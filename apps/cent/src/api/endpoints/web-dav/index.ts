@@ -128,9 +128,12 @@ export const WebDAVEndpoint: SyncEndpointFactory = {
             },
             getCollaborators: async (id) => {
                 const aliases = await getUserAliases(id);
+                // 必须与 getUserInfo 用同一套标识：账单上的 creatorId 是 getUserInfo 的 id，
+                // 这里写成 auth.username 会让自己的账单匹配不上成员列表
+                const name = auth.customUserName || auth.username;
                 const Me = {
-                    id: auth.username,
-                    name: auth.username,
+                    id: name,
+                    name,
                     avatar_url: "/icon.png",
                 };
                 const users = [
