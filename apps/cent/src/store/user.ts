@@ -127,12 +127,13 @@ export const useUserStore = create<UserStore>()(
                     );
                     return res;
                 };
-                const cachedCollaborators = get().cachedCollaborators;
-                if (cachedCollaborators[repo]) {
-                    run();
-                    return cachedCollaborators[repo];
+                // 成员列表会随新成员加入而变化，命中缓存直接返回会让署名停留在首次拉取的结果上；
+                // 缓存只在取不到列表时兜底
+                try {
+                    return await run();
+                } catch {
+                    return get().cachedCollaborators[repo] ?? [];
                 }
-                return run();
             };
             return {
                 loading,
