@@ -34,7 +34,7 @@ function TagTrigger({
             }}
             onClick={onClick}
             className={cn(
-                "flex flex-shrink-0 items-center justify-center gap-2 with-tag-color border border-input px-2 py-1 rounded-md cursor-pointer",
+                "flex h-9 flex-shrink-0 items-center justify-center gap-1.5 bg-panel px-3 rounded-full text-sm cursor-pointer with-tag-color",
                 `tag-${color}`,
             )}
         >

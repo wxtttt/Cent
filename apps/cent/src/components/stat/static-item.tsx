@@ -48,7 +48,7 @@ export function StaticItem({
                                 ? "bg-semantic-expense"
                                 : type === "income"
                                   ? "bg-semantic-income"
-                                  : "bg-stone-700",
+                                  : "bg-ink-secondary",
                         )}
                         style={{ width: `${percent * 100}%` }}
                     >

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
     calcNextDate,
     fillScheduledBills,
+    scheduledEndCap,
     useScheduled,
 } from "@/hooks/use-scheduled";
 import PopupLayout from "@/layouts/popup-layout";
@@ -53,12 +54,15 @@ export default function ScheduledListForm({
                 </Button>
 
                 {scheduleds.map((s) => {
+                    const to = [s.end, scheduledEndCap(s)].filter(
+                        (v): v is number => v !== undefined,
+                    );
                     const next = calcNextDate(
                         s.repeat.value,
                         s.repeat.unit,
                         Date.now(),
                         s.start,
-                        s.end,
+                        to.length > 0 ? Math.min(...to) : undefined,
                     );
                     return (
                         <div
@@ -77,6 +81,14 @@ export default function ScheduledListForm({
                                                 <div>-</div>
                                                 <div>{toDay(s.end)}</div>
                                             </>
+                                        )}
+                                        {s.endCount && (
+                                            <div>
+                                                {t(
+                                                    "scheduled-end-count-display",
+                                                    { n: s.endCount },
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                     {next && (

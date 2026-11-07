@@ -117,13 +117,31 @@ function calcDates(
     return results;
 }
 
+/**
+ * 结束次数上限换算成最后一次发生的时间；无上限返回 undefined。
+ * 第 1 期就是 start 本身，所以第 endCount 期 = start + (endCount-1) 个周期。
+ */
+export function scheduledEndCap(
+    scheduled: Pick<Scheduled, "start" | "repeat" | "endCount">,
+): number | undefined {
+    if (!scheduled.endCount || scheduled.endCount <= 0) return undefined;
+    return dayjs
+        .unix(scheduled.start / 1000)
+        .add(scheduled.endCount - 1, scheduled.repeat.unit)
+        .valueOf();
+}
+
 export async function fillScheduledBills(scheduled: Scheduled) {
     const allBills = await useLedgerStore.getState().refreshBillList();
+    const cap = scheduledEndCap(scheduled);
     const existed: Bill[] = [];
     // 过滤出已经自动记录过的周期账单
     for (let index = 0; index < allBills.length; index += 1) {
         const bill = allBills[index];
         if (scheduled.end && bill.time > scheduled.end) {
+            continue;
+        }
+        if (cap && bill.time > cap) {
             continue;
         }
         if (bill.time < scheduled.start) {
@@ -139,7 +157,7 @@ export async function fillScheduledBills(scheduled: Scheduled) {
         scheduled.repeat.unit,
         scheduled.start,
         scheduled.start,
-        Math.min(scheduled.end ?? Date.now(), Date.now()),
+        Math.min(cap ?? Date.now(), scheduled.end ?? Date.now(), Date.now()),
     );
 
     const diff = allDates.filter((time) => {

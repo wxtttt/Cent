@@ -5,6 +5,14 @@ import { useEffect, useState } from "react";
 import { useIntl } from "@/locale";
 import { abbreviatedSha } from "~build/git";
 import { version } from "~build/package";
+import buildTime from "~build/time";
+
+const BUILD_TIME = new Intl.DateTimeFormat(undefined, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+}).format(buildTime);
 
 export default function Version() {
     const t = useIntl();
@@ -20,7 +28,7 @@ export default function Version() {
             <div className="font-semibold">{t("cent-app-name")}</div>
             {!gitVersionVisible ? (
                 <div className="text-xs opacity-60">
-                    {t("version")}: {version}
+                    {t("version")}: {version} · {BUILD_TIME}
                 </div>
             ) : (
                 <GitVersionChecker />
@@ -89,7 +97,7 @@ const GitVersionChecker: React.FC = () => {
         <div className="text-xs">
             {/* 1. 当前部署的 Hash */}
             <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-gray-600">
+                <span className="font-semibold text-ink-secondary">
                     Current:
                     <span
                         className={`ml-1 text-xs font-normal  ${isLatest ? "text-green-700" : "text-red-700"}`}
@@ -97,13 +105,13 @@ const GitVersionChecker: React.FC = () => {
                         {isLatest ? "(newest)" : " (outdated)"}
                     </span>
                 </span>
-                <code className="text-gray-900">
-                    {formatHash(CURRENT_GIT_HASH)}
-                </code>
+                <code className="text-ink">{formatHash(CURRENT_GIT_HASH)}</code>
             </div>
-            <div className="border-t border-gray-200">
+            <div className="border-t border-rule">
                 <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-600">Latest:</span>
+                    <span className="font-semibold text-ink-secondary">
+                        Latest:
+                    </span>
 
                     {/* 加载中状态 */}
                     {isLoading && (

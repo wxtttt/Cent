@@ -6,6 +6,7 @@ import {
     AppDownloadIcons,
     useLoginAppDownloadPlatforms,
 } from "@/components/app-download";
+import { Button } from "@/components/ui/button";
 import { useIntl } from "@/locale";
 import { isMeasurementEnabled, measure } from "@/measurement";
 import { useIsLogin, useUserStore } from "@/store/user";
@@ -17,11 +18,7 @@ const loadStorageAPI = async () => {
     return lib.StorageAPI;
 };
 
-const primaryButtonStyle = `inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2`;
-
-const secondaryButtonStyle = `inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2 w-full`;
-
-const betaClassName = `relative after:content-['beta'] after:rounded after:bg-yellow-400 after:px-[2px] after:text-[8px] after:block after:absolute after:top-0 after:right-0 after:translate-x-[calc(50%)]`;
+const betaClassName = `relative after:content-['beta'] after:rounded-full after:border after:border-rule after:bg-ground-muted after:text-ink-secondary after:px-1 after:text-[10px] after:leading-4 after:block after:absolute after:-top-1 after:right-0 after:translate-x-[35%]`;
 
 const LOGIN_METHODS = ["github", "gitee", "webdav", "s3", "offline"] as const;
 type LoginMethod = (typeof LOGIN_METHODS)[number];
@@ -58,11 +55,11 @@ export default function Login() {
         <div className="fixed z-[1] top-0 right-0 w-screen h-screen overflow-hidden">
             <div className="absolute w-full h-full bg-[rgba(0,0,0,0.5)] z-[-1]"></div>
             <div className="w-full h-full flex justify-center items-center">
-                <div className="bg-background w-[350px] h-[560px] max-h-[calc(100%-40px)] flex flex-col gap-4 justify-center items-center rounded-lg overflow-y-auto">
+                <div className="bg-panel text-ink w-[350px] h-[560px] max-h-[calc(100%-40px)] flex flex-col gap-4 justify-center items-center rounded-panel border border-rule shadow-panel overflow-y-auto">
                     <Guide />
-                    <div className="min-h-20 h-fit flex flex-col gap-4">
+                    <div className="min-h-20 h-fit w-full flex flex-col gap-4 px-6">
                         {loading ? (
-                            <div>
+                            <div className="text-center">
                                 <i className="icon-[mdi--loading] animate-spin"></i>
                                 {t("login")}
                             </div>
@@ -70,9 +67,9 @@ export default function Login() {
                             <>
                                 {/* Github */}
                                 <div className="flex flex-col gap-1">
-                                    <button
+                                    <Button
                                         type="button"
-                                        className={`${primaryButtonStyle}`}
+                                        className="w-full"
                                         onClick={async () => {
                                             const StorageAPI =
                                                 await loadStorageAPI();
@@ -83,10 +80,10 @@ export default function Login() {
                                         <div className="flex-1">
                                             {t("login-to-github")}
                                         </div>
-                                    </button>
+                                    </Button>
                                     <button
                                         type="button"
-                                        className="underline text-xs cursor-pointer"
+                                        className="underline text-xs cursor-pointer hover:text-ink-secondary"
                                         onClick={async () => {
                                             const StorageAPI =
                                                 await loadStorageAPI();
@@ -100,9 +97,10 @@ export default function Login() {
                                 </div>
                                 {/* Gitee */}
                                 <div className="flex flex-col gap-1">
-                                    <button
+                                    <Button
                                         type="button"
-                                        className={`${primaryButtonStyle} !bg-[#b7312d] !hover:bg-[#b7312d]/80`}
+                                        variant="outline"
+                                        className="w-full"
                                         onClick={async () => {
                                             const StorageAPI =
                                                 await loadStorageAPI();
@@ -122,7 +120,7 @@ export default function Login() {
                                         <div className="flex-1">
                                             {t("login-to-gitee")}
                                         </div>
-                                    </button>
+                                    </Button>
                                     <button
                                         type="button"
                                         className="underline text-xs cursor-pointer"
@@ -139,9 +137,10 @@ export default function Login() {
                                 </div>
                                 {/* Web DAV */}
                                 <div>
-                                    <button
+                                    <Button
                                         type="button"
-                                        className={`${secondaryButtonStyle} ${betaClassName}`}
+                                        variant="outline"
+                                        className={`w-full ${betaClassName}`}
                                         onClick={async () => {
                                             const StorageAPI =
                                                 await loadStorageAPI();
@@ -150,13 +149,14 @@ export default function Login() {
                                     >
                                         <i className="icon-[mdi--floppy-disk]"></i>
                                         <div className="flex-1">Web DAV</div>
-                                    </button>
+                                    </Button>
                                 </div>
                                 {/* S3 */}
                                 <div>
-                                    <button
+                                    <Button
                                         type="button"
-                                        className={`${secondaryButtonStyle} ${betaClassName}`}
+                                        variant="outline"
+                                        className={`w-full ${betaClassName}`}
                                         onClick={async () => {
                                             const StorageAPI =
                                                 await loadStorageAPI();
@@ -165,13 +165,14 @@ export default function Login() {
                                     >
                                         <i className="icon-[mdi--database]"></i>
                                         <div className="flex-1">S3</div>
-                                    </button>
+                                    </Button>
                                 </div>
                                 {/* Offline */}
                                 <div className="pb-4">
-                                    <button
+                                    <Button
                                         type="button"
-                                        className={`${secondaryButtonStyle} !w-full`}
+                                        variant="outline"
+                                        className="w-full"
                                         onClick={async () => {
                                             const StorageAPI =
                                                 await loadStorageAPI();
@@ -182,16 +183,16 @@ export default function Login() {
                                         <div className="flex-1">
                                             {t("offline-mode")}
                                         </div>
-                                    </button>
+                                    </Button>
                                 </div>
                             </>
                         )}
                     </div>
                     {isMeasurementEnabled() && (
-                        <p className="px-6 pb-4 text-center text-[10px] leading-relaxed text-foreground/50">
+                        <p className="px-6 pb-4 text-center text-[10px] leading-relaxed text-ink-secondary">
                             {t("login-agreement-prefix")}{" "}
                             <a
-                                className="underline hover:text-foreground/80"
+                                className="underline hover:text-ink"
                                 href="https://linkai.work/cent/terms"
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -200,7 +201,7 @@ export default function Login() {
                             </a>{" "}
                             {t("login-agreement-conjunction")}{" "}
                             <a
-                                className="underline hover:text-foreground/80"
+                                className="underline hover:text-ink"
                                 href="https://linkai.work/cent/privacy"
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -224,17 +225,23 @@ function Guide({ className }: { className?: string }) {
     return (
         <div
             className={
-                "w-full p-4 flex-1 border-b bg-stone-800 text-white flex flex-col items-center justify-center gap-3 relative"
+                "w-full p-4 flex-1 border-b border-rule bg-field text-on-field flex flex-col items-center justify-center gap-3 relative"
             }
         >
-            <h1 className="text-3xl font-bold">{t("APP_NAME")}</h1>
-            <p className="text-sm text-center">{t("app-introduce")}</p>
-            <div className="text-xs opacity-60">{t("pwa-install-tip")}</div>
+            <h1 className="font-display text-3xl font-bold tracking-tight">
+                {t("APP_NAME")}
+            </h1>
+            <p className="text-sm text-center text-on-field-secondary">
+                {t("app-introduce")}
+            </p>
+            <div className="text-xs text-on-field-secondary">
+                {t("pwa-install-tip")}
+            </div>
             <div className="absolute bottom-4 left-4 flex justify-center">
                 <AppDownloadIcons variant="login" platforms={platforms} />
             </div>
             <a
-                className="absolute bottom-4 right-4 text-xs opacity-60 underline"
+                className="absolute bottom-4 right-4 text-xs text-on-field-secondary underline hover:text-on-field"
                 target="_blank"
                 href="https://glink25.github.io/post/Cent---%E4%BD%A0%E5%8F%AF%E8%83%BD%E5%8F%AA%E9%9C%80%E8%A6%81%E4%B8%80%E4%B8%AA%E8%AE%B0%E8%B4%A6%E8%BD%AF%E4%BB%B6/"
                 rel="noopener"

@@ -39,6 +39,25 @@ const animationVariants = {
         }, // 保持 y 轴运动
     },
 
+    // --- 左侧抽屉 (从左往右) ---
+    left: {
+        // 隐藏状态 (未打开)
+        initial: {
+            transform: "translateX(-110%)",
+            boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0)",
+        },
+        // 动画状态 (打开时)
+        animate: {
+            transform: "translateX(0px)",
+            boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0.5)",
+        },
+        // 退出状态 (关闭时)
+        exit: {
+            transform: "translateX(-110%)",
+            boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0)",
+        },
+    },
+
     // --- 移动端动画 (从右到左) ---
     mobile: {
         // 隐藏状态 (未打开)
@@ -56,6 +75,24 @@ const animationVariants = {
             transform: `translateX(${window.innerWidth}px)`,
             boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0)",
         }, // 保持 x 轴运动
+    },
+    // --- 底部抽屉 (从下往上) ---
+    bottom: {
+        // 隐藏状态 (未打开)
+        initial: {
+            transform: "translateY(100%)",
+            boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0)",
+        },
+        // 动画状态 (打开时)
+        animate: {
+            transform: "translateY(0px)",
+            boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0.5)",
+        },
+        // 退出状态 (关闭时)
+        exit: {
+            transform: "translateY(100%)",
+            boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0)",
+        },
     },
     fade: {
         // 隐藏状态 (未打开)
@@ -81,6 +118,17 @@ const animationVariants = {
 
 const TRANSITION_DURATION = 400;
 const TRANSITION_EASING = "ease";
+
+/** 元素可能在动画结束前已被移出 DOM（快速关闭/抽屉销毁），此时 commitStyles 会抛 InvalidStateError。 */
+function commitStylesSafe(ani: Animation) {
+    const target = (ani.effect as KeyframeEffect | null)?.target;
+    if (!(target instanceof Element) || !target.isConnected) {
+        ani.cancel();
+        return;
+    }
+    ani.commitStyles();
+    ani.cancel();
+}
 
 // 2. 定义过渡属性 (Transition)
 const transitionProps: Transition = {
@@ -229,7 +277,6 @@ function DialogOverlay({
 }
 
 type DialogFlipDirection = "top" | "bottom" | "left" | "right";
-
 type DialogContentProps = Omit<
     React.ComponentProps<typeof DialogPrimitive.Content>,
     "forceMount" | "asChild"
@@ -260,6 +307,7 @@ function DialogContent({
     transition = transitionProps,
     fade,
     swipe,
+    from,
     ...props
 }: DialogContentProps) {
     const isDesktop = useIsDesktop();
@@ -267,11 +315,16 @@ function DialogContent({
     const [isPresent, safeToRemove] = usePresence(); // 关键：获取是否正在被销毁
 
     // 动态选择变体
-    const currentVariant = fade
-        ? animationVariants.fade
-        : isDesktop
-          ? animationVariants.desktop
-          : animationVariants.mobile;
+    const currentVariant =
+        from === "left"
+            ? animationVariants.left
+            : from === "bottom"
+              ? animationVariants.bottom
+              : fade
+                ? animationVariants.fade
+                : isDesktop
+                  ? animationVariants.desktop
+                  : animationVariants.mobile;
     const transitionNative = useMemo(
         () => transformMotionToNative(transition),
         [transition],
@@ -330,8 +383,7 @@ function DialogContent({
                         },
                     )
                     .finished.then((ani) => {
-                        ani.commitStyles();
-                        ani.cancel();
+                        commitStylesSafe(ani);
                         contentRef.current?.style.removeProperty("transform");
                     });
             }
@@ -340,7 +392,8 @@ function DialogContent({
     );
 
     useEffect(() => {
-        if (isDesktop || fade) return;
+        // 左侧抽屉的关闭方向与右滑手势相反，交给遮罩点击和关闭按钮处理
+        if (isDesktop || fade || from === "left" || from === "bottom") return;
         const root = contentRef.current;
         if (!root) {
             return;
@@ -385,8 +438,7 @@ function DialogContent({
                     );
 
                     ani1.finished.then(async () => {
-                        ani1.commitStyles();
-                        ani1.cancel();
+                        commitStylesSafe(ani1);
                         dragDismiss.current = true;
                         onClose();
                     });
@@ -407,14 +459,184 @@ function DialogContent({
                         },
                     );
                     ani1.finished.then(() => {
-                        ani1.commitStyles();
-                        ani1.cancel();
+                        commitStylesSafe(ani1);
                     });
                 }
             },
         });
         return stop;
-    }, [isDesktop, fade, onClose]);
+    }, [isDesktop, fade, from, onClose]);
+
+    // 底部抽屉：从标记了 data-sheet-drag 的区域向下拖动收起。
+    // 位移超过 6px 才接管指针，保证拖动区域内的按钮仍可正常点击。
+    useEffect(() => {
+        if (from !== "bottom") return;
+        const root = contentRef.current;
+        if (!root) return;
+
+        let startY = 0;
+        let startX = 0;
+        let startTime = 0;
+        let lastY = 0;
+        let lastTime = 0;
+        let active = false;
+        let capturing = false;
+
+        const onDown = (event: PointerEvent) => {
+            if (event.pointerType === "mouse" && event.button !== 0) return;
+            const target = event.target as Element | null;
+            if (!target?.closest("[data-sheet-drag]")) return;
+            if (target.closest("input, textarea, select, [data-sheet-no-drag]"))
+                return;
+            active = true;
+            capturing = false;
+            startY = lastY = event.clientY;
+            startX = event.clientX;
+            startTime = lastTime = event.timeStamp;
+        };
+
+        const onMove = (event: PointerEvent) => {
+            if (!active) return;
+            const dx = event.clientX - startX;
+            const dy = event.clientY - startY;
+            if (!capturing) {
+                if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+                // 横向移动是滚动，不抢手势
+                if (Math.abs(dy) <= Math.abs(dx)) {
+                    active = false;
+                    return;
+                }
+                capturing = true;
+                try {
+                    root.setPointerCapture(event.pointerId);
+                } catch {
+                    // 指针已释放时忽略
+                }
+            }
+            lastY = event.clientY;
+            lastTime = event.timeStamp;
+            const offset = Math.max(0, dy);
+            const progress = Math.min(offset / (root.offsetHeight || 1), 1);
+            root.style.transform = `translate3d(0, ${offset}px, 0)`;
+            root.style.boxShadow = `0 0 0 150vmax rgba(0, 0, 0, ${0.5 * (1 - progress)})`;
+        };
+
+        const suppressClick = () => {
+            const suppress = (event: Event) => {
+                event.stopPropagation();
+                event.preventDefault();
+            };
+            root.addEventListener("click", suppress, {
+                capture: true,
+                once: true,
+            });
+            window.setTimeout(
+                () => root.removeEventListener("click", suppress, true),
+                120,
+            );
+        };
+
+        const onUp = (event: PointerEvent) => {
+            if (!active) return;
+            active = false;
+            if (!capturing) return;
+            capturing = false;
+
+            const dy = Math.max(0, event.clientY - startY);
+            const elapsed = Math.max(1, event.timeStamp - startTime);
+            const velocity = dy / elapsed;
+            const shouldDismiss =
+                dy > Math.min(120, root.offsetHeight * 0.25) || velocity > 0.5;
+
+            if (shouldDismiss) {
+                // 由拖动动画接管关闭，跳过默认的退出动画
+                dragDismiss.current = true;
+                root.animate(
+                    [
+                        {
+                            transform: `translate3d(0, ${dy}px, 0)`,
+                            boxShadow: root.style.boxShadow,
+                        },
+                        {
+                            transform: "translate3d(0, 100%, 0)",
+                            boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0)",
+                        },
+                    ],
+                    {
+                        duration: 220,
+                        easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+                        fill: "forwards",
+                    },
+                ).finished.then(() => onClose());
+                return;
+            }
+
+            const settle = root.animate(
+                [
+                    {
+                        transform: `translate3d(0, ${dy}px, 0)`,
+                        boxShadow: root.style.boxShadow,
+                    },
+                    {
+                        transform: "translate3d(0, 0, 0)",
+                        boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0.5)",
+                    },
+                ],
+                {
+                    duration: 220,
+                    easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+                    fill: "forwards",
+                },
+            );
+            settle.finished.then(() => {
+                settle.cancel();
+                root.style.transform = "";
+                root.style.boxShadow = "0 0 0 150vmax rgba(0, 0, 0, 0.5)";
+            });
+            if (dy > 6) suppressClick();
+        };
+
+        const onCancel = () => {
+            if (!capturing) {
+                active = false;
+                return;
+            }
+            active = false;
+            capturing = false;
+            const settle = root.animate(
+                [
+                    { transform: root.style.transform },
+                    {
+                        transform: "translate3d(0, 0, 0)",
+                        boxShadow: "0 0 0 150vmax rgba(0, 0, 0, 0.5)",
+                    },
+                ],
+                { duration: 200, fill: "forwards" },
+            );
+            settle.finished.then(() => {
+                settle.cancel();
+                root.style.transform = "";
+                root.style.boxShadow = "0 0 0 150vmax rgba(0, 0, 0, 0.5)";
+            });
+        };
+
+        const onRelease = () => {
+            if (active && !capturing) active = false;
+        };
+
+        root.addEventListener("pointerdown", onDown);
+        root.addEventListener("pointermove", onMove);
+        root.addEventListener("pointerup", onUp);
+        root.addEventListener("pointercancel", onCancel);
+        window.addEventListener("pointerup", onRelease);
+        return () => {
+            root.removeEventListener("pointerdown", onDown);
+            root.removeEventListener("pointermove", onMove);
+            root.removeEventListener("pointerup", onUp);
+            root.removeEventListener("pointercancel", onCancel);
+            window.removeEventListener("pointerup", onRelease);
+        };
+    }, [from, onClose]);
 
     const initialPlayed = useRef(false);
     const exitPlayed = useRef(false);
@@ -438,8 +660,7 @@ function DialogContent({
                     fill: "forwards",
                 })
                 .finished.then((ani) => {
-                    ani.commitStyles();
-                    ani.cancel();
+                    commitStylesSafe(ani);
                 });
         } else {
             if (exitPlayed.current) {

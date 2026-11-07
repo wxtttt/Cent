@@ -1,73 +1,45 @@
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import { toFixed, toThousand } from "@/utils/number";
-import Money from "../money";
 
 export const FocusTypes = ["income", "expense", "balance"] as const;
 export type FocusType = (typeof FocusTypes)[number];
 
+const Labels: Record<FocusType, string> = {
+    income: "income",
+    expense: "expense",
+    balance: "balance",
+};
+
+// 展示顺序与参考稿一致：支出在前，逻辑用的 FocusTypes 顺序保持不变
+const DisplayTypes: FocusType[] = ["expense", "income", "balance"];
+
 export function FocusTypeSelector({
-    value: focusType,
-    onValueChange: setFocusType,
-    money,
+    value,
+    onValueChange,
 }: {
     value: FocusType;
     onValueChange: (v: FocusType) => void;
-    money: number[];
 }) {
     const t = useIntl();
-    const btnClass = `min-w-[90px] text-sm py-1 flex items-center justify-center  cursor-pointer transition-all duration-200`;
     return (
-        <div className="flex items-center rounded-md shadow border border-input overflow-hidden divide-x">
-            <button
-                type="button"
-                className={cn(
-                    btnClass,
-                    focusType === "income" &&
-                        "!bg-stone-700 !text-white [&_span]:text-semantic-income-medium",
-                )}
-                onClick={() => {
-                    setFocusType("income");
-                }}
-            >
-                <div className="flex flex-col items-center justify-center">
-                    <span className="text-semantic-income">
-                        +<Money value={money[0]} />
-                    </span>
-                    <div className="text-[10px] opacity-60"> {t("income")}</div>
-                </div>
-            </button>
-            <button
-                type="button"
-                className={cn(
-                    btnClass,
-                    focusType === "expense" &&
-                        "!bg-stone-700 !text-white [&_span]:text-semantic-expense-medium",
-                )}
-                onClick={() => setFocusType("expense")}
-            >
-                <div className="flex flex-col items-center justify-center">
-                    <span className="text-semantic-expense">
-                        -<Money value={money[1]} />
-                    </span>
-                    <div className="text-[10px] opacity-60">{t("expense")}</div>
-                </div>
-            </button>
-            <button
-                type="button"
-                className={cn(
-                    btnClass,
-                    focusType === "balance" && "!bg-stone-700 !text-white",
-                )}
-                onClick={() => setFocusType("balance")}
-            >
-                <div className="flex flex-col items-center justify-center">
-                    <span>
-                        <Money value={money[2]} />
-                    </span>
-                    <div className="text-[10px] opacity-60">{t("Balance")}</div>
-                </div>
-            </button>
+        <div className="flex w-full items-center gap-1 rounded-full bg-ground-muted p-1">
+            {DisplayTypes.map((type) => (
+                <button
+                    key={type}
+                    type="button"
+                    className={cn(
+                        "flex-1 cursor-pointer rounded-full py-2 text-sm transition-colors duration-150",
+                        value === type
+                            ? "bg-panel font-semibold text-ink shadow-panel"
+                            : "text-ink-secondary hover:text-ink",
+                    )}
+                    onClick={() => {
+                        onValueChange(type);
+                    }}
+                >
+                    {t(Labels[type])}
+                </button>
+            ))}
         </div>
     );
 }

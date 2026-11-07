@@ -1,7 +1,10 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import { AppDownloadIcons } from "@/components/app-download";
 import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { isMeasurementEnabled } from "@/measurement";
+import { checkForUpdate } from "@/utils/pwa";
 
 import createConfirmProvider from "../confirm";
 import { SponsorAboutItem } from "../sponsor";
@@ -10,6 +13,28 @@ import Version from "./version";
 
 function Form({ onCancel }: { onCancel?: () => void }) {
     const t = useIntl();
+    const [checkingUpdate, setCheckingUpdate] = useState(false);
+
+    const handleCheckUpdate = async () => {
+        if (checkingUpdate) {
+            return;
+        }
+        setCheckingUpdate(true);
+        try {
+            const result = await checkForUpdate();
+            if (result === "latest") {
+                toast.success(t("update-latest"));
+            } else if (result === "unsupported") {
+                toast.warning(t("update-unsupported"));
+            } else {
+                toast.info(t("update-found"));
+            }
+        } catch {
+            toast.error(t("update-failed"));
+        } finally {
+            setCheckingUpdate(false);
+        }
+    };
 
     return (
         <PopupLayout
@@ -28,6 +53,26 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                     />
                     <Version />
                 </div>
+                <button
+                    type="button"
+                    className="w-full min-h-10 pb-2 flex justify-between items-center px-4 text-left disabled:opacity-60"
+                    disabled={checkingUpdate}
+                    onClick={handleCheckUpdate}
+                >
+                    <div className="flex items-center gap-2">
+                        <i className="icon-[mdi--update] size-5"></i>
+                        <div className="text-sm">
+                            {checkingUpdate
+                                ? t("update-checking")
+                                : t("check-update")}
+                        </div>
+                    </div>
+                    {checkingUpdate ? (
+                        <i className="icon-[mdi--loading] size-5 animate-spin"></i>
+                    ) : (
+                        <i className="icon-[mdi--chevron-right] size-5"></i>
+                    )}
+                </button>
                 <a
                     className="w-full min-h-10 pb-2 flex justify-between items-center px-4"
                     target="_blank"

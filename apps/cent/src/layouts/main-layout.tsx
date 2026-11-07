@@ -1,6 +1,8 @@
 import { Toaster } from "@glink25/toast";
 import { useEffect, useRef } from "react";
 import { Outlet } from "react-router";
+import AppChrome from "@/components/app-chrome";
+import { AutoRuleEditProvider, AutoRuleProvider } from "@/components/auto-rule";
 import { BillEditorProvider } from "@/components/bill-editor";
 import { BillInfoProvider } from "@/components/bill-info";
 import { TagListProvider } from "@/components/bill-tag";
@@ -10,9 +12,18 @@ import { BudgetEditProvider, BudgetProvider } from "@/components/budget";
 import { BudgetDetailProvider } from "@/components/budget/detail";
 import { CategoryListProvider } from "@/components/category";
 import { CurrencyListProvider } from "@/components/currency";
+import { DataManagerProvider } from "@/components/data-manager";
 import { ImportPreviewProvider } from "@/components/data-manager/preview-form";
+import { InventoryItemProvider } from "@/components/inventory";
+import { LoanCalculatorProvider } from "@/components/loan-calculator";
+import {
+    MedicalMedicineProvider,
+    MedicalProfileProvider,
+    MedicalVisitProvider,
+} from "@/components/medical";
 import { ModalProvider } from "@/components/modal";
-import Navigation from "@/components/navigation";
+import { PresetProvider } from "@/components/preset";
+import { ProfileProvider } from "@/components/profile";
 import {
     ScheduledEditProvider,
     ScheduledProvider,
@@ -22,7 +33,9 @@ import { SortableListProvider } from "@/components/sortable";
 import { SortableListWithEnableProvider } from "@/components/sortable/enable";
 import { SortableGroupProvider } from "@/components/sortable/group";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { VehicleProvider, VehicleRecordProvider } from "@/components/vehicle";
 import { WidgetEditProvider } from "@/components/widget/edit-form";
+import { WidgetListProvider } from "@/components/widget/list-form";
 import { useInitPreset } from "@/hooks/use-preset";
 import {
     useQuickEntryByClipboard,
@@ -32,15 +45,9 @@ import {
 import { useScheduled } from "@/hooks/use-scheduled";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { useUrlHandler } from "@/hooks/use-url-handler";
-import { measure } from "@/measurement";
 import { useMeasurementUsageSnapshot } from "@/measurement/usage-snapshot";
-import { useLedgerStore } from "@/store/ledger";
 import { usePreferenceStore } from "@/store/preference";
-import { useUserStore } from "@/store/user";
 import { startBackgroundPredict } from "@/utils/predict";
-import { ZenDialogProvider } from "@/zen";
-
-let zenStatusMeasured = false;
 
 export default function MainLayout() {
     useMeasurementUsageSnapshot();
@@ -48,17 +55,6 @@ export default function MainLayout() {
     useQuickEntryByClipboard();
     useQuickEntryByRelayr();
     useUrlHandler(); // 处理标准 URL 链接唤起
-
-    const zenEnabled = useLedgerStore((state) => {
-        if (!state.infos) return undefined;
-        const userId = useUserStore.getState().id;
-        return Boolean(state.infos.meta.personal?.[userId]?.zen?.enabled);
-    });
-    useEffect(() => {
-        if (zenEnabled === undefined || zenStatusMeasured) return;
-        zenStatusMeasured = true;
-        measure("zen_status", { enabled: zenEnabled });
-    }, [zenEnabled]);
 
     useEffect(() => {
         // predict
@@ -80,29 +76,43 @@ export default function MainLayout() {
     return (
         <ThemeProvider>
             <TooltipProvider>
-                <Navigation />
-                <div className="w-full h-full sm:pl-18">
-                    <Outlet />
+                <div className="flex h-full w-full flex-col overflow-hidden bg-ground">
+                    <AppChrome />
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                        <Outlet />
+                    </div>
                 </div>
+                <ProfileProvider />
                 <BillEditorProvider />
                 <BillInfoProvider />
                 <SortableListProvider />
                 <SortableListWithEnableProvider />
                 <SortableGroupProvider />
                 <Settings />
+                <PresetProvider />
+                <WidgetListProvider />
+                <DataManagerProvider />
                 <ImportPreviewProvider />
+                <InventoryItemProvider />
+                <MedicalProfileProvider />
+                <MedicalVisitProvider />
+                <MedicalMedicineProvider />
+                <VehicleProvider />
+                <VehicleRecordProvider />
                 <WidgetEditProvider />
                 <CurrencyListProvider />
+                <LoanCalculatorProvider />
                 <BookGuide />
                 <BookConfirmProvider />
                 <BudgetProvider />
                 <BudgetEditProvider />
                 <BudgetDetailProvider />
+                <AutoRuleProvider />
+                <AutoRuleEditProvider />
                 <ScheduledProvider />
                 <ScheduledEditProvider />
                 <TagListProvider />
                 <CategoryListProvider />
-                <ZenDialogProvider />
                 <ModalProvider />
                 <Toaster />
             </TooltipProvider>

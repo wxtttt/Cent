@@ -214,13 +214,9 @@ function observeRequest(
     });
 }
 
-function measureUsage(
-    feature: "assistant" | "zen",
-    aggregate: UsageAggregate,
-    outcome: UsageOutcome,
-) {
+function measureUsage(aggregate: UsageAggregate, outcome: UsageOutcome) {
     measure("ai_token_usage", {
-        feature,
+        feature: "assistant",
         measurement: "estimated",
         api_type: aggregate.apiType,
         input_range: toTokenRange(aggregate.inputTokens),
@@ -273,68 +269,8 @@ export function createAssistantTokenUsageProvider(
                 aggregate.inputTokens += usage.inputTokens;
                 aggregate.outputTokens += usage.outputTokens;
                 if (usage.outcome !== "completed" || !usage.hasToolCalls) {
-                    measureUsage("assistant", aggregate, usage.outcome);
+                    measureUsage(aggregate, usage.outcome);
                     turns.delete(userMessage);
-                }
-            });
-        },
-    };
-}
-
-let zenUsage: UsageAggregate | undefined;
-
-export function beginZenTokenUsage(apiType: TokenUsageApiType) {
-    if (!isMeasurementEnabled()) return;
-    if (zenUsage?.requestCount) {
-        measureUsage("zen", zenUsage, "interrupted");
-    }
-    zenUsage = {
-        apiType,
-        inputTokens: 0,
-        outputTokens: 0,
-        requestCount: 0,
-    };
-}
-
-function finishZenTokenUsage(outcome: UsageOutcome, includeZero: boolean) {
-    if (!zenUsage) return;
-    if (includeZero || zenUsage.requestCount > 0) {
-        measureUsage("zen", zenUsage, outcome);
-    }
-    zenUsage = undefined;
-}
-
-export function completeZenTokenUsage() {
-    finishZenTokenUsage("completed", true);
-}
-
-export function interruptZenTokenUsage() {
-    finishZenTokenUsage("interrupted", false);
-}
-
-export function createZenTokenUsageProvider(
-    provider: Provider,
-    getApiType: () => TokenUsageApiType,
-): Provider {
-    if (!isMeasurementEnabled()) return provider;
-    return {
-        request(request) {
-            if (!zenUsage) {
-                let apiType: TokenUsageApiType = "open_ai_compatible";
-                try {
-                    apiType = getApiType();
-                } catch {
-                    // Provider configuration remains the source of truth.
-                }
-                beginZenTokenUsage(apiType);
-            }
-            if (zenUsage) zenUsage.requestCount += 1;
-            return observeRequest(provider, request, (usage) => {
-                if (!zenUsage) return;
-                zenUsage.inputTokens += usage.inputTokens;
-                zenUsage.outputTokens += usage.outputTokens;
-                if (usage.outcome !== "completed") {
-                    finishZenTokenUsage(usage.outcome, true);
                 }
             });
         },

@@ -11,6 +11,38 @@
 
 :root {
 	--titlebar-height: 0px;
+
+	/* 设计令牌：语义色、字号、间距、圆角、动效的单一来源（对齐家小满暖度） */
+	--dp-color-ground: #fbf7ef;
+	--dp-color-ink: #2a2018;
+	--dp-color-ink-warm: #503a29;
+	--dp-color-ink-secondary: #8b8178;
+	--dp-color-header: #f3e6d3;
+	--dp-color-ground-muted: #eee0c8;
+	--dp-color-rule: #e9dcc6;
+	--dp-color-accent: #f7853c;
+	--dp-color-field: #2a2018;
+	--dp-color-on-field: #fdf9f3;
+	--dp-color-on-field-secondary: #d8cec2;
+	--dp-color-panel: #fffdf8;
+	--dp-color-on-accent: #ffffff;
+	--dp-typography-fallback: sans-serif;
+	--dp-typography-body: 16px;
+	--dp-typography-interface: 15px;
+	--dp-typography-small: 14px;
+	--dp-typography-metadata: 13px;
+	--dp-typography-label: 12px;
+	--dp-typography-body-leading: 1.6;
+	--dp-spacing-grid-gap: 24px;
+	--dp-radius-panel: 12px;
+	--dp-radius-card: 28px;
+	--dp-border-hairline: 1px;
+	--dp-motion-interaction: 160ms;
+	--dp-motion-easing: ease-out;
+	--dp-shadow-panel:
+		0 1px 2px rgba(92, 62, 30, 0.05), 0 8px 24px -12px rgba(92, 62, 30, 0.16);
+	--dp-shadow-card:
+		0 18px 40px -28px rgba(92, 62, 30, 0.24), 0 2px 8px rgba(92, 62, 30, 0.04);
 	/* Safe-area inset 兜底策略：top/bottom 最小 16px，避免在无原生安全区时贴边
 	   全局通过 var(--safe-area-inset-*) 引用，禁止直接使用 env() */
 	--safe-area-inset-top: max(env(safe-area-inset-top), 0px);
@@ -113,63 +145,105 @@ button {
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
+	--radius-panel: var(--dp-radius-panel);
+	--radius-card: var(--dp-radius-card);
+	--font-sans:
+		ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC",
+		"Microsoft YaHei", var(--dp-typography-fallback), sans-serif;
+	--font-display:
+		ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC",
+		"Microsoft YaHei", var(--dp-typography-fallback), sans-serif;
+	--color-ground: var(--dp-color-ground);
+	--color-ground-muted: var(--dp-color-ground-muted);
+	--color-panel: var(--dp-color-panel);
+	--color-ink: var(--dp-color-ink);
+	--color-ink-warm: var(--dp-color-ink-warm);
+	--color-ink-secondary: var(--dp-color-ink-secondary);
+	--color-header: var(--dp-color-header);
+	--color-rule: var(--dp-color-rule);
+	--color-field: var(--dp-color-field);
+	--color-on-field: var(--dp-color-on-field);
+	--color-on-field-secondary: var(--dp-color-on-field-secondary);
+	--color-brand: var(--dp-color-accent);
+	--color-on-brand: var(--dp-color-on-accent);
+	--shadow-panel: var(--dp-shadow-panel);
+	--shadow-card: var(--dp-shadow-card);
 }
 
 :root {
-	--radius: 0.625rem;
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.129 0.042 264.695);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.129 0.042 264.695);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.129 0.042 264.695);
-	--primary: oklch(0.208 0.042 265.755);
-	--primary-foreground: oklch(0.984 0.003 247.858);
-	--secondary: oklch(0.968 0.007 247.896);
-	--secondary-foreground: oklch(0.208 0.042 265.755);
-	--muted: oklch(0.968 0.007 247.896);
-	--muted-foreground: oklch(0.554 0.046 257.417);
-	--accent: oklch(0.968 0.007 247.896);
-	--accent-foreground: oklch(0.208 0.042 265.755);
-	--destructive: oklch(0.577 0.245 27.325);
-	--destructive-foreground: oklch(0.984 0.003 247.858);
-	--border: oklch(0.929 0.013 255.508);
-	--input: oklch(0.929 0.013 255.508);
-	--ring: oklch(0.704 0.04 256.788);
+	--radius: 12px;
+	--background: var(--dp-color-ground);
+	--foreground: var(--dp-color-ink);
+	--card: var(--dp-color-panel);
+	--card-foreground: var(--dp-color-ink);
+	--popover: var(--dp-color-panel);
+	--popover-foreground: var(--dp-color-ink);
+	--primary: var(--dp-color-accent);
+	--primary-foreground: var(--dp-color-on-accent);
+	--secondary: var(--dp-color-ground-muted);
+	--secondary-foreground: var(--dp-color-ink);
+	--muted: var(--dp-color-ground-muted);
+	--muted-foreground: var(--dp-color-ink-secondary);
+	--accent: var(--dp-color-ground-muted);
+	--accent-foreground: var(--dp-color-ink);
+	--destructive: #b42318;
+	--destructive-foreground: #ffffff;
+	--border: var(--dp-color-rule);
+	--input: var(--dp-color-rule);
+	--ring: var(--dp-color-accent);
 	--chart-1: oklch(0.646 0.222 41.116);
 	--chart-2: oklch(0.6 0.118 184.704);
 	--chart-3: oklch(0.398 0.07 227.392);
 	--chart-4: oklch(0.828 0.189 84.429);
 	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.984 0.003 247.858);
-	--sidebar-foreground: oklch(0.129 0.042 264.695);
-	--sidebar-primary: oklch(0.208 0.042 265.755);
-	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-accent: oklch(0.968 0.007 247.896);
-	--sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-	--sidebar-border: oklch(0.929 0.013 255.508);
-	--sidebar-ring: oklch(0.704 0.04 256.788);
+	--sidebar: var(--dp-color-ground-muted);
+	--sidebar-foreground: var(--dp-color-ink);
+	--sidebar-primary: var(--dp-color-accent);
+	--sidebar-primary-foreground: var(--dp-color-on-accent);
+	--sidebar-accent: var(--dp-color-panel);
+	--sidebar-accent-foreground: var(--dp-color-ink);
+	--sidebar-border: var(--dp-color-rule);
+	--sidebar-ring: var(--dp-color-accent);
 }
 
 .dark {
-	--background: oklch(30.495% 0.00388 264.575);
-	--foreground: oklch(0.984 0.003 247.858);
-	--card: oklch(0.208 0.042 265.755);
-	--card-foreground: oklch(0.984 0.003 247.858);
-	--popover: oklch(0.208 0.042 265.755);
-	--popover-foreground: oklch(0.984 0.003 247.858);
-	--primary: oklch(0.929 0.013 255.508);
-	--primary-foreground: oklch(0.208 0.042 265.755);
-	--secondary: oklch(0.279 0.041 260.031);
-	--secondary-foreground: oklch(0.984 0.003 247.858);
-	--muted: oklch(0.279 0.041 260.031);
-	--muted-foreground: oklch(0.704 0.04 256.788);
-	--accent: oklch(0.279 0.041 260.031);
-	--accent-foreground: oklch(0.984 0.003 247.858);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.551 0.027 264.364);
+	--dp-color-ground: #17130f;
+	--dp-color-ink: #f7f0e6;
+	--dp-color-ink-warm: #e4d3ba;
+	--dp-color-ink-secondary: #b5a89a;
+	--dp-color-header: #201a14;
+	--dp-color-ground-muted: #221c16;
+	--dp-color-rule: #332a22;
+	--dp-color-accent: #ff8a3d;
+	--dp-color-field: #0f0c09;
+	--dp-color-on-field: #fdf9f3;
+	--dp-color-on-field-secondary: #d8cec2;
+	--dp-color-panel: #1f1913;
+	--dp-color-on-accent: #ffffff;
+	--dp-shadow-panel:
+		0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px -14px rgba(0, 0, 0, 0.6);
+	--dp-shadow-card:
+		0 18px 40px -28px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.3);
+
+	--background: var(--dp-color-ground);
+	--foreground: var(--dp-color-ink);
+	--card: var(--dp-color-panel);
+	--card-foreground: var(--dp-color-ink);
+	--popover: var(--dp-color-panel);
+	--popover-foreground: var(--dp-color-ink);
+	--primary: var(--dp-color-accent);
+	--primary-foreground: var(--dp-color-on-accent);
+	--secondary: var(--dp-color-ground-muted);
+	--secondary-foreground: var(--dp-color-ink);
+	--muted: var(--dp-color-ground-muted);
+	--muted-foreground: var(--dp-color-ink-secondary);
+	--accent: var(--dp-color-ground-muted);
+	--accent-foreground: var(--dp-color-ink);
+	--destructive: #f97066;
+	--destructive-foreground: #16191f;
+	--border: var(--dp-color-rule);
+	--input: var(--dp-color-rule);
+	--ring: #ff8a3d;
 	--chart-1: oklch(0.488 0.243 264.376);
 	--chart-2: oklch(0.696 0.17 162.48);
 	--chart-3: oklch(0.769 0.188 70.08);
@@ -190,23 +264,21 @@ button {
 	 "income" related colors used across the app. Change here or in `.dark` to theme.
 */
 :root {
-	/* Semantic expense/income colors: keep minimal set
-	   - Primary semantic color
-	   - Legacy '-medium' alias kept for compatibility */
-	--color-expense: #b91c1c; /* primary expense color */
-	--color-expense-medium-legacy: #f87171; /* medium (legacy) */
+	/* 语义色跟随参考图：支出为绿色、收入为红色 */
+	--color-expense: #1f9d63; /* primary expense color */
+	--color-expense-medium-legacy: #4fc08d; /* medium (legacy) */
 
-	--color-income: #15803d; /* primary income color */
-	--color-income-medium-legacy: #34d399; /* medium (legacy) */
+	--color-income: #e2544a; /* primary income color */
+	--color-income-medium-legacy: #f08a83; /* medium (legacy) */
 }
 
 /* Dark mode overrides for semantic colors (optional) */
 .dark {
-	--color-expense: #991b1b;
-	--color-expense-medium-legacy: #fb7185;
+	--color-expense: #34d399;
+	--color-expense-medium-legacy: #6ee7b7;
 
-	--color-income: #166534;
-	--color-income-medium-legacy: #34d399;
+	--color-income: #f87171;
+	--color-income-medium-legacy: #fca5a5;
 }
 
 @layer base {
@@ -215,6 +287,40 @@ button {
 	}
 	body {
 		@apply bg-background text-foreground;
+		font-family: var(--font-sans);
+		font-size: var(--dp-typography-body);
+		line-height: var(--dp-typography-body-leading);
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		font-family: var(--font-display);
+		font-weight: 700;
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+	}
+	/* 键盘操作必须能看到当前位置，鼠标点击不显示 */
+}
+
+/* 焦点环放在 layer 外，确保能盖过组件里 reset 掉的 outline；表单控件自带的 focus 边框已经够明显 */
+:focus-visible:not(input):not(textarea):not(select) {
+	outline: 2px solid var(--dp-color-accent);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
 	}
 }
 
@@ -281,17 +387,17 @@ button {
 	--current-tag-color: var(--tag-gray);
 }
 
-/* 图表分类 / 协作者系列色（ECharts 风格调色板，供 `src/utils/color.ts` 读取） */
+/* 图表分类 / 协作者系列色（暖色调，供 `src/utils/color.ts` 读取） */
 :root {
-	--category-color-1: #5470c6;
-	--category-color-2: #91cc75;
-	--category-color-3: #fac858;
-	--category-color-4: #ee6666;
-	--category-color-5: #73c0de;
-	--category-color-6: #3ba272;
-	--category-color-7: #fc8452;
-	--category-color-8: #9a60b4;
-	--category-color-9: #ea7ccc;
+	--category-color-1: #f28c3b;
+	--category-color-2: #f0c94a;
+	--category-color-3: #7ec488;
+	--category-color-4: #6f9fd8;
+	--category-color-5: #b18ad4;
+	--category-color-6: #83cbb8;
+	--category-color-7: #ef9a9a;
+	--category-color-8: #c8b08a;
+	--category-color-9: #9a8fe0;
 	--collaborator-color-1: var(--category-color-1);
 	--collaborator-color-2: var(--category-color-2);
 	--collaborator-color-3: var(--category-color-3);

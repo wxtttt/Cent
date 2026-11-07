@@ -8,6 +8,7 @@ import { useTag } from "@/hooks/use-tag";
 import { amountToNumber } from "@/ledger/bill";
 import type { Bill, BillCategory } from "@/ledger/type";
 import { useIntl } from "@/locale";
+import { useBookStore } from "@/store/book";
 import { useUserStore } from "@/store/user";
 import { cn } from "@/utils";
 import { denseTime } from "@/utils/time";
@@ -22,8 +23,13 @@ interface BaseBillItemProps {
     tags?: Pick<BillTag, "id" | "name">[];
     /** 创建者展示文案（"我"/创建者名/unknown-user，由调用方决定） */
     creatorLabel: string;
+    creatorAvatar?: string;
     /** 非本位币时传入的目标币种 */
     targetCurrency?: { symbol: string };
+    /** 本位币符号 */
+    currencySymbol?: string;
+    /** 所属账本，作为卡片底部的归属信息 */
+    bookName?: string;
     /** 账单基础字段 */
     type: Bill["type"];
     amount: Bill["amount"];
@@ -42,7 +48,10 @@ export function BaseBillItem({
     category,
     tags,
     creatorLabel,
+    creatorAvatar,
     targetCurrency,
+    currencySymbol,
+    bookName,
     type,
     amount,
     time,
@@ -58,85 +67,107 @@ export function BaseBillItem({
         <button
             type="button"
             className={cn(
-                "bill-item flex justify-between items-center px-4 py-4 buttoned cursor-pointer",
+                "bill-item w-full cursor-pointer rounded-3xl border border-rule bg-panel p-4 text-left shadow-panel transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] hover:bg-ground-muted/40 active:scale-[0.995]",
                 className,
             )}
             data-bill-tags={tags?.map((v) => v.name).join(" ")}
             onClick={onClick}
         >
-            {/* 左侧图标 + 信息 */}
-            <div className="flex items-center overflow-hidden">
-                <div className="rounded-full bg-background border w-10 h-10 flex-shrink-0 flex items-center justify-center">
+            <div className="flex items-start gap-3">
+                <div className="flex size-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
                     {category?.icon && <CategoryIcon icon={category.icon} />}
                 </div>
-                <div className="flex flex-col px-4 overflow-hidden">
-                    <div className="flex text-md gap-1 h-6">
-                        <div className="flex-shrink-0 font-semibold">
+                <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="truncate text-base font-semibold">
                             {category ? category.name : ""}
                         </div>
-                        <div className="flex flex-wrap gap-x-2 gap-y-1">
-                            {tags?.map((tag) => (
-                                <div
-                                    key={tag.id}
-                                    className="text-[10px] rounded border flex items-center p-[2px] h-3"
-                                >
-                                    {tag.name}
-                                </div>
-                            ))}
-                        </div>
+                        {showTime && (
+                            <div className="mt-0.5 text-xs text-ink-secondary">
+                                {denseTime(time)}
+                            </div>
+                        )}
                     </div>
-                    <div className="flex text-xs">
-                        <div>{creatorLabel}</div>
-                        {comment && (
-                            <>
-                                <div className="px-1">|</div>
-                                <div className="truncate">{comment}</div>
-                            </>
+                    <div
+                        className={cn(
+                            "flex flex-shrink-0 flex-col items-end font-display text-lg font-bold tabular-nums",
+                            type === "expense"
+                                ? "text-semantic-expense"
+                                : type === "income"
+                                  ? "text-semantic-income"
+                                  : "",
+                        )}
+                    >
+                        <div className="flex items-baseline">
+                            <span>
+                                {type === "income" ? "+" : "-"}
+                                {currencySymbol}
+                            </span>
+                            <Money value={amountToNumber(amount)} accurate />
+                        </div>
+                        {targetCurrency && currencyAmount !== undefined && (
+                            <div className="text-xs font-normal text-ink-secondary">
+                                {targetCurrency.symbol}
+                                <Money
+                                    value={amountToNumber(currencyAmount)}
+                                    accurate
+                                />
+                            </div>
                         )}
                     </div>
                 </div>
-                <div className="flex-1 flex gap-2">
-                    {showAssets &&
-                        images?.map((img, i) => (
-                            <SmartImage
-                                key={i}
-                                source={img}
-                                alt=""
-                                className="w-8 h-8 object-cover rounded data-[state=loading]:animate-pulse bg-primary/10"
-                            />
-                        ))}
-                </div>
             </div>
 
-            {/* 金额 */}
-            <div className="bill-item-tail text-right">
-                <div
-                    className={`text-lg font-bold truncate flex-shrink-0 flex flex-col items-end ${
-                        type === "expense"
-                            ? "text-semantic-expense"
-                            : type === "income"
-                              ? "text-semantic-income"
-                              : ""
-                    }`}
-                >
-                    <Money value={amountToNumber(amount)} accurate />
-
-                    {targetCurrency && currencyAmount !== undefined && (
-                        <div className="text-xs">
-                            {targetCurrency.symbol}
-                            <Money
-                                value={amountToNumber(currencyAmount)}
-                                accurate
-                            />
-                        </div>
-                    )}
+            {comment && (
+                <div className="mt-2 flex items-start gap-1.5 text-sm text-ink-secondary">
+                    <i className="icon-[mdi--comment-processing-outline] mt-0.5 size-4 flex-shrink-0"></i>
+                    <span className="line-clamp-2">{comment}</span>
                 </div>
+            )}
 
-                {showTime && (
-                    <div className="text-[8px] text-foreground/60">
-                        {denseTime(time)}
-                    </div>
-                )}
+            {showAssets && images && images.length > 0 && (
+                <div className="mt-2 flex gap-2">
+                    {images.map((img, i) => (
+                        <SmartImage
+                            key={i}
+                            source={img}
+                            alt=""
+                            className="size-10 rounded-lg object-cover data-[state=loading]:animate-pulse bg-primary/10"
+                        />
+                    ))}
+                </div>
+            )}
+
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-rule/60 pt-2 text-xs text-ink-secondary">
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <i
+                        className={cn(
+                            "size-4 flex-shrink-0",
+                            tags && tags.length > 0
+                                ? "icon-[mdi--tag-outline]"
+                                : "icon-[mdi--book-outline]",
+                        )}
+                    ></i>
+                    <span className="truncate">
+                        {tags && tags.length > 0
+                            ? tags.map((tag) => tag.name).join(" · ")
+                            : bookName}
+                    </span>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-1.5">
+                    {creatorAvatar ? (
+                        <img
+                            src={creatorAvatar}
+                            alt=""
+                            className="size-5 rounded-full object-cover"
+                        />
+                    ) : (
+                        <i className="icon-[mdi--account-circle-outline] size-4"></i>
+                    )}
+                    <span className="max-w-[80px] truncate">
+                        {creatorLabel}
+                    </span>
+                </div>
             </div>
         </button>
     );
@@ -173,6 +204,11 @@ export default function BillItem({
         ?.map((id) => allTags.find((t) => t.id === id))
         .filter((v) => v !== undefined);
 
+    const bookName = useBookStore((state) => {
+        return state.books.find((book) => book.id === state.currentBookId)
+            ?.name;
+    });
+
     const { baseCurrency, allCurrencies } = useCurrency();
     const currency =
         bill.currency?.target === baseCurrency.id
@@ -184,8 +220,11 @@ export default function BillItem({
             category={category}
             tags={tags}
             creatorLabel={isMe ? t("me") : (creator?.name ?? "unknown-user")}
+            creatorAvatar={creator?.avatar_url}
             targetCurrency={currency}
             currencyAmount={bill.currency?.amount}
+            currencySymbol={baseCurrency.symbol}
+            bookName={bookName}
             type={bill.type}
             amount={bill.amount}
             time={bill.time}

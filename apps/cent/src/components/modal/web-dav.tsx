@@ -136,7 +136,7 @@ const LoadingForm = ({
                                             onClick={() =>
                                                 setShowPassword(!showPassword)
                                             }
-                                            className="absolute right-0 top-0 h-full px-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                            className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                                         >
                                             {showPassword ? (
                                                 <i className="icon-[mdi--eye-off] size-4"></i>

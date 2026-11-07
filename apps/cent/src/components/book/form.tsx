@@ -64,7 +64,7 @@ export function BookForm() {
 
     return (
         <div className="w-fit h-full flex justify-center items-center pointer-events-auto">
-            <div className="bg-background w-[350px] h-[480px] max-h-[55vh] py-4 flex flex-col justify-center items-center rounded">
+            <div className="bg-panel w-[350px] h-[480px] max-h-[55vh] py-4 flex flex-col justify-center items-center rounded-panel">
                 {books.length > 0 ? (
                     <div className="flex-1 flex flex-col w-full gap-2 h-full overflow-hidden">
                         <div className="flex gap-2 px-4">
@@ -76,7 +76,7 @@ export function BookForm() {
                                 return (
                                     <Label
                                         key={book.id}
-                                        className="flex-shrink-0 cursor-pointer hover:bg-accent/50 overflow-hidden flex items-center gap-3 rounded-lg border p-3 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950"
+                                        className="flex-shrink-0 cursor-pointer hover:bg-ground-muted overflow-hidden flex items-center gap-3 rounded-lg border p-3 has-[[aria-checked=true]]:border-brand has-[[aria-checked=true]]:bg-brand/5"
                                     >
                                         <Checkbox
                                             checked={book.id === currentBookId}
@@ -85,7 +85,7 @@ export function BookForm() {
                                                     toSwitchBook(book.id);
                                                 }
                                             }}
-                                            className="inline-flex items-center data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
+                                            className="inline-flex items-center data-[state=checked]:border-brand data-[state=checked]:bg-brand data-[state=checked]:text-on-brand"
                                         />
                                         <div className="flex-1 flex justify-between gap-1.5 font-normal overflow-hidden">
                                             <div className="flex-1 text-sm leading-none font-medium flex flex-col gap-1 overflow-hidden">

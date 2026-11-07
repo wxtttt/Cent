@@ -200,7 +200,7 @@ function OncentImportForm({
                                     className="w-6 h-6 rounded-full border flex justify-center items-center"
                                     value="add"
                                 >
-                                    <RadioGroup.Indicator className="block w-4 h-4 rounded-full bg-stone-900" />
+                                    <RadioGroup.Indicator className="block w-4 h-4 rounded-full bg-brand" />
                                 </RadioGroup.Item>
                                 <label className="Label" htmlFor="r1">
                                     {t("strategy-add")}
@@ -211,7 +211,7 @@ function OncentImportForm({
 								className="w-6 h-6 rounded-full border flex justify-center items-center"
 								value="overlap"
 							>
-								<RadioGroup.Indicator className="block w-4 h-4 rounded-full bg-stone-900" />
+								<RadioGroup.Indicator className="block w-4 h-4 rounded-full bg-brand" />
 							</RadioGroup.Item>
 							<label className="Label" htmlFor="r2">
 								{t("strategy-overlap")}

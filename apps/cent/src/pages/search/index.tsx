@@ -6,6 +6,7 @@ import { useShallow } from "zustand/shallow";
 import { StorageDeferredAPI } from "@/api/storage";
 import BillFilterForm from "@/components/bill-filter";
 import Clearable from "@/components/clearable";
+import EmptyState from "@/components/empty-state";
 import { HintTooltip } from "@/components/hint";
 import Ledger from "@/components/ledger";
 import {
@@ -248,6 +249,22 @@ export default function Page() {
     return (
         <div className="w-full h-full p-2 flex justify-center overflow-hidden page-show">
             <div className="h-full w-full px-2 max-w-[600px] flex flex-col">
+                <div className="flex flex-shrink-0 items-center gap-2 pt-2">
+                    <button
+                        type="button"
+                        aria-label={t("back")}
+                        className="flex size-9 cursor-pointer items-center justify-center rounded-full"
+                        onClick={() => {
+                            navigate(-1);
+                        }}
+                    >
+                        <i className="icon-[mdi--chevron-left] size-6"></i>
+                    </button>
+                    <div className="flex-1 text-center text-lg font-bold">
+                        {t("search")}
+                    </div>
+                    <div className="size-9 flex-shrink-0" />
+                </div>
                 <div className="search w-full flex justify-center pt-4">
                     <div className="w-full h-10 shadow-md rounded-sm flex items-center px-4 focus-within:(shadow-lg)">
                         <div className="flex-1">
@@ -432,6 +449,14 @@ export default function Page() {
                     afterEdit={toSearch}
                     showAssets={showAssets}
                 />
+                {searched && sorted.length === 0 && (
+                    <EmptyState
+                        mascot="bookkeeping"
+                        compact
+                        className="mt-4"
+                        text={t("search-empty-results")}
+                    />
+                )}
             </div>
             <BatchEditProvider />
         </div>

@@ -43,7 +43,7 @@ function BudgetProgress({
             data-budget-progress
             className="w-full flex items-center h-4 relative"
         >
-            <div className="relative w-full h-2 rounded-full outer bg-gray-300 flex items-center overflow-hidden">
+            <div className="relative w-full h-2 rounded-full outer bg-rule flex items-center overflow-hidden">
                 <div
                     data-budget-progress-today
                     className="inner h-2 rounded-full bg-amber-500 absolute top-0"
@@ -81,7 +81,7 @@ function BudgetProgress({
             </div>
             <div
                 data-budget-progress-now
-                className="absolute top-0 h-4 bg-slate-500 w-[2px]"
+                className="absolute top-0 h-4 bg-ink-secondary w-[2px]"
                 style={{
                     left: `${Math.min(timePercent, 1) * 100}%`,
                 }}

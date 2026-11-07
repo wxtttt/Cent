@@ -20,10 +20,10 @@ export function CategoryItem({
         <button
             type="button"
             className={cn(
-                `rounded-lg border flex-1 py-1 px-2 h-8 flex items-center justify-center whitespace-nowrap cursor-pointer`,
+                `rounded-lg border flex-1 py-1 px-2 h-8 flex items-center justify-center whitespace-nowrap cursor-pointer transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]`,
                 selected
-                    ? "bg-slate-700 text-white "
-                    : "bg-stone-200  text-light-900 dark:bg-stone-500",
+                    ? "bg-brand text-on-brand border-brand"
+                    : "bg-ground-muted text-ink border-rule hover:bg-rule/60",
                 className,
             )}
             onMouseDown={onMouseDown}

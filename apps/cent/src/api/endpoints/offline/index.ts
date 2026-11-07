@@ -1,10 +1,8 @@
 import { BillIndexedDBStorage } from "@/database/storage";
 import { t } from "@/locale";
-import type { ZenPost } from "@/zen/types";
+import { ENTRY_NAMES, type EntryItem } from "../entries";
 import type { SyncEndpointFactory } from "../type";
 import { OfflineStorage } from "./core";
-
-const ZEN_ENTRY_NAME = "zen";
 
 const Me = {
     id: "me",
@@ -25,10 +23,15 @@ export const OfflineEndpoint: SyncEndpointFactory = {
         const repo = new OfflineStorage({
             storage: (name) => new BillIndexedDBStorage(`book-${name}`),
         });
-        const zenRepo = new OfflineStorage<ZenPost>({
-            storage: (name) =>
-                new BillIndexedDBStorage(`book-${name}--${ZEN_ENTRY_NAME}`),
-        });
+        const entryRepos = Object.fromEntries(
+            ENTRY_NAMES.map((entry) => [
+                entry,
+                new OfflineStorage<EntryItem>({
+                    storage: (name) =>
+                        new BillIndexedDBStorage(`book-${name}--${entry}`),
+                }),
+            ]),
+        ) as Record<string, OfflineStorage<EntryItem>>;
         return {
             logout: async () => {
                 // 暂时不清除本地数据
@@ -45,12 +48,16 @@ export const OfflineEndpoint: SyncEndpointFactory = {
             initBook: async (name) => {
                 await Promise.all([
                     repo.initStore(name),
-                    zenRepo.initStore(name),
+                    ...ENTRY_NAMES.map((entry) =>
+                        entryRepos[entry].initStore(name),
+                    ),
                 ]);
             },
             deleteBook: async (name) => {
                 await modal.prompt({ title: t("delete-book-offline-tip") });
-                await zenRepo.deleteStore(name);
+                for (const entry of ENTRY_NAMES) {
+                    await entryRepos[entry].deleteStore(name);
+                }
                 return repo.deleteStore(name);
             },
             inviteForBook: undefined,
@@ -60,9 +67,17 @@ export const OfflineEndpoint: SyncEndpointFactory = {
             getAllItems: repo.getAllItems.bind(repo),
             onChange: repo.onChange.bind(repo),
 
-            batchZen: zenRepo.batch.bind(zenRepo),
-            getAllZenItems: zenRepo.getAllItems.bind(zenRepo),
-            onZenChange: zenRepo.onChange.bind(zenRepo),
+            batchEntry: async (bookId, entry, actions, overlap) => {
+                const entryRepo = entryRepos[entry];
+                if (!entryRepo) {
+                    throw new Error(`unknown entry: ${entry}`);
+                }
+                await entryRepo.batch(bookId, actions, overlap);
+            },
+            getAllEntryItems: async (bookId, entry) =>
+                entryRepos[entry]?.getAllItems(bookId) ?? [],
+            onEntryChange: (entry, listener) =>
+                entryRepos[entry]?.onChange(listener) ?? (() => {}),
 
             getIsNeedSync: repo.getIsNeedSync.bind(repo),
             onSync: repo.onSync.bind(repo),

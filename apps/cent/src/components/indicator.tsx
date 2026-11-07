@@ -18,8 +18,8 @@ export const PaginationIndicator: React.FC<PaginationIndicatorProps> = ({
                     key={i}
                     className={`w-1 h-1 rounded-full transition-all duration-300 ${
                         i === current
-                            ? "bg-stone-800 scale-110"
-                            : "bg-gray-300 opacity-70 hover:opacity-100"
+                            ? "bg-brand scale-110"
+                            : "bg-rule opacity-70 hover:opacity-100"
                     }`}
                 />
             ))}

@@ -116,7 +116,7 @@ function MapConfigForm({ onCancel }: { onCancel?: () => void }) {
                             <button
                                 type="button"
                                 onClick={() => setShowAmapKey(!showAmapKey)}
-                                className="absolute right-0 top-0 h-full px-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                             >
                                 {showAmapKey ? (
                                     <i className="icon-[mdi--eye-off] size-4"></i>
@@ -157,7 +157,7 @@ function MapConfigForm({ onCancel }: { onCancel?: () => void }) {
                                         !showAmapSecurityCode,
                                     )
                                 }
-                                className="absolute right-0 top-0 h-full px-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                             >
                                 {showAmapSecurityCode ? (
                                     <i className="icon-[mdi--eye-off] size-4"></i>

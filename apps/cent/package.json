@@ -20,7 +20,6 @@
 		"@dnd-kit/utilities": "^3.2.2",
 		"@glink25/chaty": "workspace:*",
 		"@glink25/toast": "workspace:*",
-		"@glink25/zen": "workspace:*",
 		"@hookform/resolvers": "^5.2.2",
 		"@iconify-json/line-md": "^1.2.11",
 		"@octokit/core": "^7.0.6",
@@ -77,8 +76,8 @@
 	"devDependencies": {
 		"@amap/amap-jsapi-types": "^0.0.15",
 		"@biomejs/biome": "2.2.2",
-		"@glink25/tailwind-config": "workspace:*",
 		"@eslint/js": "^9.33.0",
+		"@glink25/tailwind-config": "workspace:*",
 		"@iconify-json/mdi": "^1.2.3",
 		"@iconify/tailwind4": "^1.0.6",
 		"@tailwindcss/vite": "^4.1.12",

@@ -6,8 +6,10 @@ import EditorForm from "./form";
 const confirms = createConfirmProvider(EditorForm, {
     dialogTitle: "Edit Bill",
     initialFocus: "[data-calculator-value]",
+    dialogModalClose: true,
+    from: "bottom",
     contentClassName:
-        "h-full w-full max-h-full max-w-full rounded-none sm:rounded-md sm:max-h-[85vh] sm:w-[90vw] sm:max-w-[600px]",
+        "bg-ground h-[min(92dvh,620px)] w-full max-w-full overflow-hidden rounded-t-[28px] sm:w-[90vw] sm:max-w-[600px]",
 });
 
 const [BillEditorProvider, showBillEditor] = confirms;

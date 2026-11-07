@@ -7,11 +7,13 @@ import {
     forwardRef,
     useEffect,
     useImperativeHandle,
+    useMemo,
     useRef,
-    useState,
 } from "react";
 import type { OutputType } from "@/database/stash";
+import { amountToNumber } from "@/ledger/bill";
 import type { Bill } from "@/ledger/type";
+import { useIntl, useLocale } from "@/locale";
 import { cn } from "@/utils";
 import { denseDate } from "@/utils/time";
 import { showBillInfo } from "../bill-info";
@@ -19,21 +21,42 @@ import { Checkbox } from "../ui/checkbox";
 import BillItem from "./item";
 import "./style.scss";
 
-function Divider({
-    date: day,
+function DayHeader({
+    date,
+    totals,
+    className,
     onClick,
 }: {
     date: Dayjs;
+    totals?: { expense: number; income: number };
+    className?: string;
     onClick?: () => void;
 }) {
+    const t = useIntl();
+    const { locale } = useLocale();
+    const weekday = new Intl.DateTimeFormat(locale, {
+        weekday: "short",
+    }).format(date.toDate());
     return (
         <div
-            className={
-                "pl-12 pr-4 pt-4 pb-2 text-sm ledger-divider cursor-pointer"
-            }
+            className={cn(
+                "flex cursor-pointer items-center justify-between px-4 pb-2 pt-4",
+                className,
+            )}
             onClick={onClick}
         >
-            {denseDate(day)}
+            <div className="flex items-baseline gap-2">
+                <span className="text-base font-bold">{denseDate(date)}</span>
+                <span className="text-xs text-ink-secondary">{weekday}</span>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-ink-secondary tabular-nums">
+                <span>
+                    {t("short-expense")} {totals?.expense.toFixed(2) ?? "0.00"}
+                </span>
+                <span>
+                    {t("short-income")} {totals?.income.toFixed(2) ?? "0.00"}
+                </span>
+            </div>
         </div>
     );
 }
@@ -78,7 +101,24 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
         ref,
     ) => {
         const parentRef = useRef<HTMLDivElement>(null);
-        const [stickyDate, setStickyDate] = useState<Dayjs | null>(null);
+
+        const dayTotals = useMemo(() => {
+            const totals = new Map<
+                string,
+                { expense: number; income: number }
+            >();
+            for (const bill of bills) {
+                const key = dayjs.unix(bill.time / 1000).format("YYYY-MM-DD");
+                const current = totals.get(key) ?? { expense: 0, income: 0 };
+                if (bill.type === "expense") {
+                    current.expense += amountToNumber(bill.amount);
+                } else {
+                    current.income += amountToNumber(bill.amount);
+                }
+                totals.set(key, current);
+            }
+            return totals;
+        }, [bills]);
 
         useImperativeHandle(ref, () => ({
             scrollToIndex: (index: number) => {
@@ -89,11 +129,10 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
         const rowVirtualizer = useVirtualizer({
             count: bills.length,
             getScrollElement: () => parentRef.current,
-            // 使用一个合理的预估高度，这个值可以帮助虚拟化器在初次渲染时计算总高度
-            // 它不必须非常精确，但越接近实际平均值，用户体验越好
-            estimateSize: () => 60, // 假设一个合理的平均高度
+            // 卡片和日头都带间距，预估高度比旧的单行布局大
+            estimateSize: () => (enableDivideAsOrdered ? 150 : 120),
             overscan: 5,
-            paddingEnd: 80,
+            paddingEnd: 96,
         });
 
         const enableSelect = selectedIds !== undefined;
@@ -112,20 +151,13 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
                     const firstBill = bills[firstVisible.index];
                     const curDate = dayjs.unix(firstBill.time / 1000);
                     onVisibleDateChange?.(curDate);
-                    if (enableDivideAsOrdered) {
-                        setStickyDate((prev) => {
-                            if (prev && curDate.isSame(prev, "day"))
-                                return prev;
-                            return curDate;
-                        });
-                    }
                 }
             };
             el.addEventListener("scroll", handleScroll, { passive: true });
             // 初始调用
             handleScroll();
             return () => el.removeEventListener("scroll", handleScroll);
-        }, [bills, enableDivideAsOrdered, onVisibleDateChange, rowVirtualizer]);
+        }, [bills, onVisibleDateChange, rowVirtualizer]);
 
         useEffect(() => {
             if (!presence) {
@@ -153,21 +185,8 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
                     overflow: "auto",
                 }}
             >
-                {enableDivideAsOrdered && stickyDate && (
-                    <div
-                        key={stickyDate.format("YYYY-MM-DD")}
-                        className="sticky top-0 z-10 pl-12 pr-4 py-1 text-sm ledger-divider bg-background/80 backdrop-blur-sm cursor-pointer"
-                        onClick={() => onDateClick?.(stickyDate)}
-                    >
-                        {denseDate(stickyDate)}
-                    </div>
-                )}
                 <div
                     data-main-ledger
-                    className={cn(
-                        enableDivideAsOrdered &&
-                            "translate-x-0 before:block before:fixed before:top-0 before:left-9 before:w-[1px] before:h-[calc(100%-95px)] before:bg-foreground",
-                    )}
                     style={{
                         height: `${rowVirtualizer.getTotalSize()}px`,
                         width: "100%",
@@ -177,24 +196,14 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
                     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                         const bill = bills[virtualRow.index];
                         const curDate = dayjs.unix(bill.time / 1000);
-                        const isDivider = !enableDivideAsOrdered
-                            ? undefined
-                            : (() => {
-                                  const lastBill = bills[virtualRow.index + 1];
-                                  if (!lastBill) {
-                                      return undefined;
-                                  }
-                                  const lastDate = dayjs.unix(
-                                      lastBill.time / 1000,
-                                  );
-                                  const isSameDay = lastDate.isSame(
-                                      curDate,
-                                      "days",
-                                  );
-                                  if (!isSameDay) {
-                                      return lastDate;
-                                  }
-                              })();
+                        const prevBill = bills[virtualRow.index - 1];
+                        const isGroupStart =
+                            enableDivideAsOrdered &&
+                            (!prevBill ||
+                                !dayjs
+                                    .unix(prevBill.time / 1000)
+                                    .isSame(curDate, "day"));
+                        const dayKey = curDate.format("YYYY-MM-DD");
                         onItemShow?.(virtualRow.index);
                         return (
                             <div
@@ -210,8 +219,17 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
                                     width: "100%",
                                 }}
                             >
+                                {isGroupStart && (
+                                    <DayHeader
+                                        date={curDate}
+                                        totals={dayTotals.get(dayKey)}
+                                        onClick={() => onDateClick?.(curDate)}
+                                    />
+                                )}
                                 <div
-                                    className={`w-full flex items-center overflow-hidden ledger-item item-${virtualRow.index}`}
+                                    className={cn(
+                                        `ledger-item item-${virtualRow.index} flex w-full items-center gap-2 px-4 pb-2`,
+                                    )}
                                     onClick={
                                         enableSelect
                                             ? () => {
@@ -229,7 +247,7 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
                                     )}
                                     <BillItem
                                         bill={bill}
-                                        className="flex-1 overflow-hidden"
+                                        className="min-w-0 flex-1"
                                         onClick={
                                             enableSelect
                                                 ? undefined
@@ -242,18 +260,6 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
                                         showAssets={showAssets}
                                     />
                                 </div>
-                                {isDivider && (
-                                    <Divider
-                                        date={isDivider}
-                                        onClick={() => onDateClick?.(isDivider)}
-                                    />
-                                )}
-                                {enableDivideAsOrdered &&
-                                    virtualRow.index === bills.length - 1 && (
-                                        <div className="ledger-end flex items-center py-1 pl-12 text-xs before:absolute before:-translate-x-[15px] before:block before:size-2 before:rounded-full before:border">
-                                            The end
-                                        </div>
-                                    )}
                             </div>
                         );
                     })}

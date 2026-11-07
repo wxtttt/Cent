@@ -1,30 +1,20 @@
-import { StorageAPI, StorageDeferredAPI } from "@/api/storage";
+import { StorageAPI } from "@/api/storage";
 import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { useUserStore } from "@/store/user";
-import TagSettingsItem from "../bill-tag";
-import { BookSettings } from "../book";
-import Budget from "../budget";
-import CategorySettingsItem from "../category";
-import CurrencySettingsItem from "../currency";
-import DataManagerSettingsItem from "../data-manager";
 import modal from "../modal";
-import ScheduledSettingsItems from "../scheduled/settings-item";
 import SponsorBanner, { SponsorProvider } from "../sponsor";
 import { Button } from "../ui/button";
-import WidgetSettings from "../widget";
 import AboutSettingsItem, { AdvancedGuideItem } from "./about";
 import AgentApiSettingsItem from "./agent-api";
 import AssistantSettingsItem from "./assistant";
 import LabSettingsItem from "./lab";
 import LanguageSettingsItem from "./language";
 import MapSettingsItem from "./map-settings";
-import PresetSettingsItem from "./preset";
 import QuickEntrySettingsItem from "./quick-entry";
 import ThemeSettingsItem from "./theme";
 import UserSettingsItem from "./user";
 import VoiceSettingsItem from "./voice";
-import ZenSettingsItem from "./zen";
 
 function UserInfo() {
     const t = useIntl();
@@ -119,36 +109,18 @@ export default function SettingsForm({
                             {t("book-settings")}
                         </div>
                         <div className="flex flex-col divide-y">
-                            <BookSettings />
-                            <PresetSettingsItem />
-                            <WidgetSettings />
                             <UserSettingsItem />
-                            <DataManagerSettingsItem />
                         </div>
                     </div>
                     <div>
                         <div className="text-xs opacity-60 px-8">{t("ai")}</div>
                         <div className="flex flex-col divide-y">
                             <AssistantSettingsItem />
-                            <ZenSettingsItem />
                             <AgentApiSettingsItem />
                             {showRelyr && <QuickEntrySettingsItem />}
                             <VoiceSettingsItem />
                         </div>
                     </div>
-                    <div>
-                        <div className="text-xs opacity-60 px-8">
-                            {t("billing-functions")}
-                        </div>
-                        <div className="flex flex-col divide-y">
-                            <CategorySettingsItem />
-                            <TagSettingsItem />
-                            <Budget />
-                            <ScheduledSettingsItems />
-                            <CurrencySettingsItem />
-                        </div>
-                    </div>
-
                     <div>
                         <div className="text-xs opacity-60 px-8">
                             {t("other-settings")}

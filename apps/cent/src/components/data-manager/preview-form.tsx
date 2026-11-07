@@ -10,7 +10,6 @@ import { useIntl } from "@/locale";
 import { useBookStore } from "@/store/book";
 import { useLedgerStore } from "@/store/ledger";
 import { useUserStore } from "@/store/user";
-import type { ZenPost } from "@/zen/types";
 import createConfirmProvider from "../confirm";
 import { PreviewForm, type PreviewState } from "./preview";
 
@@ -25,7 +24,7 @@ export const [ImportPreviewProvider, showImportPreview] = createConfirmProvider(
 );
 
 export const importFromPreviewResult = async (res: PreviewState) => {
-    const { strategy, asMine, zenPosts, ...rest } = res;
+    const { strategy, asMine, entries, source, ...rest } = res;
     const currentMeta = cloneDeep(
         useLedgerStore.getState().infos?.meta ?? ({} as GlobalMeta),
     );
@@ -77,22 +76,43 @@ export const importFromPreviewResult = async (res: PreviewState) => {
         ],
         strategy === "overlap",
     );
-    if (zenPosts !== undefined) {
-        let actions: Action<ZenPost>[] = zenPosts.map((post) => ({
-            type: "update" as const,
-            value: post,
-            timestamp: post.__update_at,
-        }));
-        if (strategy === "overlap" && actions.length === 0) {
-            const existing = await StorageAPI.getAllZenItems(bookId);
-            actions = existing.map((post) => ({
-                type: "delete" as const,
-                value: post.id,
-                timestamp: Date.now(),
+    if (entries) {
+        // 生活模块数据桶：与账单同一套 upsert/overlap 语义
+        for (const [entry, items] of Object.entries(entries)) {
+            let actions: Action<any>[] = items.map((item) => ({
+                type: "update" as const,
+                value: item,
+                timestamp: item.__update_at,
             }));
+            if (strategy === "overlap" && actions.length === 0) {
+                const existing = await StorageAPI.getAllEntryItems(
+                    bookId,
+                    entry,
+                );
+                actions = existing.map((item) => ({
+                    type: "delete" as const,
+                    value: item.id,
+                    timestamp: Date.now(),
+                }));
+            }
+            if (actions.length > 0) {
+                await StorageAPI.batchEntry(
+                    bookId,
+                    entry,
+                    actions,
+                    strategy === "overlap",
+                );
+            }
         }
-        if (actions.length > 0) {
-            await StorageAPI.batchZen(bookId, actions, strategy === "overlap");
-        }
+    }
+    if (source) {
+        // 记录导入历史，供导入页展示
+        useLedgerStore.getState().updatePersonalMeta((prev) => {
+            prev.importHistory = [
+                { time: Date.now(), source, count: rest.bills.length },
+                ...(prev.importHistory ?? []),
+            ].slice(0, 20);
+            return prev;
+        });
     }
 };

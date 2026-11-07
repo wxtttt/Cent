@@ -25,8 +25,9 @@ import {
 import { useBookStore } from "@/store/book";
 import { useLedgerStore } from "@/store/ledger";
 import { useUserStore } from "@/store/user";
+import { cn } from "@/utils";
 import createConfirmProvider from "../confirm";
-import { HintTooltip } from "../hint";
+import { OPEN_ASSISTANT_EVENT } from "./event";
 import AssistantForm from "./form";
 import { getAIConfig } from "./request";
 import { CentAIConfig } from "./tools";
@@ -42,8 +43,10 @@ const [AssistantFormProvider, , showAssistant] = createConfirmProvider(
 
 export default function AssistantButton({
     sidePanelRef,
+    className,
 }: {
-    sidePanelRef: RefObject<HTMLElement | null>;
+    sidePanelRef?: RefObject<HTMLElement | null>;
+    className?: string;
 }) {
     const isDesktop = useIsDesktop();
     const t = useIntl();
@@ -143,8 +146,9 @@ export default function AssistantButton({
         });
     }, []);
 
-    const toShowAssistant = () => {
-        if (isDesktop) {
+    const toShowAssistant = useCallback(() => {
+        // 桌面端只有提供了右侧面板容器时才用并排面板，否则统一用弹层
+        if (isDesktop && sidePanelRef) {
             if (!isDesktopAssistantShows) {
                 measure("assistant_opened", { surface: "desktop" });
             }
@@ -153,7 +157,19 @@ export default function AssistantButton({
             measure("assistant_opened", { surface: "mobile" });
             toShowMobileAssistant();
         }
-    };
+    }, [
+        isDesktop,
+        isDesktopAssistantShows,
+        sidePanelRef,
+        toShowMobileAssistant,
+    ]);
+
+    useEffect(() => {
+        window.addEventListener(OPEN_ASSISTANT_EVENT, toShowAssistant);
+        return () => {
+            window.removeEventListener(OPEN_ASSISTANT_EVENT, toShowAssistant);
+        };
+    }, [toShowAssistant]);
 
     const isAssistantShows = isDesktopAssistantShows || isMobileAssistantShows;
 
@@ -177,23 +193,21 @@ export default function AssistantButton({
             selectedConfigId={defaultConfigId ?? configs[0]?.id}
             onConfigChange={onConfigChange}
         >
-            <HintTooltip
-                persistKey="assistantHintShows"
-                content={"AI助手移到这了"}
+            <button
+                type="button"
+                className={cn(
+                    "w-10 h-8 flex items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95 cursor-pointer hover:bg-accent",
+                    className,
+                )}
+                onClick={() => {
+                    toShowAssistant();
+                }}
             >
-                <button
-                    type="button"
-                    className="w-10 h-8 flex items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95 cursor-pointer hover:bg-accent"
-                    onClick={() => {
-                        toShowAssistant();
-                    }}
-                >
-                    <i className="icon-[mdi--shimmer-outline] text-lg bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600"></i>
-                </button>
-            </HintTooltip>
+                <i className="icon-[mdi--shimmer-outline] size-5 text-brand"></i>
+            </button>
             <AssistantFormProvider />
             {isDesktopAssistantShows &&
-                sidePanelRef.current &&
+                sidePanelRef?.current &&
                 createPortal(<MainAssistant.Content />, sidePanelRef.current)}
         </MainAssistant.Root>
     );

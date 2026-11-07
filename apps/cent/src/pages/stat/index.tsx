@@ -1,17 +1,8 @@
 import dayjs from "dayjs";
-import { Switch } from "radix-ui";
-import {
-    Fragment,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useShallow } from "zustand/shallow";
 import { StorageDeferredAPI } from "@/api/storage";
-import type { AnalysisResult } from "@/api/storage/analysis";
 import AssistantButton from "@/components/assistant";
 import { setEnv } from "@/components/assistant/tools/env";
 import {
@@ -19,47 +10,30 @@ import {
     showBillFilterView,
 } from "@/components/bill-filter";
 import { showBillInfo } from "@/components/bill-info";
-import BillItem from "@/components/ledger/item";
+import { budgetRange, budgetTotal } from "@/components/budget/util";
 import { showSortableList } from "@/components/sortable";
 import { AnalysisCloud } from "@/components/stat/analysic-cloud";
-import { AnalysisDetail } from "@/components/stat/analysis-detail";
-import AnalysisMap from "@/components/stat/analysis-map";
-import { useChartPart } from "@/components/stat/chart-part";
+import { AnalysisDashboard } from "@/components/stat/dashboard";
 import { DateSliced, useDateSliced } from "@/components/stat/date-slice";
 import {
     type FocusType,
     FocusTypeSelector,
-    FocusTypes,
 } from "@/components/stat/focus-type";
-import { TagItem } from "@/components/stat/static-item";
 import { Button } from "@/components/ui/button";
-import WidgetPreview from "@/components/widget/preview";
+import { useBudget } from "@/hooks/use-budget";
 import { useCurrency } from "@/hooks/use-currency";
 import {
     DefaultFilterViewId,
     useCustomFilters,
 } from "@/hooks/use-custom-filters";
-import { useTag } from "@/hooks/use-tag";
-import { useWidget } from "@/hooks/use-widget";
-import type {
-    BillFilter,
-    BillFilterView,
-    BillFilterViewModule,
-} from "@/ledger/extra-type";
+import { amountToNumber } from "@/ledger/bill";
+import type { BillFilter, BillFilterView } from "@/ledger/extra-type";
 import type { Bill } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { useBookStore } from "@/store/book";
 import { useLedgerStore } from "@/store/ledger";
+import { useUserStore } from "@/store/user";
 import { cn } from "@/utils";
-
-const DefaultModuleOrder: BillFilterViewModule[] = [
-    "base-analysis",
-    "top-words",
-    "map",
-    "analysis",
-    "top-expense",
-    "top-income",
-];
 
 export default function Page() {
     const t = useIntl();
@@ -111,10 +85,11 @@ export default function Page() {
         selectCustomSliceWhenInitial: Boolean(id),
     });
     const realRange = useMemo(
-        () => [
-            sliceRange?.[0] ?? selectedFilter?.start ?? startTime,
-            sliceRange?.[1] ?? selectedFilter?.end ?? endTime,
-        ],
+        () =>
+            [
+                sliceRange?.[0] ?? selectedFilter?.start ?? startTime,
+                sliceRange?.[1] ?? selectedFilter?.end ?? endTime,
+            ] as [number, number],
         [
             sliceRange,
             selectedFilter?.start,
@@ -163,85 +138,17 @@ export default function Page() {
     const [focusType, setFocusType] = useState<FocusType>("expense");
     const [dimension, setDimension] = useState<"category" | "user">("category");
 
-    const { dataSources, Part, setSelectedCategoryId } = useChartPart({
-        viewType,
-        seeDetails,
-        focusType,
-        filtered,
-        dimension,
-        displayCurrency: selectedFilterView?.displayCurrency,
-    });
-
-    const totalMoneys = FocusTypes.map((t) => dataSources.total[t]);
-
-    const { widgets } = useWidget();
-
-    const effectiveModules = useMemo(() => {
-        return selectedFilterView?.modules ?? DefaultModuleOrder;
-    }, [selectedFilterView?.modules]);
-
-    const { tags } = useTag();
-    const tagStructure = useMemo(
+    const focusBills = useMemo(
         () =>
-            Array.from(dataSources.tagStructure.entries())
-                .map(([tagId, struct]) => {
-                    const tag = tags.find((t) => t.id === tagId);
-                    if (!tag) {
-                        return undefined;
-                    }
-                    return {
-                        ...tag,
-                        ...struct,
-                    };
-                })
-                .filter((v) => v !== undefined),
-        [dataSources.tagStructure, tags],
+            focusType === "balance"
+                ? filtered
+                : filtered.filter((bill) => bill.type === focusType),
+        [filtered, focusType],
     );
-
-    const { incomes: filteredIncomeBills, expenses: filteredExpenseBills } =
-        useMemo(() => {
-            const incomes: Bill[] = [];
-            const expenses: Bill[] = [];
-            filtered.forEach((v) => {
-                if (v.type === "expense") {
-                    expenses.push(v);
-                } else {
-                    incomes.push(v);
-                }
-            });
-            return {
-                incomes,
-                expenses,
-            };
-        }, [filtered]);
-    const [analysis, setAnalysis] = useState<AnalysisResult>();
-    const analysisUnit =
-        viewType === "yearly"
-            ? "year"
-            : viewType === "monthly"
-              ? "month"
-              : viewType === "weekly"
-                ? "week"
-                : "day";
-    useEffect(() => {
-        const book = useBookStore.getState().currentBookId;
-        if (!book || !realRange[0] || !realRange[1]) {
-            setAnalysis(undefined);
-            return;
-        }
-        if (!analysisUnit) {
-            setAnalysis(undefined);
-            return;
-        }
-        StorageDeferredAPI.analysis(
-            book,
-            [realRange[0], realRange[1]],
-            analysisUnit,
-            focusType,
-        ).then((v) => {
-            setAnalysis(v);
-        });
-    }, [analysisUnit, focusType, realRange[0], realRange[1]]);
+    const showWordCloud = useMemo(() => {
+        const modules = selectedFilterView?.modules;
+        return modules === undefined || modules.includes("top-words");
+    }, [selectedFilterView?.modules]);
 
     const { updateFilter, addFilter } = useCustomFilters();
     const toChangeFilter = async () => {
@@ -294,6 +201,32 @@ export default function Page() {
 
     const { allCurrencies, baseCurrency } = useCurrency();
 
+    const { budgets } = useBudget();
+    const userId = useUserStore((state) => state.id);
+    const budget = useMemo(() => {
+        if (focusType !== "expense") return undefined;
+        const joined = budgets.filter((item) => item.joiners.includes(userId));
+        const active = joined.filter(
+            (item) => budgetRange(item, realRange[1])[1] !== null,
+        );
+        if (active.length === 0) return undefined;
+        const total = active.reduce((sum, item) => sum + budgetTotal(item), 0);
+        if (total <= 0) return undefined;
+        const used = filtered.reduce((sum, bill) => {
+            if (bill.type !== "expense") return sum;
+            return active.some((item) => item.joiners.includes(bill.creatorId))
+                ? sum + amountToNumber(bill.amount)
+                : sum;
+        }, 0);
+        const daysLeft = Math.max(
+            0,
+            dayjs(realRange[1])
+                .endOf("day")
+                .diff(dayjs().startOf("day"), "day"),
+        );
+        return { total, used, daysLeft };
+    }, [focusType, budgets, userId, realRange, filtered]);
+
     const envArg = useMemo(
         () => ({
             filterView: selectedFilterView,
@@ -306,165 +239,34 @@ export default function Page() {
 
     setEnv(envArg);
 
-    const getBillsByFocusType = useCallback(
-        (type: FocusType) => {
-            if (type === "expense") return filteredExpenseBills;
-            if (type === "income") return filteredIncomeBills;
-            return filtered;
-        },
-        [filtered, filteredExpenseBills, filteredIncomeBills],
-    );
-
-    const renderModule = useCallback(
-        (module: BillFilterViewModule) => {
-            if (module === "base-analysis") {
-                return (
-                    <Fragment key={module}>
-                        {Part}
-                        {tagStructure.length > 0 && (
-                            <div className="rounded-md border p-2 w-full flex flex-col">
-                                <h2 className="font-medium text-lg my-3 text-center">
-                                    {t("tag-details")}
-                                </h2>
-                                <div className="table w-full border-collapse">
-                                    <div className="table-row-group divide-y">
-                                        {tagStructure.map((struct) => {
-                                            const index =
-                                                FocusTypes.indexOf(focusType);
-                                            const money = [
-                                                struct.income,
-                                                struct.expense,
-                                                struct.income - struct.expense,
-                                            ][index];
-                                            const total = totalMoneys[index];
-                                            return (
-                                                <TagItem
-                                                    key={struct.id}
-                                                    name={struct.name}
-                                                    money={money}
-                                                    total={total}
-                                                    type={focusType}
-                                                    onClick={() => {
-                                                        seeDetails({
-                                                            tags: [struct.id],
-                                                        });
-                                                    }}
-                                                ></TagItem>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </Fragment>
-                );
-            }
-            if (module === "top-words") {
-                return (
-                    <AnalysisCloud
-                        key={module}
-                        bills={getBillsByFocusType(focusType)}
-                    />
-                );
-            }
-            if (module === "map") {
-                return (
-                    <AnalysisMap
-                        key={module}
-                        bills={getBillsByFocusType(focusType)}
-                    />
-                );
-            }
-            if (module === "analysis") {
-                if (!analysis) return null;
-                return (
-                    <div
-                        key={module}
-                        className="rounded-md border p-2 w-full flex flex-col"
-                    >
-                        <h2 className="font-medium text-lg my-3 text-center">
-                            {t("analysis")}
-                        </h2>
-                        <AnalysisDetail
-                            analysis={analysis}
-                            type={focusType}
-                            unit={analysisUnit}
-                        />
-                    </div>
-                );
-            }
-            if (module === "top-expense") {
-                if (!dataSources.highestExpenseBill) return null;
-                return (
-                    <div key={module} className="rounded-md border p-2 w-full">
-                        {t("highest-expense")}:
-                        <BillItem
-                            className="w-full"
-                            bill={dataSources.highestExpenseBill}
-                            showTime
-                            onClick={() =>
-                                showBillInfo(dataSources.highestExpenseBill!)
-                            }
-                        />
-                    </div>
-                );
-            }
-            if (module === "top-income") {
-                if (!dataSources.highestIncomeBill) return null;
-                return (
-                    <div key={module} className="rounded-md border p-2 w-full">
-                        {t("highest-income")}:
-                        <BillItem
-                            className="w-full"
-                            bill={dataSources.highestIncomeBill}
-                            showTime
-                            onClick={() =>
-                                showBillInfo(dataSources.highestIncomeBill!)
-                            }
-                        />
-                    </div>
-                );
-            }
-            if (module.startsWith("widget-")) {
-                const widgetId = module.slice(7);
-                const widget = widgets.find((w) => w.id === widgetId);
-                if (!widget) return null;
-                return (
-                    <div key={module} className="rounded-md border w-full">
-                        <WidgetPreview
-                            widget={widget}
-                            bills={getBillsByFocusType(focusType)}
-                        />
-                    </div>
-                );
-            }
-            return null;
-        },
-        [
-            Part,
-            tagStructure,
-            focusType,
-            totalMoneys,
-            seeDetails,
-            getBillsByFocusType,
-            analysis,
-            analysisUnit,
-            dataSources.highestExpenseBill,
-            dataSources.highestIncomeBill,
-            t,
-            widgets,
-        ],
-    );
-
     const sidePanelRef = useRef<HTMLDivElement>(null);
 
     return (
-        <div className="w-full h-full overflow-hidden flex page-show">
-            <div className="flex-1 h-full p-2 flex flex-col items-center justify-center gap-4 overflow-hidden transition-width">
-                <div className="w-full mx-2 max-w-[600px] flex flex-col gap-2">
-                    <div className="w-full flex flex-col gap-2">
-                        <div className="w-full flex">
-                            <div className="flex-1 flex gap-2 overflow-x-auto scrollbar-hidden">
+        <div className="flex h-full w-full overflow-hidden page-show">
+            <div className="flex h-full flex-1 flex-col overflow-hidden">
+                <header className="flex-shrink-0 border-b border-rule/60 bg-ground/95 backdrop-blur">
+                    <div className="mx-auto flex w-full max-w-[600px] items-center gap-2 px-2 py-2">
+                        <button
+                            type="button"
+                            aria-label={t("back")}
+                            className="flex size-9 cursor-pointer items-center justify-center rounded-full text-ink transition-colors hover:bg-ground-muted"
+                            onClick={() => {
+                                navigate(-1);
+                            }}
+                        >
+                            <i className="icon-[mdi--chevron-left] size-6"></i>
+                        </button>
+                        <div className="flex-1 text-center text-lg font-bold">
+                            {t("stat-title")}
+                        </div>
+                        <div className="size-9 flex-shrink-0" />
+                    </div>
+                </header>
+
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                    <div className="mx-auto flex w-full max-w-[600px] flex-col gap-4 px-4 pb-10 pt-3">
+                        <div className="flex items-center gap-1.5">
+                            <div className="flex flex-1 items-center gap-1.5 overflow-x-auto scrollbar-hidden">
                                 {allFilterViews.map((filter) => {
                                     const displayCurrency =
                                         filter.displayCurrency ===
@@ -475,16 +277,17 @@ export default function Page() {
                                                       v.id ===
                                                       filter.displayCurrency,
                                               );
+                                    const active = filterViewId === filter.id;
                                     return (
-                                        <Button
+                                        <button
                                             key={filter.id}
-                                            size={"sm"}
+                                            type="button"
                                             className={cn(
-                                                filterViewId !== filter.id
-                                                    ? "text-primary/50"
-                                                    : "relative after:absolute after:bottom-[2px] after:left-3 after:w-[calc(100%-24px)] after:h-[2px] after:rounded-full after:bg-primary/20",
+                                                "shrink-0 cursor-pointer rounded-full border px-3 py-1.5 text-xs transition-colors",
+                                                active
+                                                    ? "border-brand/30 bg-brand/10 font-semibold text-brand"
+                                                    : "border-rule bg-panel text-ink-secondary hover:text-ink",
                                             )}
-                                            variant="ghost"
                                             onClick={() => {
                                                 setSliceId(undefined);
                                                 setFilterViewId(filter.id);
@@ -492,83 +295,74 @@ export default function Page() {
                                         >
                                             {displayCurrency?.symbol}
                                             {filter.name}
-                                        </Button>
+                                        </button>
                                     );
                                 })}
                             </div>
-                            <div className="flex items-center">
-                                <Button
-                                    variant="ghost"
+                            <div className="flex shrink-0 items-center">
+                                <button
+                                    type="button"
+                                    aria-label={t("add")}
+                                    className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                                     onClick={toAddFilter}
-                                    size="sm"
                                 >
                                     <i className="icon-[mdi--plus] size-4"></i>
-                                </Button>
-                                <Button
-                                    variant="ghost"
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-label={t("sort")}
+                                    className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                                     onClick={toReOrder}
-                                    size="sm"
                                 >
                                     <i className="icon-[mdi--menu] size-4"></i>
-                                </Button>
+                                </button>
                                 <AssistantButton sidePanelRef={sidePanelRef} />
                             </div>
                         </div>
-                    </div>
-                    <DateSliced
-                        {...dateSlicedProps}
-                        onClickSettings={toChangeFilter}
-                    >
-                        <div className="flex items-center pr-2 relative">
-                            <Switch.Root
-                                checked={dimension === "user"}
-                                onCheckedChange={() => {
-                                    setDimension((v) => {
-                                        return v === "category"
-                                            ? "user"
-                                            : "category";
-                                    });
-                                }}
-                                className="relative z-[0] h-[29px] w-[54px] cursor-pointer rounded-sm bg-blackA6 outline-none bg-stone-300 group"
-                            >
-                                <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center gap-2 z-[1]">
-                                    <i className="icon-[mdi--view-grid-outline] group-[data-[state=checked]]:text-white"></i>
-                                    <i className="icon-[mdi--account-outline]"></i>
-                                </div>
-                                <Switch.Thumb className="block size-[22px] translate-x-[4px] rounded-sm bg-background transition-transform duration-100 will-change-transform data-[state=checked]:translate-x-[28px]" />
-                            </Switch.Root>
-                        </div>
-                    </DateSliced>
-                </div>
-                <FocusTypeSelector
-                    value={focusType}
-                    onValueChange={(v) => {
-                        setFocusType(v);
-                        setSelectedCategoryId(undefined);
-                    }}
-                    money={totalMoneys}
-                />
-                <div className="w-full px-2 flex-1 flex justify-center overflow-y-auto">
-                    <div className="w-full max-w-[600px] flex flex-col items-center gap-4 relative">
-                        {effectiveModules.map((module) => renderModule(module))}
-                        <div>
+
+                        <DateSliced
+                            {...dateSlicedProps}
+                            onClickSettings={toChangeFilter}
+                        />
+
+                        <FocusTypeSelector
+                            value={focusType}
+                            onValueChange={setFocusType}
+                        />
+
+                        <AnalysisDashboard
+                            bills={filtered}
+                            focusType={focusType}
+                            dimension={dimension}
+                            onDimensionChange={setDimension}
+                            range={realRange}
+                            viewType={viewType}
+                            symbol={baseCurrency.symbol}
+                            budget={budget}
+                            onSeeRange={seeDetails}
+                            onOpenBill={showBillInfo}
+                        />
+
+                        {showWordCloud && <AnalysisCloud bills={focusBills} />}
+
+                        <div className="flex justify-center">
                             <Button
                                 variant="ghost"
+                                size="sm"
                                 onClick={() => seeDetails()}
                             >
                                 {t("see-all-ledgers")}
                                 <i className="icon-[mdi--arrow-up-right]"></i>
                             </Button>
                         </div>
-                        <div className="w-full h-20 flex-shrink-0"></div>
                     </div>
                 </div>
-                <BillFilterViewProvider />
             </div>
             <div
                 ref={sidePanelRef}
                 className="side-panel hidden md:flex w-[400px] empty:w-0 transition-all border-l"
             ></div>
+            <BillFilterViewProvider />
         </div>
     );
 }

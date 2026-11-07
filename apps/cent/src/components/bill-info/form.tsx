@@ -163,7 +163,7 @@ export default function BillInfo({
                     <div className="w-full border border-dashed my-2"></div>
 
                     {/* details */}
-                    <div className="text-gray-500">
+                    <div className="text-ink-secondary">
                         <div className="flex justify-between items-center my-1 gap-2">
                             <div>{t("comment")}:</div>
                             <div className="flex-1 overflow-x-auto text-right">

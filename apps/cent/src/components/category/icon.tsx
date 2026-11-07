@@ -7,6 +7,25 @@ export default function CategoryIcon({
     className?: string;
     icon: string;
 }) {
+    // 图片地址（Vite 资产 URL / CDN），家小满式自绘分类图标走这里
+    if (
+        icon.startsWith("/") ||
+        icon.startsWith("http") ||
+        icon.startsWith("data:")
+    ) {
+        return (
+            <img
+                src={icon}
+                alt=""
+                draggable={false}
+                className={cn(
+                    "inline-block object-contain min-w-4 min-h-4",
+                    className,
+                )}
+            />
+        );
+    }
+
     // 判断是否为 <svg> 开头
     const isSvgString = icon.trim().startsWith("<svg");
 
@@ -57,6 +76,21 @@ export default function CategoryIcon({
                     backgroundRepeat: "no-repeat",
                 }}
             />
+        );
+    }
+
+    // 非 iconify 类名的纯文本（emoji）按字符渲染，与家小满分类图标风格一致
+    if (!icon.startsWith("icon-")) {
+        return (
+            <span
+                className={cn(
+                    "inline-flex items-center justify-center leading-none",
+                    className,
+                )}
+                style={{ fontSize: "1.25em" }}
+            >
+                {icon}
+            </span>
         );
     }
 

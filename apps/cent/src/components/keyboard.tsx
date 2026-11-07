@@ -426,10 +426,7 @@ export const CalculatorValue = ({
             role="textbox"
             aria-label={label}
             tabIndex={0}
-            className={cn(
-                "relative touch-none focus-visible:outline focus-visible:outline-2",
-                className,
-            )}
+            className={cn("relative touch-none", className)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             onKeyDown={(event) => {
@@ -498,13 +495,88 @@ export const CalculatorValue = ({
 export const CalculatorKeyboard = ({
     className,
     onKey,
+    variant = "dark",
+    actionLabel,
+    onAction,
 }: {
     className?: string;
     onKey?: (v: string) => void;
+    variant?: "dark" | "light" | "sheet";
+    actionLabel?: string;
+    onAction?: () => void;
 }) => {
     const t = useIntl();
     const { handleButtonClick, Layout, valueRef } =
         useContext(CalculatorContext)!;
+
+    if (variant === "sheet") {
+        const press = (label: string) => {
+            handleButtonClick(label);
+            if (label !== "r") {
+                valueRef.current?.focus({ preventScroll: true });
+            }
+            onKey?.(label);
+        };
+        const renderKey = (label: string) => (
+            <Button
+                variant="ghost"
+                key={label}
+                data-label={label}
+                type="button"
+                onPointerDown={(event) => {
+                    if (event.button !== 0) return;
+                    event.preventDefault();
+                    press(label);
+                }}
+                onClick={(event) => {
+                    if (event.detail !== 0) return;
+                    press(label);
+                }}
+                className={cn(
+                    "h-full rounded-2xl bg-panel text-2xl font-medium transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] active:scale-[0.98] active:bg-ground-muted",
+                    label === "c" && "text-ink-secondary",
+                )}
+            >
+                {label === "c" ? (
+                    <i className="icon-[mdi--backspace-outline] size-6" />
+                ) : label === "-" ? (
+                    "−"
+                ) : (
+                    label
+                )}
+            </Button>
+        );
+        return (
+            <div
+                className={cn(
+                    "grid h-[232px] grid-cols-4 grid-rows-4 gap-2",
+                    className,
+                )}
+            >
+                {["1", "2", "3", "+", "4", "5", "6", "-", "7", "8", "9"].map(
+                    renderKey,
+                )}
+                <Button
+                    variant="ghost"
+                    type="button"
+                    onPointerDown={(event) => {
+                        if (event.button !== 0) return;
+                        event.preventDefault();
+                        onAction?.();
+                    }}
+                    onClick={(event) => {
+                        if (event.detail !== 0) return;
+                        onAction?.();
+                    }}
+                    className="col-start-4 row-span-2 row-start-3 h-full rounded-2xl bg-brand text-lg font-semibold text-on-brand transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] hover:bg-brand/90 active:scale-[0.98]"
+                >
+                    {actionLabel ?? t("done")}
+                </Button>
+                {[".", "0", "c"].map(renderKey)}
+            </div>
+        );
+    }
+
     return (
         <div className={cn("grid grid-cols-8 gap-2", className)}>
             {Layout.map((row) => (
@@ -533,8 +605,12 @@ export const CalculatorKeyboard = ({
                     }}
                     className={cn(
                         (row.cols ?? 1) > 1 && "col-span-2",
-                        "h-full text-lg font-semibold bg-background/10 active:bg-background/50 transition-all py-1",
-                        row.label === "c" && "bg-destructive/60",
+                        "h-full text-lg font-semibold transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] py-1",
+                        row.label === "c"
+                            ? "bg-destructive/70 text-white hover:bg-destructive/80"
+                            : variant === "light"
+                              ? "bg-panel text-ink active:bg-rule dark:bg-on-field/10 dark:active:bg-on-field/25"
+                              : "bg-on-field/10 text-on-field active:bg-on-field/25",
                     )}
                 >
                     {row.label === "c" ? (

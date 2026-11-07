@@ -2,27 +2,42 @@ import { Suspense } from "react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import Home from "@/pages/home";
 import { LoadingSkeleton } from "./components/loading";
+import { ensureFullBills } from "./hooks/use-full-bills";
 import MainLayout from "./layouts/main-layout";
-import { useLedgerStore } from "./store/ledger";
 import { lazyWithReload } from "./utils/lazy";
 
-const Stat = lazyWithReload(
-    async () => {
-        return import("@/pages/stat");
-    },
-    async () => {
-        // 加载stat页面前需要获取全部账单数据
-        await useLedgerStore.getState().refreshBillList();
-    },
+const loadFullBills = async () => {
+    await ensureFullBills();
+};
+
+const LedgerPage = lazyWithReload(
+    () => import("@/pages/ledger"),
+    loadFullBills,
 );
 
+const Stat = lazyWithReload(() => import("@/pages/stat"), loadFullBills);
+
 const Search = lazyWithReload(() => import("@/pages/search"));
+
+const InventoryPage = lazyWithReload(() => import("@/pages/inventory"));
+
+const MedicalPage = lazyWithReload(() => import("@/pages/medical"));
+
+const VehiclePage = lazyWithReload(() => import("@/pages/vehicle"));
 
 function RootRoute() {
     return (
         <Routes>
             <Route element={<MainLayout />}>
                 <Route index element={<Home />} />
+                <Route
+                    path="/ledger"
+                    element={
+                        <Suspense fallback={<LoadingSkeleton />}>
+                            <LedgerPage />
+                        </Suspense>
+                    }
+                />
                 <Route
                     path="/search"
                     element={
@@ -36,6 +51,30 @@ function RootRoute() {
                     element={
                         <Suspense fallback={<LoadingSkeleton />}>
                             <Stat />
+                        </Suspense>
+                    }
+                />
+                <Route
+                    path="/inventory"
+                    element={
+                        <Suspense fallback={<LoadingSkeleton />}>
+                            <InventoryPage />
+                        </Suspense>
+                    }
+                />
+                <Route
+                    path="/medical"
+                    element={
+                        <Suspense fallback={<LoadingSkeleton />}>
+                            <MedicalPage />
+                        </Suspense>
+                    }
+                />
+                <Route
+                    path="/vehicle"
+                    element={
+                        <Suspense fallback={<LoadingSkeleton />}>
+                            <VehiclePage />
                         </Suspense>
                     }
                 />

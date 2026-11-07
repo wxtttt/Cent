@@ -1,4 +1,5 @@
 import { strFromU8, strToU8, unzip, zip } from "fflate";
+import { ENTRY_NAMES } from "@/api/endpoints/entries";
 import { StorageAPI } from "@/api/storage";
 import type { Bill, ExportedJSON } from "@/ledger/type";
 import { cacheInDB } from "@/utils/cache";
@@ -224,8 +225,19 @@ export const processImportFile = async (backupFile: File) => {
         throw new Error(`Missing ${BACKUP_JSON_FILE} in backup zip`);
     }
     const data = JSON.parse(strFromU8(jsonData)) as ExportedJSON;
+    const entries = data.entries
+        ? Object.fromEntries(
+              await Promise.all(
+                  Object.entries(data.entries).map(async ([entry, items]) => [
+                      entry,
+                      await mapImportImages(items, files),
+                  ]),
+              ),
+          )
+        : undefined;
     return {
         ...data,
+        entries,
         items: await mapImportImages(data.items, files),
     };
 };
@@ -235,10 +247,12 @@ export const prepareExportFile = async (
     signal?: AbortSignal,
 ) => {
     throwIfAborted(signal);
-    const [items, meta, zenPosts] = await Promise.all([
+    const [items, meta, ...entryItemLists] = await Promise.all([
         StorageAPI.getAllItems(bookId),
         StorageAPI.getMeta(bookId),
-        StorageAPI.getAllZenItems(bookId),
+        ...ENTRY_NAMES.map((entry) =>
+            StorageAPI.getAllEntryItems(bookId, entry),
+        ),
     ]);
     throwIfAborted(signal);
     const { items: exportedItems, files } = await mapExportImages(
@@ -246,16 +260,28 @@ export const prepareExportFile = async (
         bookId,
     );
     throwIfAborted(signal);
+    const entries: NonNullable<ExportedJSON["entries"]> = {};
+    const entryFiles: Record<string, Uint8Array> = {};
+    for (const [index, entry] of ENTRY_NAMES.entries()) {
+        const { items: mappedItems, files: imageFiles } = await mapExportImages(
+            entryItemLists[index],
+            bookId,
+        );
+        entries[entry] = mappedItems;
+        Object.assign(entryFiles, imageFiles);
+    }
+    throwIfAborted(signal);
     const json = JSON.stringify({
         items: exportedItems,
         meta,
-        zenPosts,
+        entries,
     } as ExportedJSON);
 
     const zipped = await zipAsync(
         {
             [BACKUP_JSON_FILE]: strToU8(json),
             ...files,
+            ...entryFiles,
         },
         signal,
     );

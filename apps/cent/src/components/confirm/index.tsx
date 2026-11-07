@@ -25,6 +25,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
         contentClassName,
         fade,
         swipe,
+        from,
         initialFocus,
     }: {
         dialogTitle: string | ReactNode;
@@ -33,6 +34,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
         contentClassName?: string;
         fade?: boolean;
         swipe?: boolean;
+        from?: "left" | "bottom";
         initialFocus?: string;
     },
 ) {
@@ -87,15 +89,26 @@ export default function createConfirmProvider<Value, Returned = Value>(
                         style={layerStyle}
                     />
                     <div
-                        className="fixed top-0 left-0 w-full h-full flex justify-center items-center pointer-events-none"
+                        className={cn(
+                            "fixed top-0 left-0 w-full h-full flex justify-center items-center pointer-events-none",
+                            from === "left" &&
+                                "justify-start items-stretch sm:items-center sm:pl-4",
+                            from === "bottom" && "items-end sm:items-center",
+                        )}
                         style={layerStyle}
                     >
                         <DialogContent
                             data-confirm-id={instanceId}
                             fade={fade}
                             swipe={swipe}
+                            from={from}
                             className={cn(
-                                "pointer-events-auto bg-background max-h-[55vh] w-[90vw] max-w-[500px] rounded-md overflow-y-auto",
+                                "pointer-events-auto bg-panel border border-rule shadow-panel",
+                                from === "left"
+                                    ? "rounded-none"
+                                    : from === "bottom"
+                                      ? "rounded-t-[28px] sm:rounded-panel"
+                                      : "max-h-[55vh] w-[90vw] max-w-[500px] rounded-panel overflow-y-auto",
                                 contentClassName,
                             )}
                             onOpenAutoFocus={(e) => {

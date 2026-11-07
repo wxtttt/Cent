@@ -35,7 +35,7 @@ export class OfflineStorage<Item extends BaseItem = Bill> {
                     .map((db) => db.name)
                     .filter((name) => name !== undefined)
                     .filter((name) => name.startsWith(`book-${PREFIX}`))
-                    // 排除额外 entry（如 zen）的本地库，避免被当成账本列出
+                    // 排除生活模块 entry 的本地库，避免被当成账本列出
                     .filter((name) => !name!.includes("--"))
                     .map((name) => ({
                         id: name.replace("book-", ""),

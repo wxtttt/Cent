@@ -65,7 +65,7 @@ export default function BudgetCard({
                 data-budget-card
                 data-budget-finished
                 className={cn(
-                    "rounded-lg border flex flex-col w-full px-4 py-2 cursor-pointer",
+                    "rounded-panel border border-rule bg-panel shadow-panel flex flex-col w-full px-4 py-2 cursor-pointer",
                     className,
                 )}
                 onClick={() => {
@@ -107,7 +107,7 @@ export default function BudgetCard({
         <div
             data-budget-card
             className={cn(
-                "rounded-lg border flex flex-col w-full px-4 py-2 cursor-pointer",
+                "rounded-panel border border-rule bg-panel shadow-panel flex flex-col w-full px-4 py-2 cursor-pointer",
                 className,
             )}
             onClick={() => {

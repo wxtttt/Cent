@@ -22,8 +22,8 @@ export default function Tag({
             {...props}
             data-state={checked ? "checked" : "uncheck"}
             className={cn(
-                `rounded-md border py-1 px-2 flex items-center justify-center whitespace-nowrap cursor-pointer`,
-                "data-[state=checked]:bg-slate-700 data-[state=checked]:text-white bg-stone-200 dark:bg-stone-500 dark:data-[state=checked]:bg-slate-700 text-light-900",
+                `rounded-md border py-1 px-2 flex items-center justify-center whitespace-nowrap cursor-pointer transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]`,
+                "data-[state=checked]:bg-brand data-[state=checked]:text-on-brand data-[state=checked]:border-brand bg-ground-muted text-ink border-rule hover:bg-rule/60",
                 className,
             )}
             onMouseDown={() => {

@@ -120,7 +120,7 @@ function SortableGroupContainer({ group, isGroupSortable }: GroupProps) {
         <div
             ref={setNodeRef}
             style={style}
-            className="bg-gray-50/50 dark:bg-gray-900/20 border rounded-lg p-3 flex flex-col gap-2"
+            className="bg-ground-muted/60 border rounded-lg p-3 flex flex-col gap-2"
         >
             {/* Group Header */}
             <div className="flex items-center justify-between mb-1">
@@ -131,7 +131,7 @@ function SortableGroupContainer({ group, isGroupSortable }: GroupProps) {
                     <button
                         {...attributes}
                         {...listeners}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded cursor-grab active:cursor-grabbing"
+                        className="p-1 hover:bg-rule/70 rounded cursor-grab active:cursor-grabbing"
                     >
                         <i className="icon-[mdi--reorder-horizontal] block"></i>
                     </button>

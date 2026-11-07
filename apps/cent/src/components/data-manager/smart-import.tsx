@@ -1,11 +1,16 @@
+import dayjs from "dayjs";
 import { type ReactNode, useMemo, useState } from "react";
 import { useCopyToClipboard, useLocalStorage } from "react-use";
 import { toast } from "sonner";
+import { useShallow } from "zustand/shallow";
 import PopupLayout from "@/layouts/popup-layout";
 import { BillCategories } from "@/ledger/category";
 import type { ExportedJSON } from "@/ledger/type";
 import { t, useIntl } from "@/locale";
 import { measure } from "@/measurement";
+import { useLedgerStore } from "@/store/ledger";
+import { useUserStore } from "@/store/user";
+import { cn } from "@/utils";
 import { readClipboard } from "@/utils/clipboard";
 import modal from "../modal";
 import { Button } from "../ui/button";
@@ -43,8 +48,23 @@ const getDefaultTransformers = () => [
 
 const CUSTOM_TRANSFORMERS_KEY = "custom-import-transformers";
 
+/** 内置方案的导出指引 */
+const IMPORT_GUIDES: Record<string, string> = {
+    alipay: "import-guide-alipay",
+    wechat: "import-guide-wechat",
+};
+
 export function SmartImport({ onCancel }: { onCancel?: () => void }) {
     const t = useIntl();
+
+    const importHistory = useLedgerStore(
+        useShallow((state) => {
+            const userId = useUserStore.getState().id;
+            return (
+                state.infos?.meta.personal?.[userId]?.importHistory ?? []
+            ).slice(0, 5);
+        }),
+    );
 
     const [selected, setSelected] = useState(
         () => getDefaultTransformers()[0].id,
@@ -133,6 +153,7 @@ export function SmartImport({ onCancel }: { onCancel?: () => void }) {
         const res = await showImportPreview({
             bills: data.items,
             meta: data.meta,
+            source: selectedTransformer.id,
         });
         if (!res) {
             return;
@@ -179,6 +200,70 @@ export function SmartImport({ onCancel }: { onCancel?: () => void }) {
             }
         >
             <div className="flex gap-3 flex-col flex-1 p-4 overflow-y-auto px-4">
+                {importHistory.length > 0 && (
+                    <div className="flex flex-col gap-1.5 rounded-card border border-rule bg-panel p-3 shadow-panel">
+                        <div className="text-xs text-ink-secondary">
+                            {t("import-history")}
+                        </div>
+                        {importHistory.map((entry) => (
+                            <div
+                                key={entry.time}
+                                className="flex items-baseline justify-between gap-2 text-xs"
+                            >
+                                <span className="truncate">
+                                    {dayjs
+                                        .unix(entry.time / 1000)
+                                        .format("MM-DD HH:mm")}
+                                </span>
+                                <span className="flex-1 truncate text-ink-secondary">
+                                    {entry.source}
+                                </span>
+                                <span className="flex-shrink-0 tabular-nums">
+                                    {t("import-history-count", {
+                                        n: entry.count,
+                                    })}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                    {DefaultTransformers.map((tr) => (
+                        <button
+                            key={tr.id}
+                            type="button"
+                            className={cn(
+                                "flex cursor-pointer flex-col items-center gap-1.5 rounded-card border p-3 transition-colors",
+                                selected === tr.id
+                                    ? "border-brand/50 bg-brand/10"
+                                    : "border-rule bg-panel hover:bg-ground-muted",
+                            )}
+                            onClick={() => setSelected(tr.id)}
+                        >
+                            <i
+                                className={cn(
+                                    "size-6",
+                                    selected === tr.id
+                                        ? "text-brand"
+                                        : "text-ink",
+                                    tr.id === "alipay"
+                                        ? "icon-[mdi--alipay]"
+                                        : "icon-[mdi--wechat]",
+                                )}
+                            />
+                            <span className="text-xs font-medium">
+                                {tr.id === "alipay"
+                                    ? t("alipay-bill")
+                                    : t("wechat-bill")}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+                {isDefaultTransformer && IMPORT_GUIDES[selected] && (
+                    <p className="rounded-card bg-ground-muted px-3 py-2 text-xs text-ink-secondary">
+                        {t(IMPORT_GUIDES[selected])}
+                    </p>
+                )}
                 <div className="flex gap-2 items-center">
                     <span className="flex-shrink-0">{t("select-scheme")}:</span>
                     <Select value={selected} onValueChange={setSelected}>

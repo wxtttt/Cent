@@ -139,7 +139,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                             <button
                                 type="button"
                                 onClick={() => setShowSecret(!showSecret)}
-                                className="absolute right-0 top-0 h-full px-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                                className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                             >
                                 {showSecret ? (
                                     <i className="icon-[mdi--eye-off] size-4"></i>
@@ -153,7 +153,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
 
                 {/* For：iOS 区域 */}
                 {enable && secret && (
-                    <div className="w-full px-4 py-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="w-full px-4 py-4 border-t border-rule">
                         <div className="text-sm font-medium mb-3">
                             {t("ios")}
                         </div>
@@ -202,7 +202,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                 {t("copy-quick-entry-config")}
                             </Button>
                             {configText && (
-                                <div className="mt-2 h-[70px] overflow-y-auto !select-all text-xs text-gray-600 dark:text-gray-400 break-all font-mono bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700">
+                                <div className="mt-2 h-[70px] overflow-y-auto !select-all text-xs text-ink-secondary break-all font-mono bg-ground-muted p-2 rounded border border-rule">
                                     {configText}
                                 </div>
                             )}
@@ -233,7 +233,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
 
                 {/* For：Android 区域 */}
                 {enable && secret && (
-                    <div className="w-full px-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="w-full px-4 pt-4 border-t border-rule">
                         <div className="text-sm font-medium mb-3">
                             {t("android")}
                         </div>

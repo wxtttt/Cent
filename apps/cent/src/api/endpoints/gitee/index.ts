@@ -5,11 +5,9 @@ import type { Bill } from "@/ledger/type";
 import { t } from "@/locale";
 import { createTidal } from "@/tidal";
 import { createGiteeSyncer } from "@/tidal/gitee";
-import type { ZenPost } from "@/zen/types";
+import { ENTRY_NAMES, type EntryItem, type TidalRepo } from "../entries";
 import type { SyncEndpointFactory } from "../type";
 import { createLoginAPI } from "./login";
-
-const ZEN_ENTRY_NAME = "zen";
 
 const config = {
     repoPrefix: "cent-journal",
@@ -48,17 +46,22 @@ export const GiteeEndpoint: SyncEndpointFactory = {
                     repoPrefix: config.repoPrefix,
                 }),
         });
-        const zenRepo = createTidal<ZenPost>({
-            storageFactory: (name) =>
-                new BillIndexedDBStorage(`book-${name}--${ZEN_ENTRY_NAME}`),
-            entryName: ZEN_ENTRY_NAME,
-            syncerFactory: () =>
-                createGiteeSyncer({
-                    auth: LoginAPI.getToken,
-                    entryName: ZEN_ENTRY_NAME,
-                    repoPrefix: config.repoPrefix,
+        const entryRepos = Object.fromEntries(
+            ENTRY_NAMES.map((entry) => [
+                entry,
+                createTidal<EntryItem>({
+                    storageFactory: (name) =>
+                        new BillIndexedDBStorage(`book-${name}--${entry}`),
+                    entryName: entry,
+                    syncerFactory: () =>
+                        createGiteeSyncer({
+                            auth: LoginAPI.getToken,
+                            entryName: entry,
+                            repoPrefix: config.repoPrefix,
+                        }),
                 }),
-        });
+            ]),
+        ) as Record<string, TidalRepo>;
 
         const toBookName = (bookId: string) => {
             const [owner, repo] = bookId.split("/");
@@ -79,20 +82,24 @@ export const GiteeEndpoint: SyncEndpointFactory = {
             return Promise.reject();
         };
 
-        // ledger 与 zen 顺序同步：避免对同一 git ref 并发提交导致 non-fast-forward
+        // ledger 与各生活模块顺序同步：避免对同一 git ref 并发提交导致 non-fast-forward
         const scheduler = new Scheduler(async (signal) => {
             const [ledgerFinished, cancelLedger] = repo.sync();
             signal.onabort = cancelLedger;
             await ledgerFinished;
-            const [zenFinished, cancelZen] = zenRepo.sync();
-            signal.onabort = cancelZen;
-            await zenFinished;
+            for (const entry of ENTRY_NAMES) {
+                const [entryFinished, cancelEntry] = entryRepos[entry].sync();
+                signal.onabort = cancelEntry;
+                await entryFinished;
+            }
         });
 
         return {
             logout: async () => {
                 repo.detach();
-                zenRepo.detach();
+                for (const entry of ENTRY_NAMES) {
+                    entryRepos[entry].detach();
+                }
             },
             getUserInfo: repo.getUserInfo,
             getCollaborators: repo.getCollaborators,
@@ -104,7 +111,10 @@ export const GiteeEndpoint: SyncEndpointFactory = {
             },
             createBook: repo.create,
             initBook: async (name) => {
-                await Promise.all([repo.init(name), zenRepo.init(name)]);
+                await Promise.all([
+                    repo.init(name),
+                    ...ENTRY_NAMES.map((entry) => entryRepos[entry].init(name)),
+                ]);
             },
             deleteBook,
             inviteForBook,
@@ -117,15 +127,28 @@ export const GiteeEndpoint: SyncEndpointFactory = {
             getAllItems: repo.getAllItems,
             onChange: repo.onChange,
 
-            batchZen: async (...args) => {
-                await zenRepo.batch(...args);
+            batchEntry: async (bookId, entry, actions, overlap) => {
+                const entryRepo = entryRepos[entry];
+                if (!entryRepo) {
+                    throw new Error(`unknown entry: ${entry}`);
+                }
+                await entryRepo.batch(bookId, actions, overlap);
                 scheduler.schedule();
             },
-            getAllZenItems: zenRepo.getAllItems,
-            onZenChange: zenRepo.onChange,
+            getAllEntryItems: async (bookId, entry) =>
+                entryRepos[entry]?.getAllItems(bookId) ?? [],
+            onEntryChange: (entry, listener) =>
+                entryRepos[entry]?.onChange(listener) ?? (() => {}),
 
-            getIsNeedSync: async () =>
-                (await repo.hasStashes()) || (await zenRepo.hasStashes()),
+            getIsNeedSync: async () => {
+                const needSync = await Promise.all([
+                    repo.hasStashes(),
+                    ...ENTRY_NAMES.map((entry) =>
+                        entryRepos[entry].hasStashes(),
+                    ),
+                ]);
+                return needSync.some(Boolean);
+            },
             onSync: scheduler.onProcess.bind(scheduler),
             toSync: scheduler.schedule.bind(scheduler),
 

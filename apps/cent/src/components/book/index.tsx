@@ -3,9 +3,7 @@ import { useIntl } from "@/locale";
 import { useBookStore } from "@/store/book";
 import { useIsLogin } from "@/store/user";
 import { cn } from "@/utils";
-import { Button } from "../ui/button";
 import { BookForm } from "./form";
-import { showBookGuide } from "./util";
 
 export default function BookGuide() {
     const t = useIntl();
@@ -32,7 +30,7 @@ export default function BookGuide() {
                     <div className="fixed z-[3] top-0 left-0 w-full h-full flex justify-center items-center pointer-events-none">
                         <Dialog.Content
                             className={cn(
-                                "bg-background max-h-[55vh] w-fit max-w-[500px] rounded-md data-[state=open]:animate-content-show",
+                                "bg-panel max-h-[55vh] w-fit max-w-[500px] rounded-panel border border-rule shadow-panel data-[state=open]:animate-content-show",
                             )}
                         >
                             <VisuallyHidden.Root>
@@ -49,28 +47,5 @@ export default function BookGuide() {
                 </Dialog.Content>
             </Dialog.Portal>
         </Dialog.Root>
-    );
-}
-
-export function BookSettings() {
-    const t = useIntl();
-    return (
-        <div className="backup">
-            <Button
-                onClick={() => {
-                    showBookGuide();
-                }}
-                variant="ghost"
-                className="w-full py-4 rounded-none h-auto"
-            >
-                <div className="w-full px-4 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--book-cog-outline] size-5"></i>
-                        {t("ledger-books")}
-                    </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
-                </div>
-            </Button>
-        </div>
     );
 }

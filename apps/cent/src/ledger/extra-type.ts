@@ -1,4 +1,3 @@
-import type { ZenPost } from "@/zen/types";
 import type { Bill, BillType } from "./type";
 
 /** 标签组可以快捷收纳标签，可以略过
@@ -83,6 +82,8 @@ export type Scheduled = {
     title: string;
     start: number;
     end?: number;
+    /** 结束次数上限：从 start 起最多生成多少期；与 end 同时存在时取先到者 */
+    endCount?: number;
     template: Omit<Bill, "id" | "creatorId">;
     enabled?: boolean;
     repeat: {
@@ -91,6 +92,18 @@ export type Scheduled = {
     };
     // 最新一条自动记账记录的时间
     latest?: number;
+};
+
+/** 自动记账规则：备注命中关键词后填充分类，数组顺序即优先级 */
+export type AutoRule = {
+    id: string;
+    enabled: boolean;
+    /** 备注包含该关键词（不区分大小写）即命中 */
+    keyword: string;
+    /** 限定收支方向，不填为不限 */
+    type?: BillType;
+    /** 命中后设置的分类 */
+    categoryId?: string;
 };
 
 /** 嵌套内容在保存与请求入口校验为标准 JSON；非递归类型避免 Immer Draft 无限展开。 */
@@ -119,13 +132,10 @@ export type PersonalMeta = {
     rates?: Record<string, number>;
     tagGroups?: BillTagGroup[];
     scheduleds?: Scheduled[];
-    zenPosts?: ZenPost[];
-    zen?: {
-        enabled?: boolean;
-        /** undefined 跟随默认，null 不使用模型，string 使用指定配置。 */
-        aiConfigId?: string | null;
-        scheduledTime?: string;
-    };
+    /** 贷款计算器保存的方案 */
+    loanPlans?: SavedLoanPlan[];
+    /** 最近导入记录（按时间倒序，最多保留 20 条） */
+    importHistory?: ImportHistoryEntry[];
     customCSS?: string;
     homeWidgets?: string[]; // 首页展示的widget列表，元素为widget id
     assistant?: {
@@ -142,4 +152,25 @@ export type CustomCurrency = {
     name: string;
     symbol: string;
     rateToBase: number;
+};
+
+/** 贷款计算器保存的方案，随个人配置同步 */
+export type SavedLoanPlan = {
+    id: string;
+    name: string;
+    /** 贷款本金（元） */
+    principal: number;
+    /** 年利率（百分数） */
+    annualRate: number;
+    /** 还款期数（月） */
+    months: number;
+    createdAt: number;
+};
+
+/** 一次账单导入的历史记录 */
+export type ImportHistoryEntry = {
+    time: number;
+    /** 导入来源（如 alipay / wechat / 自定义方案名） */
+    source: string;
+    count: number;
 };

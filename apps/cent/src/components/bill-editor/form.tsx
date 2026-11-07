@@ -1,15 +1,16 @@
-import { Switch } from "radix-ui";
+import dayjs from "dayjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useAutoRules } from "@/hooks/use-auto-rules";
 import useCategory from "@/hooks/use-category";
 import { useCurrency } from "@/hooks/use-currency";
 import { useWheelScrollX } from "@/hooks/use-wheel-scroll";
 import PopupLayout from "@/layouts/popup-layout";
+import { matchAutoRule } from "@/ledger/auto-rules";
 import { amountToNumber, numberToAmount } from "@/ledger/bill";
 import { ExpenseBillCategories, IncomeBillCategories } from "@/ledger/category";
-import type { Bill } from "@/ledger/type";
-import { categoriesGridClassName } from "@/ledger/utils";
-import { useIntl } from "@/locale";
+import type { Bill, BillCategory, BillType } from "@/ledger/type";
+import { intl, useIntl } from "@/locale";
 import { type EditBill, useLedgerStore } from "@/store/ledger";
 import { usePreferenceStore } from "@/store/preference";
 import { cn } from "@/utils";
@@ -17,8 +18,7 @@ import { decodeApiKey } from "@/utils/api-key";
 import { getPredictNow } from "@/utils/predict";
 import { showTagList } from "../bill-tag";
 import { showCategoryList } from "../category";
-import { CategoryItem } from "../category/item";
-import { DatePicker } from "../date-picker";
+import CategoryIcon from "../category/icon";
 import Deletable from "../deletable";
 import { FORMAT_IMAGE_SUPPORTED, showFilePicker } from "../file-picker";
 import SmartImage from "../image";
@@ -29,10 +29,11 @@ import {
     showLocationPicker,
 } from "../map/location-picker";
 import CurrentLocation from "../simple-location";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
+import { WheelDatePicker } from "../wheel-date-picker";
 import { goAddBill } from ".";
 import { RemarkHint } from "./remark";
-import ResizeHandle from "./resize";
 import TagGroupSelector from "./tag-group";
 
 const defaultBill = {
@@ -42,19 +43,56 @@ const defaultBill = {
     categoryId: ExpenseBillCategories[0].id,
 };
 
+function CategoryTile({
+    category,
+    selected,
+    onClick,
+    className,
+}: {
+    category: BillCategory;
+    selected?: boolean;
+    onClick?: () => void;
+    className?: string;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn(
+                "flex min-w-0 flex-col items-center gap-1.5",
+                className,
+            )}
+        >
+            <div
+                className={cn(
+                    "flex size-11 items-center justify-center rounded-2xl transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                    selected
+                        ? "bg-brand/10 text-brand ring-1 ring-brand/30"
+                        : "bg-ground-muted text-ink",
+                )}
+            >
+                <CategoryIcon icon={category.icon} className="size-6" />
+            </div>
+            <span
+                className={cn(
+                    "w-full truncate text-center text-xs",
+                    selected ? "font-medium text-brand" : "text-ink-secondary",
+                )}
+            >
+                {category.name}
+            </span>
+        </button>
+    );
+}
+
 export default function EditorForm({
     edit,
-    onCancel,
     onConfirm,
 }: {
     edit?: EditBill;
     onConfirm?: (v: Omit<Bill, "id" | "creatorId">) => void;
-    onCancel?: () => void;
 }) {
     const t = useIntl();
-    const goBack = () => {
-        onCancel?.();
-    };
 
     const { baseCurrency, convert, quickCurrencies, allCurrencies } =
         useCurrency();
@@ -154,11 +192,86 @@ export default function EditorForm({
         return categories.find((c) => c.id === selected?.parent)?.children;
     }, [billState.categoryId, categories]);
 
+    const selectedParent = categories.find(
+        (c) =>
+            c.id === billState.categoryId ||
+            c.children.some((s) => s.id === billState.categoryId),
+    );
+
+    // 快速分类只保留 4 个位置，选中的分类若不在前四个则替换末位
+    const quickCategories = useMemo(() => {
+        const list = categories.slice(0, 4);
+        if (selectedParent && !list.some((c) => c.id === selectedParent.id)) {
+            if (list.length < 4) {
+                list.push(selectedParent);
+            } else {
+                list[list.length - 1] = selectedParent;
+            }
+        }
+        return list;
+    }, [categories, selectedParent]);
+
+    // 自动记账规则建议：备注命中规则且目标分类与当前不同时提示，由用户点击确认
+    const { rules: autoRules } = useAutoRules();
+    const ruleSuggestion = useMemo(() => {
+        if (!isCreate) return undefined;
+        const comment = billState.comment?.trim();
+        if (!comment) return undefined;
+        const rule = matchAutoRule(
+            { comment, type: billState.type },
+            autoRules,
+        );
+        if (!rule?.categoryId || rule.categoryId === billState.categoryId) {
+            return undefined;
+        }
+        if (!allCategories.some((c) => c.id === rule.categoryId)) {
+            return undefined;
+        }
+        return rule;
+    }, [
+        isCreate,
+        billState.comment,
+        billState.type,
+        billState.categoryId,
+        autoRules,
+        allCategories,
+    ]);
+    const suggestedCategoryName = ruleSuggestion
+        ? (allCategories.find((c) => c.id === ruleSuggestion.categoryId)
+              ?.name ?? "")
+        : "";
+
+    const changeType = (type: BillType) => {
+        setBillState((v) => {
+            if (v.type === type) {
+                return v;
+            }
+            return {
+                ...v,
+                type,
+                categoryId:
+                    type === "expense"
+                        ? ExpenseBillCategories[0].id
+                        : IncomeBillCategories[0].id,
+            };
+        });
+    };
+
     const toConfirm = useCallback(() => {
         onConfirm?.({
             ...billState,
         });
     }, [onConfirm, billState]);
+
+    const toAddAgain = () => {
+        toConfirm();
+        setTimeout(() => {
+            goAddBill({
+                ...defaultBill,
+                time: billState.time,
+            });
+        }, 10);
+    };
 
     const chooseImage = async () => {
         const [file] = await showFilePicker({ accept: FORMAT_IMAGE_SUPPORTED });
@@ -247,21 +360,25 @@ export default function EditorForm({
           ? amountToNumber(billState?.amount)
           : 0;
 
-    const multiplyKey = usePreferenceStore((v) => {
-        if (!v.multiplyKey || v.multiplyKey === "off") {
-            return undefined;
-        }
-        if (v.multiplyKey === "double-zero") {
-            return "double-zero";
-        }
-        return "triple-zero";
-    });
+    const [moreOpen, setMoreOpen] = useState(false);
 
     const tagSelectorRef = useRef<HTMLDivElement>(null);
     useWheelScrollX(tagSelectorRef);
+
+    const amountColor =
+        billState.type === "expense"
+            ? "text-semantic-expense"
+            : "text-semantic-income";
+
+    const dateLabel = dayjs(billState.time).format(
+        intl.locale === "zh" ? "M月D日 HH:mm" : "MMM D, HH:mm",
+    );
+
+    const iconChipClass =
+        "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-panel text-ink-secondary";
+
     return (
         <Calculator.Root
-            multiplyKey={multiplyKey}
             initialValue={calculatorInitialValue}
             onValueChange={(n) => {
                 setBillState((v) => {
@@ -289,52 +406,204 @@ export default function EditorForm({
             }}
         >
             <PopupLayout
-                className="h-full gap-2 pb-0 scrollbar-hidden"
-                onBack={goBack}
+                className="h-full scrollbar-hidden"
+                hideBack
+                handle
                 title={
-                    <div className="pl-[54px] w-full min-h-12 rounded-lg flex pt-2 pb-0 overflow-hidden scrollbar-hidden">
-                        <div className="text-white">
-                            <Switch.Root
-                                className="w-24 h-12 relative bg-stone-900 rounded-lg p-1 flex justify-center items-center"
-                                checked={billState.type === "income"}
-                                onCheckedChange={() => {
-                                    setBillState((v) => ({
-                                        ...v,
-                                        type:
-                                            v.type === "expense"
-                                                ? "income"
-                                                : "expense",
-                                        categoryId:
-                                            v.type === "expense"
-                                                ? IncomeBillCategories[0].id
-                                                : ExpenseBillCategories[0].id,
-                                    }));
+                    <div className="flex w-full justify-center pb-1">
+                        <div className="flex items-center gap-1 rounded-full bg-panel p-1 shadow-[0_2px_10px_rgba(92,62,30,0.08)] ring-1 ring-rule/50">
+                            {(["expense", "income"] as const).map((type) => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    className={cn(
+                                        "h-9 w-24 rounded-full text-sm font-medium transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                                        billState.type === type
+                                            ? "bg-ground-muted text-ink"
+                                            : "text-ink-secondary",
+                                    )}
+                                    onClick={() => changeType(type)}
+                                >
+                                    {t(type)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                }
+            >
+                <div className="flex min-h-0 flex-1 flex-col">
+                    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-hidden">
+                        {/* categories */}
+                        <div
+                            data-sheet-drag
+                            className="mx-3 flex-shrink-0 rounded-[22px] bg-panel px-2 pb-3 pt-2.5"
+                        >
+                            <div className="flex items-start gap-1">
+                                {quickCategories.map((item) => (
+                                    <CategoryTile
+                                        key={item.id}
+                                        category={item}
+                                        selected={
+                                            selectedParent?.id === item.id
+                                        }
+                                        className="flex-1"
+                                        onClick={() =>
+                                            handleParentCategoryClick(item.id)
+                                        }
+                                    />
+                                ))}
+                                <Popover
+                                    open={moreOpen}
+                                    onOpenChange={setMoreOpen}
+                                >
+                                    <PopoverTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
+                                        >
+                                            <div className="flex size-11 items-center justify-center rounded-2xl bg-ground-muted text-ink-secondary">
+                                                <i className="icon-[mdi--dots-horizontal] size-6" />
+                                            </div>
+                                            <span className="text-xs text-ink-secondary">
+                                                {t("more")}
+                                            </span>
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        align="end"
+                                        side="top"
+                                        sideOffset={10}
+                                        className="w-[min(88vw,340px)] rounded-2xl p-3"
+                                    >
+                                        <div className="grid grid-cols-4 gap-x-1 gap-y-3">
+                                            {categories.map((item) => (
+                                                <CategoryTile
+                                                    key={item.id}
+                                                    category={item}
+                                                    selected={
+                                                        selectedParent?.id ===
+                                                        item.id
+                                                    }
+                                                    className="w-full"
+                                                    onClick={() => {
+                                                        handleParentCategoryClick(
+                                                            item.id,
+                                                        );
+                                                        setMoreOpen(false);
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-ground-muted text-xs text-ink-secondary"
+                                            onClick={() => {
+                                                setMoreOpen(false);
+                                                showCategoryList(
+                                                    billState.type,
+                                                );
+                                            }}
+                                        >
+                                            <i className="icon-[mdi--cog-outline] size-4" />
+                                            {t("edit-categories")}
+                                        </button>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                            {(subCategories?.length ?? 0) > 0 && (
+                                <div className="mt-2.5 flex gap-1.5 overflow-x-auto scrollbar-hidden">
+                                    {subCategories?.map((subCategory) => {
+                                        const selected =
+                                            billState.categoryId ===
+                                            subCategory.id;
+                                        return (
+                                            <button
+                                                key={subCategory.id}
+                                                type="button"
+                                                className={cn(
+                                                    "h-7 flex-shrink-0 rounded-full px-3 text-xs transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                                                    selected
+                                                        ? "bg-brand/10 font-medium text-brand"
+                                                        : "bg-ground-muted text-ink-secondary",
+                                                )}
+                                                onClick={() =>
+                                                    setBillState((v) => ({
+                                                        ...v,
+                                                        categoryId:
+                                                            subCategory.id,
+                                                    }))
+                                                }
+                                            >
+                                                {subCategory.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* meta chips */}
+                        <div
+                            ref={tagSelectorRef}
+                            className="mt-3 flex flex-shrink-0 items-center gap-2 overflow-x-auto px-3 scrollbar-hidden"
+                        >
+                            <WheelDatePicker
+                                title={t("ledger")}
+                                displayFormatter={() => ""}
+                                value={billState.time}
+                                onChange={(time) => {
+                                    setBillState((prev) => {
+                                        if (!prev.currency) {
+                                            return {
+                                                ...prev,
+                                                time: time,
+                                            };
+                                        }
+                                        const { predict } = convert(
+                                            amountToNumber(
+                                                prev.currency?.amount ??
+                                                    prev.amount,
+                                            ),
+                                            prev.currency.target,
+                                            baseCurrency.id,
+                                            time,
+                                        );
+                                        return {
+                                            ...prev,
+                                            time: time,
+                                            amount: numberToAmount(predict),
+                                            currency: {
+                                                base: baseCurrency.id,
+                                                target: prev.currency.target,
+                                                amount:
+                                                    prev.currency?.amount ??
+                                                    prev.amount,
+                                            },
+                                        };
+                                    });
                                 }}
                             >
-                                <Switch.Thumb className="w-1/2 h-full flex justify-center items-center transition-all rounded-md bg-semantic-expense -translate-x-[22px] data-[state=checked]:bg-semantic-income data-[state=checked]:translate-x-[21px]">
-                                    <span className="text-[8px]">
-                                        {billState.type === "expense"
-                                            ? t("expense")
-                                            : t("income")}
+                                <div className="flex h-9 items-center gap-1.5 rounded-full bg-panel px-3 text-sm">
+                                    <i className="icon-[mdi--calendar-blank-outline] size-4 text-ink-secondary" />
+                                    <span className="whitespace-nowrap text-[15px] font-medium text-ink">
+                                        {dateLabel}
                                     </span>
-                                </Switch.Thumb>
-                            </Switch.Root>
-                        </div>
-                        <div className="flex-1 flex bg-stone-400 focus:outline rounded-lg ml-2 px-2 relative">
-                            {quickCurrencies.length > 0 && (
+                                </div>
+                            </WheelDatePicker>
+
+                            {quickCurrencies.length > 0 ? (
                                 <Select
                                     value={targetCurrency?.id}
-                                    onValueChange={(newCurrencyId) => {
-                                        changeCurrency(newCurrencyId);
-                                    }}
+                                    onValueChange={changeCurrency}
                                 >
-                                    <div className="flex items-center">
-                                        <SelectTrigger className="w-fit outline-none ring-none border-none shadow-none p-0 [&_svg]:hidden">
-                                            <div className="flex items-center font-semibold text-2xl text-white">
-                                                {targetCurrency?.symbol}
-                                            </div>
-                                        </SelectTrigger>
-                                    </div>
+                                    <SelectTrigger className="h-9 w-fit flex-shrink-0 gap-1.5 rounded-full border-0 bg-panel px-3 text-sm shadow-none [&>svg]:hidden">
+                                        <div className="flex items-center gap-1.5">
+                                            <i className="icon-[mdi--wallet-outline] size-4 text-ink-secondary" />
+                                            <span className="whitespace-nowrap text-[15px] font-medium text-ink">
+                                                {targetCurrency?.label}
+                                            </span>
+                                        </div>
+                                    </SelectTrigger>
                                     <SelectContent>
                                         {quickCurrencies.map((currency) => (
                                             <SelectItem
@@ -347,293 +616,216 @@ export default function EditorForm({
                                         ))}
                                     </SelectContent>
                                 </Select>
-                            )}
-                            <div className="flex-1 flex flex-col justify-center items-end overflow-hidden">
-                                {billState.currency && (
-                                    <div className="absolute text-white text-[8px] top-0">
-                                        ≈ {baseCurrency.symbol}{" "}
-                                        {amountToNumber(billState.amount)}{" "}
+                            ) : (
+                                <div className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-panel px-3 text-sm">
+                                    <i className="icon-[mdi--wallet-outline] size-4 text-ink-secondary" />
+                                    <span className="whitespace-nowrap text-ink">
                                         {baseCurrency.label}
-                                    </div>
-                                )}
-                                <Calculator.Value
-                                    label={t("amount")}
-                                    onConfirm={toConfirm}
-                                    className={cn(
-                                        "text-white text-3xl font-semibold text-right bg-transparent max-w-full overflow-x-auto scrollbar-hidden",
-                                    )}
-                                ></Calculator.Value>
-                                {billState.amount < 0 && (
-                                    <div className="absolute text-red-700 text-[8px] bottom-0">
-                                        {t("bill-negative-tip")}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                }
-            >
-                {/* categories */}
-                <div className="flex-1 flex-shrink-0 overflow-y-auto min-h-[80px] scrollbar-hidden flex flex-col px-2 text-sm font-medium gap-2 pb-1">
-                    <div className="flex flex-col min-h-[80px] grow-[2] shrink overflow-y-auto scrollbar-hidden w-full">
-                        <div
-                            className={cn(
-                                "grid gap-1",
-                                categoriesGridClassName(categories),
+                                    </span>
+                                </div>
                             )}
-                        >
-                            {categories.map((item) => (
-                                <CategoryItem
-                                    key={item.id}
-                                    category={item}
-                                    selected={billState.categoryId === item.id}
-                                    onMouseDown={() => {
-                                        handleParentCategoryClick(item.id);
-                                    }}
-                                />
-                            ))}
+
+                            <TagGroupSelector
+                                isCreate={isCreate}
+                                selectedTags={billState.tagIds}
+                                onSelectChange={(newTagIds, extra) => {
+                                    setBillState((prev) => ({
+                                        ...prev,
+                                        tagIds: newTagIds,
+                                    }));
+                                    if (extra?.preferCurrency) {
+                                        changeCurrency(extra.preferCurrency);
+                                    }
+                                }}
+                            />
+
                             <button
                                 type="button"
-                                className={cn(
-                                    `rounded-lg border flex-1 py-1 px-2 h-8 flex gap-2 items-center justify-center whitespace-nowrap cursor-pointer`,
-                                )}
+                                className={iconChipClass}
+                                title={t("edit-tags")}
                                 onClick={() => {
-                                    showCategoryList(billState.type);
+                                    showTagList();
                                 }}
                             >
-                                <i className="icon-[mdi--settings]"></i>
-                                {t("edit")}
+                                <i className="icon-[mdi--tag-outline] size-5" />
                             </button>
-                        </div>
-                    </div>
-                    {(subCategories?.length ?? 0) > 0 && (
-                        <div className="flex flex-col min-h-[68px] grow-[1] shrink max-h-fit overflow-y-auto rounded-md p-0 shadow-[0_0_0_2px_rgb(255_255_255),0_0_0_3px_rgb(229_231_235)] scrollbar-hidden">
-                            <div
-                                className={cn(
-                                    "grid gap-1",
-                                    categoriesGridClassName(subCategories),
-                                )}
-                            >
-                                {subCategories?.map((subCategory) => {
-                                    return (
-                                        <CategoryItem
-                                            key={subCategory.id}
-                                            category={subCategory}
-                                            selected={
-                                                billState.categoryId ===
-                                                subCategory.id
-                                            }
-                                            onMouseDown={() => {
-                                                setBillState((v) => ({
-                                                    ...v,
-                                                    categoryId: subCategory.id,
-                                                }));
-                                            }}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-                </div>
-                {/* tags */}
-                <div
-                    ref={tagSelectorRef}
-                    className="w-full h-[40px] flex-shrink-0 flex-grow-0 flex gap-1 py-1 items-center overflow-x-auto px-2 text-sm font-medium scrollbar-hidden"
-                >
-                    <TagGroupSelector
-                        isCreate={isCreate}
-                        selectedTags={billState.tagIds}
-                        onSelectChange={(newTagIds, extra) => {
-                            setBillState((prev) => ({
-                                ...prev,
-                                tagIds: newTagIds,
-                            }));
-                            if (extra?.preferCurrency) {
-                                changeCurrency(extra.preferCurrency);
-                            }
-                        }}
-                    />
-                    <button
-                        type="button"
-                        className={cn(
-                            `rounded-lg border py-1 px-2 h-8 flex gap-2 items-center justify-center whitespace-nowrap cursor-pointer`,
-                        )}
-                        onClick={() => {
-                            showTagList();
-                        }}
-                    >
-                        <i className="icon-[mdi--tag-text-outline]"></i>
-                        {t("edit-tags")}
-                    </button>
-                </div>
 
-                {/* keyboard area */}
-                <div
-                    className={cn(
-                        "h-[calc(480px+160px*(var(--bekh,0.5)-0.5))] sm:h-[calc(380px+160px*(var(--bekh,0.5)-0.5))] min-h-[264px] max-h-[calc(100%-124px)]",
-                        "keyboard-field relative flex gap-2 flex-col justify-start bg-stone-900 sm:rounded-b-md text-[white] p-2 pb-[max(var(--safe-area-inset-bottom),8px)]",
-                    )}
-                >
-                    <ResizeHandle />
-                    <div className="flex justify-between items-center">
-                        <div className="flex gap-2 items-center h-10">
-                            <div className="flex items-center h-full">
-                                {(billState.images?.length ?? 0) > 0 && (
-                                    <div className="pr-2 flex gap-[6px] items-center overflow-x-auto max-w-22 h-full scrollbar-hidden">
-                                        {billState.images?.map((img, index) => (
-                                            <Deletable
-                                                // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-                                                key={index}
-                                                onDelete={() => {
-                                                    setBillState((v) => ({
-                                                        ...v,
-                                                        images: v.images?.filter(
-                                                            (m) => m !== img,
-                                                        ),
-                                                    }));
-                                                }}
-                                            >
-                                                <SmartImage
-                                                    source={img}
-                                                    alt=""
-                                                    className="w-6 h-6 object-cover rounded"
-                                                />
-                                            </Deletable>
-                                        ))}
-                                    </div>
-                                )}
-                                {(billState.images?.length ?? 0) < 3 && (
-                                    <button
-                                        type="button"
-                                        className="px-1 flex justify-center items-center rounded-full transition-all cursor-pointer"
-                                        onClick={chooseImage}
-                                    >
-                                        <i className="icon-xs icon-[mdi--image-plus-outline] text-[white]"></i>
-                                    </button>
-                                )}
-                            </div>
-                            <div className="h-full flex items-center">
-                                {billState?.location ? (
-                                    <Deletable
-                                        onDelete={() => {
-                                            setBillState((prev) => {
-                                                return {
-                                                    ...prev,
-                                                    location: undefined,
-                                                };
-                                            });
-                                        }}
-                                    >
-                                        <button
-                                            type="button"
-                                            className="px-1 flex items-center justify-center"
-                                            onClick={handlePickLocation}
-                                        >
-                                            <i className="w-5 icon-[mdi--location-radius]"></i>
-                                        </button>
-                                    </Deletable>
-                                ) : (
-                                    <CurrentLocation
-                                        ref={locationRef}
-                                        className="px-1 flex items-center justify-center"
-                                        onValueChange={(v) => {
-                                            setBillState((prev) => {
-                                                return { ...prev, location: v };
-                                            });
-                                        }}
-                                    >
-                                        <i className="icon-[mdi--add-location]" />
-                                    </CurrentLocation>
-                                )}
-                            </div>
-                            <div className="rounded-full transition-all hover:(bg-stone-700) active:(bg-stone-500)">
-                                <DatePicker
-                                    fixedTime
-                                    value={billState.time}
-                                    onChange={(time) => {
-                                        setBillState((prev) => {
-                                            if (!prev.currency) {
-                                                return {
-                                                    ...prev,
-                                                    time: time,
-                                                };
-                                            }
-                                            const { predict } = convert(
-                                                amountToNumber(
-                                                    prev.currency?.amount ??
-                                                        prev.amount,
-                                                ),
-                                                prev.currency.target,
-                                                baseCurrency.id,
-                                                time,
-                                            );
-                                            return {
-                                                ...prev,
-                                                time: time,
-                                                amount: numberToAmount(predict),
-                                                currency: {
-                                                    base: baseCurrency.id,
-                                                    target: prev.currency
-                                                        .target,
-                                                    amount:
-                                                        prev.currency?.amount ??
-                                                        prev.amount,
-                                                },
-                                            };
-                                        });
-                                    }}
-                                />
-                            </div>
-                        </div>
-                        <RemarkHint
-                            recommends={predictComments}
-                            onSelect={(v) => {
-                                setBillState((prev) => ({
-                                    ...prev,
-                                    comment: `${prev.comment} ${v}`,
-                                }));
-                            }}
-                        >
-                            <div className="flex h-full flex-1">
-                                <IOSUnscrolledInput
-                                    value={billState.comment}
-                                    onChange={(e) => {
+                            {isCreate && (
+                                <button
+                                    type="button"
+                                    className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-panel px-3 text-sm text-ink-secondary"
+                                    onClick={toAddAgain}
+                                >
+                                    <i className="icon-[mdi--reload] size-4" />
+                                    <span className="whitespace-nowrap">
+                                        {t("add-again")}
+                                    </span>
+                                </button>
+                            )}
+
+                            {billState.images?.map((img, index) => (
+                                <Deletable
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+                                    key={index}
+                                    onDelete={() => {
                                         setBillState((v) => ({
                                             ...v,
-                                            comment: e.target.value,
+                                            images: v.images?.filter(
+                                                (m) => m !== img,
+                                            ),
                                         }));
                                     }}
-                                    type="text"
-                                    className="w-full bg-transparent text-white text-right placeholder-opacity-50 outline-none"
-                                    placeholder={t("comment")}
-                                    enterKeyHint="done"
-                                />
+                                >
+                                    <SmartImage
+                                        source={img}
+                                        alt=""
+                                        className="size-9 flex-shrink-0 rounded-full object-cover"
+                                    />
+                                </Deletable>
+                            ))}
+                            {(billState.images?.length ?? 0) < 3 && (
+                                <button
+                                    type="button"
+                                    className={iconChipClass}
+                                    onClick={chooseImage}
+                                >
+                                    <i className="icon-[mdi--image-plus-outline] size-5" />
+                                </button>
+                            )}
+
+                            {billState?.location ? (
+                                <Deletable
+                                    onDelete={() => {
+                                        setBillState((prev) => ({
+                                            ...prev,
+                                            location: undefined,
+                                        }));
+                                    }}
+                                >
+                                    <button
+                                        type="button"
+                                        className={iconChipClass}
+                                        onClick={handlePickLocation}
+                                    >
+                                        <i className="icon-[mdi--map-marker] size-5" />
+                                    </button>
+                                </Deletable>
+                            ) : (
+                                <CurrentLocation
+                                    ref={locationRef}
+                                    className={iconChipClass}
+                                    onValueChange={(v) => {
+                                        setBillState((prev) => ({
+                                            ...prev,
+                                            location: v,
+                                        }));
+                                    }}
+                                >
+                                    <i className="icon-[mdi--add-location] size-5" />
+                                </CurrentLocation>
+                            )}
+                        </div>
+
+                        {/* amount */}
+                        <div
+                            data-sheet-drag
+                            className="mx-3 mt-3 flex-shrink-0 rounded-[22px] bg-panel px-4 py-3"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex min-w-0 flex-1 items-baseline">
+                                    <span
+                                        className={cn(
+                                            "mr-0.5 text-2xl font-semibold",
+                                            amountColor,
+                                        )}
+                                    >
+                                        {targetCurrency?.symbol}
+                                    </span>
+                                    <Calculator.Value
+                                        label={t("amount")}
+                                        onConfirm={toConfirm}
+                                        className={cn(
+                                            "min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-[32px] font-semibold leading-tight scrollbar-hidden",
+                                            amountColor,
+                                        )}
+                                    />
+                                </div>
+                                <RemarkHint
+                                    recommends={predictComments}
+                                    onSelect={(v) => {
+                                        setBillState((prev) => ({
+                                            ...prev,
+                                            comment: `${prev.comment} ${v}`,
+                                        }));
+                                    }}
+                                >
+                                    <div className="flex h-9 w-24 flex-shrink-0 items-center">
+                                        <IOSUnscrolledInput
+                                            value={billState.comment}
+                                            onChange={(e) => {
+                                                setBillState((v) => ({
+                                                    ...v,
+                                                    comment: e.target.value,
+                                                }));
+                                            }}
+                                            type="text"
+                                            className="w-full bg-transparent text-right text-sm text-ink placeholder:text-ink-secondary/60 outline-none"
+                                            placeholder={t(
+                                                "click-to-add-comment",
+                                            )}
+                                            enterKeyHint="done"
+                                        />
+                                    </div>
+                                </RemarkHint>
                             </div>
-                        </RemarkHint>
+                            {ruleSuggestion && (
+                                <button
+                                    type="button"
+                                    className="mt-1 flex w-fit cursor-pointer items-center gap-1 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] text-brand transition-colors hover:bg-brand/15"
+                                    onClick={() => {
+                                        const { categoryId } = ruleSuggestion;
+                                        if (!categoryId) return;
+                                        setBillState((prev) => ({
+                                            ...prev,
+                                            categoryId,
+                                        }));
+                                    }}
+                                >
+                                    <i className="icon-[mdi--auto-fix] size-3" />
+                                    {t("auto-rule-suggest", {
+                                        category: suggestedCategoryName,
+                                    })}
+                                </button>
+                            )}
+                            {(billState.currency || billState.amount < 0) && (
+                                <div className="mt-1 flex items-center justify-between text-[11px] text-ink-secondary">
+                                    {billState.currency ? (
+                                        <span>
+                                            ≈ {baseCurrency.symbol}{" "}
+                                            {amountToNumber(billState.amount)}{" "}
+                                            {baseCurrency.label}
+                                        </span>
+                                    ) : (
+                                        <span />
+                                    )}
+                                    {billState.amount < 0 && (
+                                        <span className="text-destructive">
+                                            {t("bill-negative-tip")}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    <button
-                        type="button"
-                        className="flex h-[80px] min-h-[48px] justify-center items-center bg-green-700 rounded-lg font-bold text-lg cursor-pointer"
-                        onClick={toConfirm}
-                    >
-                        <i className="icon-[mdi--check] icon-md"></i>
-                    </button>
-                    <Calculator.Keyboard
-                        className={cn("flex-1")}
-                        onKey={(v) => {
-                            if (v === "r") {
-                                toConfirm();
-                                setTimeout(() => {
-                                    goAddBill({
-                                        ...defaultBill,
-                                        time: billState.time,
-                                    });
-                                }, 10);
-                            }
-                        }}
-                    />
+                    {/* keypad */}
+                    <div className="mt-3 flex flex-shrink-0 flex-col px-3 pb-3">
+                        <Calculator.Keyboard
+                            variant="sheet"
+                            actionLabel={t("done")}
+                            onAction={toConfirm}
+                        />
+                    </div>
                 </div>
                 <LocationPickerProvider />
             </PopupLayout>

@@ -4,10 +4,8 @@ import { BillIndexedDBStorage } from "@/database/storage";
 import type { Bill } from "@/ledger/type";
 import { createTidal } from "@/tidal";
 import { checkS3Config, createS3Syncer } from "@/tidal/s3";
-import type { ZenPost } from "@/zen/types";
+import { ENTRY_NAMES, type EntryItem, type TidalRepo } from "../entries";
 import type { SyncEndpointFactory } from "../type";
-
-const ZEN_ENTRY_NAME = "zen";
 
 const config = {
     repoPrefix: "cent-journal",
@@ -85,17 +83,22 @@ export const S3Endpoint: SyncEndpointFactory = {
                     ...s3SyncerConfig,
                 }),
         });
-        const zenRepo = createTidal<ZenPost>({
-            storageFactory: (name) =>
-                new BillIndexedDBStorage(`book-${name}--${ZEN_ENTRY_NAME}`),
-            entryName: ZEN_ENTRY_NAME,
-            syncerFactory: () =>
-                createS3Syncer({
-                    ...config,
-                    ...s3SyncerConfig,
-                    entryName: ZEN_ENTRY_NAME,
+        const entryRepos = Object.fromEntries(
+            ENTRY_NAMES.map((entry) => [
+                entry,
+                createTidal<EntryItem>({
+                    storageFactory: (name) =>
+                        new BillIndexedDBStorage(`book-${name}--${entry}`),
+                    entryName: entry,
+                    syncerFactory: () =>
+                        createS3Syncer({
+                            ...config,
+                            ...s3SyncerConfig,
+                            entryName: entry,
+                        }),
                 }),
-        });
+            ]),
+        ) as Record<string, TidalRepo>;
 
         const toBookName = (bookId: string) => {
             return bookId.replace(`${config.repoPrefix}-`, "");
@@ -110,20 +113,24 @@ export const S3Endpoint: SyncEndpointFactory = {
             return meta._s3UserAliases;
         };
 
-        // ledger 与 zen 顺序同步，保持单一上传通道
+        // ledger 与各生活模块顺序同步，保持单一上传通道
         const scheduler = new Scheduler(async (signal) => {
             const [ledgerFinished, cancelLedger] = repo.sync();
             signal.onabort = cancelLedger;
             await ledgerFinished;
-            const [zenFinished, cancelZen] = zenRepo.sync();
-            signal.onabort = cancelZen;
-            await zenFinished;
+            for (const entry of ENTRY_NAMES) {
+                const [entryFinished, cancelEntry] = entryRepos[entry].sync();
+                signal.onabort = cancelEntry;
+                await entryFinished;
+            }
         });
 
         return {
             logout: async () => {
                 await repo.detach();
-                await zenRepo.detach();
+                for (const entry of ENTRY_NAMES) {
+                    await entryRepos[entry].detach();
+                }
             },
             getUserInfo: async () => {
                 const Me = {
@@ -162,7 +169,10 @@ export const S3Endpoint: SyncEndpointFactory = {
             },
             createBook: repo.create,
             initBook: async (name) => {
-                await Promise.all([repo.init(name), zenRepo.init(name)]);
+                await Promise.all([
+                    repo.init(name),
+                    ...ENTRY_NAMES.map((entry) => entryRepos[entry].init(name)),
+                ]);
                 repo.getMeta(name).then((meta?: S3PrivateMeta) => {
                     const customUserName = auth.customUserName;
                     if (!customUserName) {
@@ -198,15 +208,28 @@ export const S3Endpoint: SyncEndpointFactory = {
             getAllItems: repo.getAllItems,
             onChange: repo.onChange,
 
-            batchZen: async (...args) => {
-                await zenRepo.batch(...args);
+            batchEntry: async (bookId, entry, actions, overlap) => {
+                const entryRepo = entryRepos[entry];
+                if (!entryRepo) {
+                    throw new Error(`unknown entry: ${entry}`);
+                }
+                await entryRepo.batch(bookId, actions, overlap);
                 scheduler.schedule();
             },
-            getAllZenItems: zenRepo.getAllItems,
-            onZenChange: zenRepo.onChange,
+            getAllEntryItems: async (bookId, entry) =>
+                entryRepos[entry]?.getAllItems(bookId) ?? [],
+            onEntryChange: (entry, listener) =>
+                entryRepos[entry]?.onChange(listener) ?? (() => {}),
 
-            getIsNeedSync: async () =>
-                (await repo.hasStashes()) || (await zenRepo.hasStashes()),
+            getIsNeedSync: async () => {
+                const needSync = await Promise.all([
+                    repo.hasStashes(),
+                    ...ENTRY_NAMES.map((entry) =>
+                        entryRepos[entry].hasStashes(),
+                    ),
+                ]);
+                return needSync.some(Boolean);
+            },
             onSync: scheduler.onProcess.bind(scheduler),
             toSync: scheduler.schedule.bind(scheduler),
 

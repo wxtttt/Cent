@@ -8,6 +8,7 @@ export default function PopupLayout({
     onBack,
     className,
     hideBack,
+    handle,
     right,
 }: {
     title?: string | ReactNode;
@@ -15,17 +16,33 @@ export default function PopupLayout({
     onBack?: () => void;
     className?: string;
     hideBack?: boolean;
+    handle?: boolean;
     right?: ReactNode;
 }) {
     const t = useIntl();
     return (
         <div
             className={cn(
-                "flex-1 flex flex-col overflow-hidden pt-[var(--safe-area-inset-top)] pb-[var(--safe-area-inset-bottom)]",
+                "flex-1 flex flex-col overflow-hidden pb-[var(--safe-area-inset-bottom)]",
+                handle ? "pt-0" : "pt-[var(--safe-area-inset-top)]",
                 className,
             )}
         >
-            <div className="w-full flex justify-center items-center relative px-4 pt-4 pb-2 flex-shrink-0">
+            {handle && (
+                <div
+                    data-sheet-drag
+                    className="w-full flex flex-shrink-0 justify-center pt-2 sm:hidden"
+                >
+                    <div className="h-1 w-10 rounded-full bg-ink-secondary/40" />
+                </div>
+            )}
+            <div
+                data-sheet-drag={handle ? "" : undefined}
+                className={cn(
+                    "w-full flex justify-center items-center relative px-4 pb-2 flex-shrink-0",
+                    handle ? "pt-2 sm:pt-4" : "pt-4",
+                )}
+            >
                 {!hideBack && (
                     <button
                         type="button"

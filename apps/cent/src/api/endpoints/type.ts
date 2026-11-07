@@ -1,7 +1,6 @@
 import type { Modal } from "@/components/modal";
 import type { Action, Full } from "@/database/stash";
 import type { Bill } from "@/ledger/type";
-import type { ZenPost } from "@/zen/types";
 export type ChangeListener = (args: { bookId: string }) => void;
 
 export type UserInfo = {
@@ -40,14 +39,15 @@ export type SyncEndpoint = {
     getAllItems: (bookId: string) => Promise<Full<Bill>[]>;
     onChange(listener: (args: { bookId: string }) => void): () => void;
 
-    /** zen 模式数据：与账单同 store 共存，独立切片为 zen-*.json */
-    batchZen: (
+    /** 生活模块数据：与账单同 store 共存，独立分片为 <entry>-*.json */
+    batchEntry: (
         bookId: string,
-        actions: Action<ZenPost>[],
+        entry: string,
+        actions: Action<any>[],
         overlap?: boolean,
     ) => Promise<void>;
-    getAllZenItems: (bookId: string) => Promise<Full<ZenPost>[]>;
-    onZenChange(listener: (args: { bookId: string }) => void): () => void;
+    getAllEntryItems: (bookId: string, entry: string) => Promise<Full<any>[]>;
+    onEntryChange: (entry: string, listener: ChangeListener) => () => void;
 
     getIsNeedSync: () => Promise<boolean>;
     onSync: (processor: (finished: Promise<void>) => void) => () => void;

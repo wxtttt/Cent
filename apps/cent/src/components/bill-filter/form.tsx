@@ -286,7 +286,7 @@ export default function BillFilterForm({
                         type="button"
                         className={`w-20 flex items-center justify-center pr-2 md:pl-4 py-2 h-[34px] buttoned cursor-pointer transition-colors duration-200 ${
                             form.type === "income"
-                                ? "!bg-stone-700 !text-white"
+                                ? "!bg-brand !text-on-brand"
                                 : ""
                         }`}
                         onClick={() =>
@@ -299,7 +299,7 @@ export default function BillFilterForm({
                         type="button"
                         className={`w-20 flex items-center justify-center py-2 h-[34px] buttoned cursor-pointer transition-colors duration-200 ${
                             form.type === "expense"
-                                ? "!bg-stone-700 !text-white"
+                                ? "!bg-brand !text-on-brand"
                                 : ""
                         }`}
                         onClick={() =>
@@ -312,7 +312,7 @@ export default function BillFilterForm({
                         type="button"
                         className={`w-20 flex items-center justify-center pr-2 md:pr-4 py-2 h-[34px] buttoned cursor-pointer transition-colors duration-200 ${
                             form.type === undefined
-                                ? "!bg-stone-700 !text-white"
+                                ? "!bg-brand !text-on-brand"
                                 : ""
                         }`}
                         onClick={() =>

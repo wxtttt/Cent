@@ -83,7 +83,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                     <div>
                                         {user.name !== user.originalName ? (
                                             <Deletable
-                                                className="[&_.delete-button]:bg-stone-800"
+                                                className="[&_.delete-button]:bg-brand"
                                                 onDelete={() => {
                                                     toRecoverName(user);
                                                 }}

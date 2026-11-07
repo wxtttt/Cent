@@ -46,6 +46,18 @@ const createFormSchema = (t: any) =>
         title: z.string(),
         start: z.date({ error: t("please-select-start-date") }),
         end: z.optional(z.date()),
+        // 数字输入框留空时是 NaN，统一归一成 undefined
+        endCount: z.preprocess(
+            (v) => (typeof v === "number" && Number.isNaN(v) ? undefined : v),
+            z.optional(
+                z.number().check(
+                    z.int(),
+                    z.positive({
+                        message: t("period-must-be-positive-integer"),
+                    }),
+                ),
+            ),
+        ),
         enabled: z.optional(z.boolean()),
         template: z.refine((val) => val !== undefined && val !== null, {
             message: t("scheduled-template-validate"),
@@ -108,6 +120,7 @@ export default function ScheduledEditForm({
             ...data,
             start: data.start.getTime(),
             end: data.end ? data.end.getTime() : undefined,
+            endCount: data.endCount ?? undefined,
             latest: edit?.latest,
             id,
         } as Scheduled & { needBills?: NeedBill[] };
@@ -354,6 +367,39 @@ export default function ScheduledEditForm({
                                     />
                                 </div>
                             </div>
+                            <FormField
+                                control={form.control}
+                                name="endCount"
+                                render={({ field }) => (
+                                    <FormItem className="flex items-center justify-between gap-2">
+                                        <FormLabel className="flex-shrink-0">
+                                            {t("scheduled-end-count")}
+                                        </FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                step="1"
+                                                className="w-28 text-end"
+                                                placeholder={t(
+                                                    "scheduled-end-count-placeholder",
+                                                )}
+                                                value={
+                                                    Number.isNaN(field.value)
+                                                        ? ""
+                                                        : (field.value ?? "")
+                                                }
+                                                onChange={(event) =>
+                                                    field.onChange(
+                                                        event.target
+                                                            .valueAsNumber,
+                                                    )
+                                                }
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
 
                         <FormField
