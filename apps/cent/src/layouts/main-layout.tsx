@@ -15,6 +15,7 @@ import { CurrencyListProvider } from "@/components/currency";
 import { DataManagerProvider } from "@/components/data-manager";
 import { ImportPreviewProvider } from "@/components/data-manager/preview-form";
 import { InventoryItemProvider } from "@/components/inventory";
+import { LedgerFilterProvider } from "@/components/ledger/filter-sheet";
 import { LoanCalculatorProvider } from "@/components/loan-calculator";
 import {
     MedicalMedicineProvider,
@@ -46,6 +47,7 @@ import { useScheduled } from "@/hooks/use-scheduled";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { useUrlHandler } from "@/hooks/use-url-handler";
 import { useMeasurementUsageSnapshot } from "@/measurement/usage-snapshot";
+import { StatProvider } from "@/pages/stat";
 import { usePreferenceStore } from "@/store/preference";
 import { startBackgroundPredict } from "@/utils/predict";
 
@@ -111,6 +113,8 @@ export default function MainLayout() {
                 <AutoRuleEditProvider />
                 <ScheduledProvider />
                 <ScheduledEditProvider />
+                <LedgerFilterProvider />
+                <StatProvider />
                 <TagListProvider />
                 <CategoryListProvider />
                 <ModalProvider />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import xiaonuan from "@/assets/mascots/01-home-xiaonuan.webp";
@@ -51,6 +51,13 @@ const DOCK_MASCOTS: Record<string, string> = {
 
 const DOCK_TABS = ["/ledger", "/medical", "/inventory"];
 
+// 启动即预热页签吉祥物：首个会话 SW 尚未接管时，避免切页签后
+// 底栏立绘等网络请求完成才显示（图片均 <50KB，预热成本可忽略）
+for (const src of Object.values(DOCK_MASCOTS)) {
+    const img = new Image();
+    img.src = src;
+}
+
 type PlusMode = "home" | "ledger" | "medical" | "inventory";
 type HomeAction = "manual" | "scheduled" | "inventory-item" | "profile";
 type LedgerAction = "import" | "manual";
@@ -60,10 +67,20 @@ function AssistantDock() {
     const isLogin = useIsLogin();
     const currentBookId = useBookStore((state) => state.currentBookId);
     const location = useLocation();
-    const navigate = useNavigate();
     const [menuOpen, setMenuOpen] = useState(false);
+    // 菜单归属页签：换页签的渲染期就视为关闭（effect 在绘制后才跑，
+    // 残留 open 态会让新页签的抽屉带着 open=true 挂载，Radix Presence
+    // 在"挂载即关闭"竞态下会卡住不卸载）；effect 再清掉状态，
+    // 切回原页签时也不会重新弹出
+    const [menuPath, setMenuPath] = useState("");
+    const menuVisible = menuOpen && menuPath === location.pathname;
     const { add: addScheduled } = useScheduled();
     const { profiles: medicalProfiles } = useMedical();
+    // 页签一切换即清掉开启态：这里 pathname 是变化信号而非数据依赖
+    // biome-ignore lint/correctness/useExhaustiveDependencies: 以 pathname 变化为收起信号
+    useEffect(() => {
+        setMenuOpen(false);
+    }, [location.pathname]);
     const show =
         location.pathname === "/" ||
         DOCK_TABS.some((tab) => location.pathname.startsWith(tab));
@@ -177,7 +194,7 @@ function AssistantDock() {
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[3] px-4 pb-[max(12px,var(--safe-area-inset-bottom))]">
             {/* 首页：快捷新建底部抽屉（纯文字按钮，与家小满一致） */}
             {plusMode === "home" && (
-                <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+                <Dialog open={menuVisible} onOpenChange={setMenuOpen}>
                     <DialogPortal>
                         <DialogOverlay className="fixed inset-0 z-40 bg-black/50" />
                         <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
@@ -214,25 +231,36 @@ function AssistantDock() {
                     </DialogPortal>
                 </Dialog>
             )}
-            {/* 记账：dock 上方一排图标卡（无遮罩，与家小满记账页一致） */}
-            {plusMode === "ledger" && menuOpen && (
-                <div className="pointer-events-auto absolute inset-x-4 bottom-[calc(max(12px,var(--safe-area-inset-bottom))+76px)] z-20 mx-auto grid max-w-[560px] grid-cols-2 gap-3">
-                    {ledgerActions.map(([action, icon, labelKey]) => (
-                        <button
-                            key={action}
-                            type="button"
-                            className="flex flex-col items-center gap-1.5 rounded-2xl bg-panel p-4 shadow-panel transition-colors hover:bg-ground-muted"
-                            onClick={() => toLedgerAction(action)}
-                        >
-                            <i className={cn(icon, "size-6 text-ink")} />
-                            <span className="text-xs text-ink">
-                                {t(labelKey)}
-                            </span>
-                        </button>
-                    ))}
-                </div>
+            {/* 记账：dock 上方一排图标卡（与家小满记账页一致）。整页透明拦截层：
+                菜单开着时页面按钮不可点，点外部任意区域即收起 */}
+            {plusMode === "ledger" && menuVisible && (
+                <>
+                    <button
+                        type="button"
+                        aria-label={t("close")}
+                        className="pointer-events-auto fixed inset-0 cursor-default"
+                        onClick={() => {
+                            setMenuOpen(false);
+                        }}
+                    />
+                    <div className="pointer-events-auto absolute inset-x-4 bottom-[calc(max(12px,var(--safe-area-inset-bottom))+76px)] z-20 mx-auto grid max-w-[560px] grid-cols-2 gap-3">
+                        {ledgerActions.map(([action, icon, labelKey]) => (
+                            <button
+                                key={action}
+                                type="button"
+                                className="flex flex-col items-center gap-1.5 rounded-2xl bg-panel p-4 shadow-panel transition-colors hover:bg-ground-muted"
+                                onClick={() => toLedgerAction(action)}
+                            >
+                                <i className={cn(icon, "size-6 text-ink")} />
+                                <span className="text-xs text-ink">
+                                    {t(labelKey)}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </>
             )}
-            <div className="pointer-events-auto mx-auto flex w-full max-w-[560px] items-center gap-1 rounded-full border border-rule bg-panel/95 p-1.5 pl-2 shadow-panel backdrop-blur">
+            <div className="pointer-events-auto relative mx-auto flex w-full max-w-[560px] items-center gap-1 rounded-full border border-rule bg-panel/95 p-1.5 pl-2 shadow-panel backdrop-blur">
                 {mascot ? (
                     <img
                         src={mascot}
@@ -267,7 +295,7 @@ function AssistantDock() {
                     aria-label={t("add-bill")}
                     className={cn(
                         "flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-on-brand transition-transform hover:scale-[1.04] active:scale-95",
-                        hasMenu && menuOpen ? "bg-field" : "bg-brand",
+                        hasMenu && menuVisible ? "bg-field" : "bg-brand",
                     )}
                     onClick={() => {
                         if (plusMode === "medical") {
@@ -277,6 +305,7 @@ function AssistantDock() {
                                 (v) => v && quickAddInventory(v),
                             );
                         } else {
+                            setMenuPath(location.pathname);
                             setMenuOpen((v) => !v);
                         }
                     }}
@@ -284,7 +313,7 @@ function AssistantDock() {
                     <i
                         className={cn(
                             "size-6 transition-transform",
-                            hasMenu && menuOpen
+                            hasMenu && menuVisible
                                 ? "icon-[mdi--close]"
                                 : "icon-[mdi--plus]",
                         )}

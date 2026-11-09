@@ -1080,5 +1080,17 @@
   "zen-skip": "Skip",
   "zen-today-completed-hint": "One day, one entry.",
   "zen-today-completed-title": "Today's Zen is Complete",
-  "zen-view-history": "View past Zen"
+  "zen-view-history": "View past Zen",
+  "filter-time": "Time range",
+  "filter-type": "Type",
+  "filter-members": "Members",
+  "filter-amount-range": "Amount range",
+  "filter-last-month": "Last month",
+  "filter-other-months": "Other months",
+  "filter-start-time": "Start date",
+  "filter-end-time": "End date",
+  "filter-min-amount": "Min amount",
+  "filter-max-amount": "Max amount",
+  "filter-reset": "Reset filter",
+  "filter-confirm": "Apply filter"
 }

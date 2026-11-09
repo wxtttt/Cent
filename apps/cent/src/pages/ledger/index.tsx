@@ -1,17 +1,22 @@
 import dayjs from "dayjs";
-import { useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/shallow";
 import { goAddBill } from "@/components/bill-editor";
 import { budgetRange, budgetTotal } from "@/components/budget/util";
+import { isCancelError } from "@/components/confirm/state";
 import EmptyState, { MascotPeek } from "@/components/empty-state";
 import Ledger from "@/components/ledger";
+import {
+    type LedgerQuickFilter,
+    showLedgerFilter,
+} from "@/components/ledger/filter-sheet";
 import TicketCard from "@/components/ticket-card";
 import { useBudget } from "@/hooks/use-budget";
 import { useCurrency } from "@/hooks/use-currency";
 import { useFullBills } from "@/hooks/use-full-bills";
 import { amountToNumber } from "@/ledger/bill";
 import { useIntl, useLocale } from "@/locale";
+import { showStat } from "@/pages/stat";
 import { useLedgerStore } from "@/store/ledger";
 import { useUiStore } from "@/store/ui";
 import { useUserStore } from "@/store/user";
@@ -44,7 +49,6 @@ function RatioBar({ label, value }: { label: string; value: number }) {
 export default function Page() {
     const t = useIntl();
     const { locale } = useLocale();
-    const navigate = useNavigate();
     useFullBills();
 
     const bills = useLedgerStore((state) => state.bills);
@@ -122,6 +126,40 @@ export default function Page() {
         useUiStore.getState().consumeDate();
     }, [pendingDate, loading, bills]);
 
+    // 快捷筛选（家小满筛选面板）：确认后在本页就地过滤列表
+    const [quickFilter, setQuickFilter] = useState<LedgerQuickFilter>();
+    const quickFilterActive = useMemo(() => {
+        if (!quickFilter) return false;
+        return Object.values(quickFilter).some((v) =>
+            Array.isArray(v) ? v.length > 0 : v !== undefined,
+        );
+    }, [quickFilter]);
+    const visibleBills = useMemo(() => {
+        if (!quickFilter) return bills;
+        const { start, end, type, creators, minAmountNumber, maxAmountNumber } =
+            quickFilter;
+        return bills.filter((bill) => {
+            if (start !== undefined && bill.time < start) return false;
+            if (end !== undefined && bill.time > end) return false;
+            if (type !== undefined && bill.type !== type) return false;
+            if (
+                creators &&
+                creators.length > 0 &&
+                !creators.includes(bill.creatorId)
+            ) {
+                return false;
+            }
+            const amount = amountToNumber(bill.amount);
+            if (minAmountNumber !== undefined && amount < minAmountNumber) {
+                return false;
+            }
+            if (maxAmountNumber !== undefined && amount > maxAmountNumber) {
+                return false;
+            }
+            return true;
+        });
+    }, [bills, quickFilter]);
+
     return (
         <div className="flex h-full flex-col overflow-hidden page-show">
             <div className="flex-shrink-0">
@@ -129,19 +167,35 @@ export default function Page() {
                     <div className="flex items-center justify-between">
                         <button
                             type="button"
-                            className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm text-ink shadow-panel transition-colors hover:bg-ground-muted"
+                            className={cn(
+                                "flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm shadow-panel transition-colors hover:bg-ground-muted",
+                                quickFilterActive
+                                    ? "font-medium text-brand"
+                                    : "text-ink",
+                            )}
                             onClick={() => {
-                                navigate("/search");
+                                showLedgerFilter(quickFilter)
+                                    .then((v) => setQuickFilter(v))
+                                    .catch((e) => {
+                                        if (!isCancelError(e)) throw e;
+                                    });
                             }}
                         >
                             {t("filter")}
-                            <i className="icon-[mdi--chevron-down] size-4 text-ink-secondary"></i>
+                            <i
+                                className={cn(
+                                    "icon-[mdi--chevron-down] size-4",
+                                    quickFilterActive
+                                        ? "text-brand"
+                                        : "text-ink-secondary",
+                                )}
+                            ></i>
                         </button>
                         <button
                             type="button"
                             className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm text-ink shadow-panel transition-colors hover:bg-ground-muted"
                             onClick={() => {
-                                navigate("/stat");
+                                showStat();
                             }}
                         >
                             <i className="icon-[mdi--chart-box-outline] size-4 text-brand"></i>
@@ -221,7 +275,7 @@ export default function Page() {
                     <div className="flex items-baseline justify-between px-1 pb-1 pt-5">
                         <h2 className="text-xl font-bold">{t("records")}</h2>
                         <span className="text-xs text-ink-secondary">
-                            {t("total-records", { n: bills.length })}
+                            {t("total-records", { n: visibleBills.length })}
                         </span>
                     </div>
                 </div>
@@ -229,10 +283,10 @@ export default function Page() {
 
             <div className="min-h-0 flex-1">
                 <div className="mx-auto h-full w-full max-w-[720px]">
-                    {bills.length > 0 ? (
+                    {visibleBills.length > 0 ? (
                         <Ledger
                             ref={ledgerRef}
-                            bills={bills}
+                            bills={visibleBills}
                             enableDivideAsOrdered
                             showTime
                             showAssets

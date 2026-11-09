@@ -48,7 +48,6 @@ export function MascotPeek({
             src={MASCOT_PEEKS[mascot]}
             alt=""
             draggable={false}
-            loading="lazy"
             className={cn("pointer-events-none select-none", className)}
         />
     );
@@ -88,7 +87,6 @@ export default function EmptyState({
                     src={MASCOTS[mascot]}
                     alt=""
                     draggable={false}
-                    loading="lazy"
                     className="relative size-full object-contain"
                 />
             </div>

@@ -15,8 +15,6 @@ const LedgerPage = lazyWithReload(
     loadFullBills,
 );
 
-const Stat = lazyWithReload(() => import("@/pages/stat"), loadFullBills);
-
 const Search = lazyWithReload(() => import("@/pages/search"));
 
 const InventoryPage = lazyWithReload(() => import("@/pages/inventory"));
@@ -43,14 +41,6 @@ function RootRoute() {
                     element={
                         <Suspense fallback={<LoadingSkeleton />}>
                             <Search />
-                        </Suspense>
-                    }
-                />
-                <Route
-                    path="/stat/:id?"
-                    element={
-                        <Suspense fallback={<LoadingSkeleton />}>
-                            <Stat />
                         </Suspense>
                     }
                 />

@@ -47,6 +47,13 @@ export default defineConfig(({ mode }) => {
             registerType: "prompt",
             injectRegister: false,
             includeAssets: ["favicon.ico", "apple-touch-icon.png"],
+            // 图片也进预缓存：iOS PWA 冷启动后 HTTP 缓存常被系统回收，
+            // 未预缓存的图片（吉祥物立绘等）要等切页签后现走网络才显示
+            injectManifest: {
+                globPatterns: [
+                    "**/*.{js,css,html,svg,png,webp,ico,woff,woff2}",
+                ],
+            },
             manifest: {
                 name: "Cent - 日计",
                 short_name: "Cent",

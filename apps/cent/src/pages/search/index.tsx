@@ -23,6 +23,7 @@ import { useCustomFilters } from "@/hooks/use-custom-filters";
 import type { Bill, BillFilter } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { measure } from "@/measurement";
+import { showStat } from "@/pages/stat";
 import { useBookStore } from "@/store/book";
 import { useLedgerStore } from "@/store/ledger";
 import { usePreferenceStore } from "@/store/preference";
@@ -138,8 +139,8 @@ export default function Page() {
             return;
         }
         const id = await addFilter(name, { filter: form });
-        navigate(`/stat/${id}`);
-    }, [addFilter, form, navigate, t]);
+        showStat(id);
+    }, [addFilter, form, t]);
 
     const hasFilter = useRef(Boolean(state?.filter));
     useEffect(() => {

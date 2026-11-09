@@ -1091,5 +1091,17 @@
   "zen-skip": "跳过",
   "zen-today-completed-hint": "一日事，一日毕",
   "zen-today-completed-title": "今日 Zen 已完成",
-  "zen-view-history": "查看往期 Zen"
+  "zen-view-history": "查看往期 Zen",
+  "filter-time": "时间筛选",
+  "filter-type": "交易类型",
+  "filter-members": "记账人",
+  "filter-amount-range": "金额范围",
+  "filter-last-month": "上个月",
+  "filter-other-months": "其他月份",
+  "filter-start-time": "起始时间",
+  "filter-end-time": "终止时间",
+  "filter-min-amount": "最低金额",
+  "filter-max-amount": "最高金额",
+  "filter-reset": "重置筛选",
+  "filter-confirm": "确认筛选"
 }

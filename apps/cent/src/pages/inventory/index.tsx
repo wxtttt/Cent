@@ -7,6 +7,14 @@ import { showInventoryItem } from "@/components/inventory";
 import type { InventoryItemValue } from "@/components/inventory/item-form";
 import SegmentedTabs from "@/components/segmented-tabs";
 import TicketCard from "@/components/ticket-card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogOverlay,
+    DialogPortal,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { useInventory } from "@/hooks/use-inventory";
 import type { InventoryItem } from "@/inventory/types";
 import { useIntl } from "@/locale";
@@ -259,51 +267,86 @@ function CategoryFilterButton({
 }) {
     const t = useIntl();
     const [open, setOpen] = useState(false);
-    const current =
-        value === "__all"
-            ? t("inventory-all")
-            : (categories.find((c) => c === value) ?? t("inventory-all"));
+    const active = value !== "__all";
+    // 家小满知物页样式：胶囊只写「筛选」，激活的分类名以橙色文字展示在胶囊右侧
+    const current = active
+        ? (categories.find((c) => c === value) ?? value)
+        : undefined;
     if (categories.length === 0) {
         return <span />;
     }
     return (
-        <div className="relative">
+        <div className="flex items-center gap-2.5">
             <button
                 type="button"
-                className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm text-ink shadow-panel"
-                onClick={() => setOpen((v) => !v)}
+                className={cn(
+                    "flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm shadow-panel transition-colors hover:bg-ground-muted",
+                    active ? "font-medium text-brand" : "text-ink",
+                )}
+                onClick={() => setOpen(true)}
             >
-                {current}
-                <i className="icon-[mdi--chevron-down] size-4 text-ink-secondary" />
+                {t("filter")}
+                <i
+                    className={cn(
+                        "icon-[mdi--chevron-down] size-4",
+                        active ? "text-brand" : "text-ink-secondary",
+                    )}
+                />
             </button>
-            {open && (
-                <div className="absolute left-0 top-full z-20 mt-1 flex min-w-32 flex-col rounded-2xl border border-rule bg-panel p-1 shadow-card">
-                    {[t("inventory-all"), ...categories].map((category) => {
-                        const id =
-                            category === t("inventory-all")
-                                ? "__all"
-                                : category;
-                        return (
-                            <button
-                                key={id}
-                                type="button"
-                                className={cn(
-                                    "cursor-pointer rounded-xl px-3 py-2 text-left text-sm",
-                                    value === id
-                                        ? "bg-brand/10 font-medium text-brand"
-                                        : "text-ink",
-                                )}
-                                onClick={() => {
-                                    onChange(id);
-                                    setOpen(false);
-                                }}
-                            >
-                                {category}
-                            </button>
-                        );
-                    })}
-                </div>
+            {active && current && (
+                <span className="text-sm font-medium text-brand">
+                    {current}
+                </span>
             )}
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogPortal>
+                    <DialogOverlay className="fixed inset-0 z-40 bg-black/50" />
+                    <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
+                        <DialogContent
+                            from="bottom"
+                            className="pointer-events-auto flex max-h-[80dvh] w-full flex-col rounded-t-[28px] border-0 bg-[#f4f4f4] sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]"
+                        >
+                            <div
+                                data-sheet-drag
+                                className="flex flex-shrink-0 flex-col items-center pt-3"
+                            >
+                                <div className="h-1 w-8 rounded-full bg-[#bdbbb7]" />
+                                <DialogTitle className="mt-3.5 text-[17px] font-bold text-ink">
+                                    {t("filter")}
+                                </DialogTitle>
+                                <DialogDescription className="sr-only">
+                                    {t("filter")}
+                                </DialogDescription>
+                            </div>
+                            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 pb-[max(20px,var(--safe-area-inset-bottom))] pt-6">
+                                {["__all", ...categories].map((id) => {
+                                    const label =
+                                        id === "__all"
+                                            ? t("inventory-all")
+                                            : id;
+                                    const selected = value === id;
+                                    return (
+                                        <button
+                                            key={id}
+                                            type="button"
+                                            className="flex h-[52px] flex-shrink-0 cursor-pointer items-center justify-between rounded-2xl bg-white px-6 text-[16px] text-ink"
+                                            onClick={() => {
+                                                onChange(id);
+                                                setOpen(false);
+                                            }}
+                                        >
+                                            {label}
+                                            {selected && (
+                                                <i className="icon-[mdi--check] size-5 text-brand" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </DialogContent>
+                    </div>
+                </DialogPortal>
+            </Dialog>
         </div>
     );
 }

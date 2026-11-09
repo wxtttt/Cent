@@ -26,6 +26,7 @@ import {
 import { useWidget } from "@/hooks/use-widget";
 import { amountToNumber } from "@/ledger/bill";
 import { useIntl, useLocale } from "@/locale";
+import { showStat } from "@/pages/stat";
 import { useLedgerStore } from "@/store/ledger";
 import { useUserStore } from "@/store/user";
 import { cn } from "@/utils";
@@ -392,7 +393,7 @@ export default function Page() {
                                 type="button"
                                 className="flex w-full cursor-pointer items-center gap-1.5 text-[13px] leading-none text-ink-secondary"
                                 onClick={() => {
-                                    navigate("/stat");
+                                    showStat();
                                 }}
                             >
                                 <i className="icon-[mdi--wallet-outline] size-4 flex-shrink-0 text-brand"></i>
