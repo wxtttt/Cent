@@ -1,6 +1,7 @@
 import { VisuallyHidden } from "radix-ui";
 import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { useShallow } from "zustand/shallow";
+import { useVisualViewport } from "@/hooks/use-visual-viewport";
 import { cn } from "@/utils";
 import {
     Dialog,
@@ -54,6 +55,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
                     : undefined,
             [state?.zIndex],
         );
+        const viewport = useVisualViewport();
         // 3. 组件卸载时清理全局 Store 中的数据，避免内存泄漏
         useEffect(() => {
             return () => useGlobalConfirmStore.getState().remove(instanceId);
@@ -107,10 +109,19 @@ export default function createConfirmProvider<Value, Returned = Value>(
                                 from === "left"
                                     ? "rounded-none"
                                     : from === "bottom"
-                                      ? "rounded-t-[28px] sm:rounded-panel"
+                                      ? "flex flex-col overflow-hidden rounded-t-[28px] sm:rounded-panel"
                                       : "max-h-[55vh] w-[90vw] max-w-[500px] rounded-panel overflow-y-auto",
                                 contentClassName,
                             )}
+                            style={
+                                from === "bottom"
+                                    ? {
+                                          // 软键盘弹出时把抽屉压回可视区域，内容靠内部滚动
+                                          maxHeight: `calc(${viewport.height}px - 8px)`,
+                                          marginBottom: viewport.keyboard,
+                                      }
+                                    : undefined
+                            }
                             onOpenAutoFocus={(e) => {
                                 returnFocusRef.current =
                                     document.activeElement instanceof

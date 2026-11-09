@@ -27,6 +27,37 @@ export type InventoryItem = {
 /** 兼容旧数据的两态取值 */
 export type LegacyInventoryStatus = "active" | "archived";
 
+/** 家小满知物内置分类，按实物/虚拟分组（筛选面板与分类选择共用） */
+export const INVENTORY_CATEGORY_GROUPS = [
+    {
+        key: "physical",
+        categories: [
+            "数码电器",
+            "家具家电",
+            "美妆个护",
+            "服饰鞋包",
+            "运动户外",
+            "母婴玩具",
+            "食品酒水",
+            "图书音像",
+            "其他实物",
+        ],
+    },
+    {
+        key: "virtual",
+        categories: [
+            "影音娱乐",
+            "学习教育",
+            "云服务存储",
+            "效率工具",
+            "其他虚拟",
+        ],
+    },
+] as const;
+
+export const INVENTORY_DEFAULT_CATEGORIES: readonly string[] =
+    INVENTORY_CATEGORY_GROUPS.flatMap((group) => group.categories);
+
 export function normalizeInventoryStatus(
     status: string,
 ): InventoryItem["status"] {

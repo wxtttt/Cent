@@ -8,6 +8,7 @@ import EmptyState, { MascotPeek } from "@/components/empty-state";
 import Ledger from "@/components/ledger";
 import {
     type LedgerQuickFilter,
+    resolveQuickTimeRange,
     showLedgerFilter,
 } from "@/components/ledger/filter-sheet";
 import TicketCard from "@/components/ticket-card";
@@ -20,7 +21,6 @@ import { showStat } from "@/pages/stat";
 import { useLedgerStore } from "@/store/ledger";
 import { useUiStore } from "@/store/ui";
 import { useUserStore } from "@/store/user";
-import { cn } from "@/utils";
 
 function RatioBar({ label, value }: { label: string; value: number }) {
     const percent = Math.max(0, Math.round(value * 1000) / 10);
@@ -57,6 +57,9 @@ export default function Page() {
     const { baseCurrency } = useCurrency();
     const { budgets } = useBudget();
 
+    // 快捷筛选（家小满筛选面板）：确认后在本页就地过滤列表与统计卡
+    const [quickFilter, setQuickFilter] = useState<LedgerQuickFilter>();
+
     const ledgerRef = useRef<{
         scrollToIndex: (index: number) => void;
     }>(null);
@@ -73,10 +76,32 @@ export default function Page() {
         [bills, monthStart, monthEnd],
     );
 
+    const timeRange = useMemo(
+        () => resolveQuickTimeRange(quickFilter),
+        [quickFilter],
+    );
+    const cardMonth = timeRange?.month ?? month;
+
+    // 统计卡跟随筛选的时间范围；没有时间筛选时回落到本月
+    const cardBills = useMemo(() => {
+        if (!timeRange) return monthBills;
+        return bills.filter(
+            (bill) =>
+                (timeRange.start === undefined ||
+                    bill.time >= timeRange.start) &&
+                (timeRange.end === undefined || bill.time <= timeRange.end),
+        );
+    }, [bills, monthBills, timeRange]);
+
+    // 卡片标题始终按月份展示（家小满实测：自定义日期也显示所在月份）
+    const cardTitle = t("month-income-expense", {
+        month: cardMonth.format("M"),
+    });
+
     const { income, expense } = useMemo(() => {
         let incomeTotal = 0;
         let expenseTotal = 0;
-        for (const bill of monthBills) {
+        for (const bill of cardBills) {
             const value = amountToNumber(bill.amount);
             if (bill.type === "income") {
                 incomeTotal += value;
@@ -85,24 +110,25 @@ export default function Page() {
             }
         }
         return { income: incomeTotal, expense: expenseTotal };
-    }, [monthBills]);
+    }, [cardBills]);
 
     const balance = income - expense;
     const savingRate = income > 0 ? balance / income : 0;
     const incomeRatio = income + expense > 0 ? income / (income + expense) : 0;
 
+    // 预算按月生效，跟随统计卡当前月份
     const activeBudgetTotal = useMemo(
         () =>
             budgets.reduce((total, budget) => {
                 if (
                     !budget.joiners.includes(userId) ||
-                    !budgetRange(budget, month)[1]
+                    !budgetRange(budget, cardMonth)[1]
                 ) {
                     return total;
                 }
                 return total + budgetTotal(budget);
             }, 0),
-        [budgets, userId, month],
+        [budgets, userId, cardMonth],
     );
     const budgetRate = activeBudgetTotal > 0 ? expense / activeBudgetTotal : 0;
 
@@ -127,16 +153,10 @@ export default function Page() {
     }, [pendingDate, loading, bills]);
 
     // 快捷筛选（家小满筛选面板）：确认后在本页就地过滤列表
-    const [quickFilter, setQuickFilter] = useState<LedgerQuickFilter>();
-    const quickFilterActive = useMemo(() => {
-        if (!quickFilter) return false;
-        return Object.values(quickFilter).some((v) =>
-            Array.isArray(v) ? v.length > 0 : v !== undefined,
-        );
-    }, [quickFilter]);
     const visibleBills = useMemo(() => {
         if (!quickFilter) return bills;
-        const { start, end, type, creators, minAmountNumber, maxAmountNumber } =
+        const { start, end } = timeRange ?? {};
+        const { type, creators, minAmountNumber, maxAmountNumber } =
             quickFilter;
         return bills.filter((bill) => {
             if (start !== undefined && bill.time < start) return false;
@@ -158,7 +178,7 @@ export default function Page() {
             }
             return true;
         });
-    }, [bills, quickFilter]);
+    }, [bills, quickFilter, timeRange]);
 
     return (
         <div className="flex h-full flex-col overflow-hidden page-show">
@@ -167,12 +187,7 @@ export default function Page() {
                     <div className="flex items-center justify-between">
                         <button
                             type="button"
-                            className={cn(
-                                "flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm shadow-panel transition-colors hover:bg-ground-muted",
-                                quickFilterActive
-                                    ? "font-medium text-brand"
-                                    : "text-ink",
-                            )}
+                            className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm text-ink shadow-panel transition-colors hover:bg-ground-muted"
                             onClick={() => {
                                 showLedgerFilter(quickFilter)
                                     .then((v) => setQuickFilter(v))
@@ -182,14 +197,7 @@ export default function Page() {
                             }}
                         >
                             {t("filter")}
-                            <i
-                                className={cn(
-                                    "icon-[mdi--chevron-down] size-4",
-                                    quickFilterActive
-                                        ? "text-brand"
-                                        : "text-ink-secondary",
-                                )}
-                            ></i>
+                            <i className="icon-[mdi--chevron-down] size-4 text-ink-secondary"></i>
                         </button>
                         <button
                             type="button"
@@ -215,9 +223,7 @@ export default function Page() {
                             <>
                                 <div className="flex items-start justify-between gap-3">
                                     <h1 className="font-display text-2xl font-bold tracking-tight">
-                                        {t("month-income-expense", {
-                                            month: month.format("M"),
-                                        })}
+                                        {cardTitle}
                                     </h1>
                                     <div className="flex-shrink-0 text-right">
                                         <div className="text-xs text-ink-secondary">

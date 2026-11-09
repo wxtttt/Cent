@@ -8,11 +8,14 @@ export default function SegmentedTabs({
     value,
     onChange,
     className,
+    size = "md",
 }: {
     items: { value: string; label: string }[];
     value: string;
     onChange: (value: string) => void;
     className?: string;
+    /** sm 为紧凑档位（家小满筛选激活时的缩小样式） */
+    size?: "md" | "sm";
 }) {
     return (
         <div
@@ -29,7 +32,8 @@ export default function SegmentedTabs({
                         type="button"
                         onClick={() => onChange(item.value)}
                         className={cn(
-                            "cursor-pointer rounded-full px-5 py-2 text-sm transition-all duration-[var(--dp-motion-interaction)]",
+                            "cursor-pointer rounded-full text-sm transition-all duration-[var(--dp-motion-interaction)]",
+                            size === "sm" ? "px-3 py-1.5" : "px-5 py-2",
                             active
                                 ? "bg-panel font-semibold text-ink shadow-panel"
                                 : "text-ink-secondary hover:text-ink",

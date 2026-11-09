@@ -97,7 +97,7 @@ export default function MedicalProfileForm({
                 </Button>
             }
         >
-            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 {/* 头像：圆形 + 相机角标，与家小满建档页一致 */}
                 <div className="flex justify-center pt-1">
                     <div className="relative">
@@ -321,7 +321,7 @@ export function MedicalVisitForm({
                 </Button>
             }
         >
-            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 <FormCard>
                     {profiles.length > 0 && (
                         <FormRow label={t("stat-member")}>
@@ -477,7 +477,7 @@ export function MedicalMedicineForm({
                 </Button>
             }
         >
-            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 <FormCard>
                     <FormRow label={t("medical-medicine-name")}>
                         <RowInput

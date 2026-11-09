@@ -313,6 +313,11 @@ button {
 	outline-offset: 2px;
 }
 
+/* 滚轮/选项列表的按钮打开即被自动聚焦，点击场景不显示焦点环 */
+[data-no-focus-ring]:focus-visible {
+	outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,

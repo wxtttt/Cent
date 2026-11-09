@@ -16,7 +16,11 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { useInventory } from "@/hooks/use-inventory";
-import type { InventoryItem } from "@/inventory/types";
+import {
+    INVENTORY_CATEGORY_GROUPS,
+    INVENTORY_DEFAULT_CATEGORIES,
+    type InventoryItem,
+} from "@/inventory/types";
 import { useIntl } from "@/locale";
 import { useLedgerStore } from "@/store/ledger";
 import { cn } from "@/utils";
@@ -83,8 +87,10 @@ export default function InventoryPage() {
         };
     }, [items]);
 
+    // 筛选保留家小满内置分类，再补上自定义分类与物品里出现的分类
     const categories = useMemo(() => {
-        const set = new Set(categorySuggestions);
+        const set = new Set<string>(INVENTORY_DEFAULT_CATEGORIES);
+        for (const category of categorySuggestions) set.add(category);
         for (const { item } of withMeta) {
             if (item.category) set.add(item.category);
         }
@@ -141,13 +147,15 @@ export default function InventoryPage() {
     return (
         <div className="h-full overflow-y-auto">
             <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 px-4 pb-32 pt-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
                     <CategoryFilterButton
                         categories={categories}
                         value={filterCategory}
                         onChange={setFilterCategory}
                     />
                     <SegmentedTabs
+                        className="flex-shrink-0"
+                        size="sm"
                         items={KIND_TABS.map(({ value, label }) => ({
                             value,
                             label: t(label),
@@ -272,15 +280,38 @@ function CategoryFilterButton({
     const current = active
         ? (categories.find((c) => c === value) ?? value)
         : undefined;
-    if (categories.length === 0) {
-        return <span />;
-    }
+    // 家小满内置分类之外的自定义分类单独成组
+    const customCategories = categories.filter(
+        (category) => !INVENTORY_DEFAULT_CATEGORIES.includes(category),
+    );
+    const renderCategory = (id: string, label?: string) => {
+        const selected = value === id;
+        return (
+            <button
+                key={id}
+                type="button"
+                data-no-focus-ring
+                className={cn(
+                    "flex h-10 w-full min-w-0 cursor-pointer items-center justify-center rounded-xl border-[1.5px] px-2.5 text-[15px] transition-colors",
+                    selected
+                        ? "border-brand bg-[#ffefe6] font-medium text-brand"
+                        : "border-transparent bg-white text-ink",
+                )}
+                onClick={() => {
+                    onChange(id);
+                    setOpen(false);
+                }}
+            >
+                <span className="truncate">{label ?? id}</span>
+            </button>
+        );
+    };
     return (
-        <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <button
                 type="button"
                 className={cn(
-                    "flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm shadow-panel transition-colors hover:bg-ground-muted",
+                    "flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm shadow-panel transition-colors hover:bg-ground-muted",
                     active ? "font-medium text-brand" : "text-ink",
                 )}
                 onClick={() => setOpen(true)}
@@ -294,7 +325,7 @@ function CategoryFilterButton({
                 />
             </button>
             {active && current && (
-                <span className="text-sm font-medium text-brand">
+                <span className="min-w-0 truncate text-sm font-medium text-brand">
                     {current}
                 </span>
             )}
@@ -318,30 +349,39 @@ function CategoryFilterButton({
                                     {t("filter")}
                                 </DialogDescription>
                             </div>
-                            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-4 pb-[max(20px,var(--safe-area-inset-bottom))] pt-6">
-                                {["__all", ...categories].map((id) => {
-                                    const label =
-                                        id === "__all"
-                                            ? t("inventory-all")
-                                            : id;
-                                    const selected = value === id;
-                                    return (
-                                        <button
-                                            key={id}
-                                            type="button"
-                                            className="flex h-[52px] flex-shrink-0 cursor-pointer items-center justify-between rounded-2xl bg-white px-6 text-[16px] text-ink"
-                                            onClick={() => {
-                                                onChange(id);
-                                                setOpen(false);
-                                            }}
-                                        >
-                                            {label}
-                                            {selected && (
-                                                <i className="icon-[mdi--check] size-5 text-brand" />
+                            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-[max(20px,var(--safe-area-inset-bottom))] pt-5">
+                                <div className="grid flex-shrink-0 grid-cols-3 gap-2.5">
+                                    {renderCategory(
+                                        "__all",
+                                        t("inventory-all"),
+                                    )}
+                                </div>
+                                {INVENTORY_CATEGORY_GROUPS.map((group) => (
+                                    <section key={group.key}>
+                                        <div className="px-1 text-[13px] text-ink-secondary">
+                                            {group.key === "physical"
+                                                ? t("inventory-kind-physical")
+                                                : t("inventory-kind-virtual")}
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-3 gap-2.5">
+                                            {group.categories.map((id) =>
+                                                renderCategory(id),
                                             )}
-                                        </button>
-                                    );
-                                })}
+                                        </div>
+                                    </section>
+                                ))}
+                                {customCategories.length > 0 && (
+                                    <section>
+                                        <div className="px-1 text-[13px] text-ink-secondary">
+                                            {t("inventory-custom-categories")}
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-3 gap-2.5">
+                                            {customCategories.map((id) =>
+                                                renderCategory(id),
+                                            )}
+                                        </div>
+                                    </section>
+                                )}
                             </div>
                         </DialogContent>
                     </div>

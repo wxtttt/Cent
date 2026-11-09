@@ -9,35 +9,58 @@ import { cn } from "@/utils";
 
 /** 记账页快捷筛选，维度与家小满筛选面板一致：时间/交易类型/记账人/金额 */
 export type LedgerQuickFilter = {
-    start?: number;
-    end?: number;
+    /** 时间筛选来源：月份档位与自定义日期各自保留，只有激活方参与过滤 */
+    timeMode?: "month" | "custom";
+    /** 月份档位：本月 / 上个月 / 具体月份（月首时间戳） */
+    monthPreset?: "this" | "last" | number;
+    /** 自定义起止日期（未激活时也保留在面板里） */
+    customStart?: number;
+    customEnd?: number;
     type?: BillType;
     creators?: (string | number)[];
     minAmountNumber?: number;
     maxAmountNumber?: number;
 };
 
-const monthRange = (d: dayjs.Dayjs) =>
-    [d.startOf("month").valueOf(), d.endOf("month").valueOf()] as const;
-
-/** 由起止时间反推所选快捷档位（本月/上个月/其他月份） */
-function presetOf(start?: number, end?: number) {
-    if (start === undefined || end === undefined) return undefined;
-    const [ts, te] = monthRange(dayjs());
-    if (start === ts && end === te) return "this" as const;
-    const [ls, le] = monthRange(dayjs().subtract(1, "month"));
-    if (start === ls && end === le) return "last" as const;
-    return "other" as const;
+/** 解析筛选实际生效的时间范围与统计卡月份 */
+export function resolveQuickTimeRange(filter?: LedgerQuickFilter) {
+    if (!filter?.timeMode) return undefined;
+    if (filter.timeMode === "month") {
+        const month =
+            filter.monthPreset === "this"
+                ? dayjs()
+                : filter.monthPreset === "last"
+                  ? dayjs().subtract(1, "month")
+                  : typeof filter.monthPreset === "number"
+                    ? dayjs(filter.monthPreset)
+                    : undefined;
+        if (!month) return undefined;
+        return {
+            start: month.startOf("month").valueOf(),
+            end: month.endOf("month").valueOf(),
+            month,
+        };
+    }
+    const { customStart, customEnd } = filter;
+    if (customStart === undefined && customEnd === undefined) return undefined;
+    return {
+        start: customStart,
+        end: customEnd,
+        // 统计卡标题取区间结束月份（家小满实测：跨月区间显示末月）
+        month: dayjs(customEnd ?? customStart),
+    };
 }
 
 function Chip({
     active,
     onClick,
     children,
+    className,
 }: {
     active?: boolean;
     onClick: () => void;
     children: React.ReactNode;
+    className?: string;
 }) {
     return (
         <button
@@ -46,7 +69,8 @@ function Chip({
                 "h-11 cursor-pointer rounded-xl border-[1.5px] px-5 text-[15px] transition-colors",
                 active
                     ? "border-brand bg-[#ffefe6] font-medium text-brand"
-                    : "border-transparent bg-white text-[#8a8a8a]",
+                    : "border-transparent bg-white text-ink",
+                className,
             )}
             onClick={onClick}
         >
@@ -58,18 +82,37 @@ function Chip({
 function DateField({
     value,
     placeholder,
+    active,
     onChange,
+    open,
+    onOpenChange,
+    title,
 }: {
     value?: number;
     placeholder: string;
-    onChange: (v: number | undefined) => void;
+    active?: boolean;
+    open?: boolean;
+    onOpenChange?: (v: boolean) => void;
+    title?: string;
+    onChange: (v: number) => void;
 }) {
     return (
-        <div className="flex h-11 flex-1 items-center justify-center rounded-xl bg-white text-[15px]">
+        <div
+            className={cn(
+                "flex h-11 flex-1 items-center justify-center rounded-xl border-[1.5px] text-[15px]",
+                active
+                    ? "border-brand bg-[#ffefe6] font-medium text-brand"
+                    : "border-transparent bg-white text-ink-secondary/70",
+            )}
+        >
             <DatePicker
+                type="date"
+                title={title}
                 value={value}
                 displayFormatter={(d) => d?.format("YYYY/MM/DD") ?? placeholder}
-                onChange={(v) => onChange(v)}
+                open={open}
+                onOpenChange={onOpenChange}
+                onChange={onChange}
             />
         </div>
     );
@@ -111,30 +154,57 @@ function SheetForm({
     const t = useIntl();
     const allCreators = useCreators();
     const [draft, setDraft] = useState<LedgerQuickFilter>(edit ?? {});
-    const preset = presetOf(draft.start, draft.end);
+    const [monthOpen, setMonthOpen] = useState(false);
+    const [startOpen, setStartOpen] = useState(false);
+    const [endOpen, setEndOpen] = useState(false);
 
-    const setTimeRange = (preset: "this" | "last" | "other") => {
-        setDraft((prev) => {
-            // 再点一次已选中的档位 = 清除时间筛选
-            if (presetOf(prev.start, prev.end) === preset) {
-                return { ...prev, start: undefined, end: undefined };
-            }
-            if (preset === "this") {
-                const [s, e] = monthRange(dayjs());
-                return { ...prev, start: s, end: e };
-            }
-            if (preset === "last") {
-                const [s, e] = monthRange(dayjs().subtract(1, "month"));
-                return { ...prev, start: s, end: e };
-            }
-            // 其他月份：清空起止时间，交给下面的日期输入
-            return { ...prev, start: undefined, end: undefined };
-        });
+    const isMonthMode = draft.timeMode === "month";
+    const isCustomMode = draft.timeMode === "custom";
+
+    // 档位与自定义日期是两套独立状态：切档位不改动下方日期，反之亦然
+    const setChip = (next: "this" | "last" | "other") => {
+        if (next === "other") {
+            setMonthOpen(true);
+            return;
+        }
+        if (isMonthMode && draft.monthPreset === next) {
+            setDraft((prev) => ({
+                ...prev,
+                timeMode: undefined,
+                monthPreset: undefined,
+            }));
+            return;
+        }
+        setDraft((prev) => ({
+            ...prev,
+            timeMode: "month",
+            monthPreset: next,
+        }));
+    };
+
+    const setMonthValue = (v: number) => {
+        setDraft((prev) => ({
+            ...prev,
+            timeMode: "month",
+            monthPreset: dayjs(v).startOf("month").valueOf(),
+        }));
+    };
+
+    // 自定义日期按天生效：起始取当天零点，终止含当天整天
+    const setCustom = (key: "customStart" | "customEnd", v: number) => {
+        setDraft((prev) => ({
+            ...prev,
+            timeMode: "custom",
+            [key]:
+                key === "customEnd"
+                    ? dayjs(v).endOf("day").valueOf()
+                    : dayjs(v).startOf("day").valueOf(),
+        }));
     };
 
     return (
         // 面板底色/圆角/档位规格均按家小满实测：#f4f4f4 底、44px 档位、橙色选中
-        <div className="flex max-h-[90dvh] flex-col outline-none">
+        <div className="relative flex min-h-0 flex-1 flex-col outline-none">
             <div
                 data-sheet-drag
                 className="flex flex-shrink-0 flex-col items-center pt-3"
@@ -149,43 +219,73 @@ function SheetForm({
                     <h3 className="text-[15px] font-bold text-ink">
                         {t("filter-time")}
                     </h3>
-                    <div className="mt-3.5 flex flex-wrap gap-2.5">
+                    <div className="mt-3.5 flex gap-2.5">
                         <Chip
-                            active={preset === "this"}
-                            onClick={() => setTimeRange("this")}
+                            className="flex-1 px-1"
+                            active={isMonthMode && draft.monthPreset === "this"}
+                            onClick={() => setChip("this")}
                         >
                             {t("this-month")}
                         </Chip>
                         <Chip
-                            active={preset === "last"}
-                            onClick={() => setTimeRange("last")}
+                            className="flex-1 px-1"
+                            active={isMonthMode && draft.monthPreset === "last"}
+                            onClick={() => setChip("last")}
                         >
                             {t("filter-last-month")}
                         </Chip>
                         <Chip
-                            active={preset === "other"}
-                            onClick={() => setTimeRange("other")}
+                            className="flex-1 px-1"
+                            active={
+                                isMonthMode &&
+                                typeof draft.monthPreset === "number"
+                            }
+                            onClick={() => setChip("other")}
                         >
-                            {t("filter-other-months")}
+                            {isMonthMode &&
+                            typeof draft.monthPreset === "number"
+                                ? dayjs(draft.monthPreset).format("YYYY/MM")
+                                : t("filter-other-months")}
                         </Chip>
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                         <DateField
-                            value={draft.start}
+                            value={draft.customStart}
                             placeholder={t("filter-start-time")}
-                            onChange={(v) =>
-                                setDraft((prev) => ({ ...prev, start: v }))
-                            }
+                            title={t("filter-start-time")}
+                            active={isCustomMode}
+                            open={startOpen}
+                            onOpenChange={setStartOpen}
+                            onChange={(v) => setCustom("customStart", v)}
                         />
-                        <span className="flex-shrink-0 text-ink-secondary">
-                            -
-                        </span>
+                        <span className="flex-shrink-0 text-ink">-</span>
                         <DateField
-                            value={draft.end}
+                            value={draft.customEnd}
                             placeholder={t("filter-end-time")}
-                            onChange={(v) =>
-                                setDraft((prev) => ({ ...prev, end: v }))
+                            title={t("filter-end-time")}
+                            active={isCustomMode}
+                            open={endOpen}
+                            onOpenChange={setEndOpen}
+                            onChange={(v) => setCustom("customEnd", v)}
+                        />
+                    </div>
+                    {/* 其他月份滚轮：由档位按钮唤起，触发器不占位 */}
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute h-0 w-0 overflow-hidden"
+                    >
+                        <DatePicker
+                            type="month"
+                            title={t("filter-other-months")}
+                            value={
+                                typeof draft.monthPreset === "number"
+                                    ? draft.monthPreset
+                                    : undefined
                             }
+                            displayFormatter={() => ""}
+                            open={monthOpen}
+                            onOpenChange={setMonthOpen}
+                            onChange={setMonthValue}
                         />
                     </div>
                 </section>
@@ -194,8 +294,9 @@ function SheetForm({
                     <h3 className="text-[15px] font-bold text-ink">
                         {t("filter-type")}
                     </h3>
-                    <div className="mt-3.5 flex flex-wrap gap-2.5">
+                    <div className="mt-3.5 flex gap-2.5">
                         <Chip
+                            className="flex-1 px-1"
                             active={draft.type === undefined}
                             onClick={() =>
                                 setDraft((prev) => ({
@@ -207,6 +308,7 @@ function SheetForm({
                             {t("all")}
                         </Chip>
                         <Chip
+                            className="flex-1 px-1"
                             active={draft.type === "expense"}
                             onClick={() =>
                                 setDraft((prev) => ({
@@ -218,6 +320,7 @@ function SheetForm({
                             {t("expense")}
                         </Chip>
                         <Chip
+                            className="flex-1 px-1"
                             active={draft.type === "income"}
                             onClick={() =>
                                 setDraft((prev) => ({
@@ -338,7 +441,7 @@ const [LedgerFilterProvider, rawShowLedgerFilter] = createConfirmProvider<
     LedgerQuickFilter
 >(SheetForm, {
     dialogTitle: "filter",
-    dialogModalClose: false,
+    dialogModalClose: true,
     from: "bottom",
     contentClassName:
         "w-full rounded-t-[28px] border-0! bg-[#f4f4f4]! sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]",

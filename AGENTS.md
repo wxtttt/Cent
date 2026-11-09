@@ -179,8 +179,9 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 - 新增账单：`goAddBill(value?)`（`components/bill-editor/index.tsx`）打开底部编辑抽屉，确认后写入 store。取消时 Promise 以 `Error("manually cancelled")` reject，用 `isCancelError()`（`components/confirm/state.ts`）判断。
 - 记账编辑器：`components/bill-editor/form.tsx`，计算器在 `components/keyboard.tsx`（`Calculator.Root` / `Calculator.Value` / `Calculator.Keyboard`，`variant="sheet"` 是 4×4 键盘）。弹窗高度固定为 `h-[min(92dvh,620px)]`，中部区域滚动、键盘区固定，改动布局时保证不裁切。
 - 底部抽屉下拉关闭：`components/ui/dialog/index.tsx` 中监听 `from === "bottom"`，只有从带 `data-sheet-drag` 的区域按下才会接管手势；位移超过 6px 且纵向占优时开始拖动，超过高度 25% 或快速下滑即关闭。新增抽屉内容时可按需加 `data-sheet-drag`，输入框默认被排除。
+- 底部抽屉高度由 `hooks/use-visual-viewport.ts` 按 `visualViewport` 计算（`maxHeight` + 软键盘 `marginBottom`），内容区用 `min-h-0 flex-1 overflow-y-auto`，键盘弹起时抽屉不被顶出屏幕；确认式抽屉统一 `dialogModalClose`（点外部关闭），生活模块表单与记账筛选都按此结构。
 - **生活模块实体**（新增数据前先看这里）：
-  - 物品 `src/inventory/types.ts` `InventoryItem`：三态 `status: in_use|idle|disposed`（读端用 `normalizeInventoryStatus` 兼容旧两态）、`kind: physical|virtual`、`price`（资产总览估算）、`expiryDate` 过期；分类建议存 `GlobalMeta.inventoryCategories`。
+  - 物品 `src/inventory/types.ts` `InventoryItem`：三态 `status: in_use|idle|disposed`（读端用 `normalizeInventoryStatus` 兼容旧两态）、`kind: physical|virtual`、`price`（资产总览估算）、`expiryDate` 过期；内置分类为 `INVENTORY_CATEGORY_GROUPS`（实物 9 + 虚拟 5，筛选与建品共用），自定义分类存 `GlobalMeta.inventoryCategories`。筛选面板的 chip 统一 40px 高、3 列等宽铺满整行，「全部」与分类同尺寸置顶。
   - 医疗 `src/medical/types.ts`：`MedicalProfile`（含 `avatar: string|File` 头像、`gender`、`medicalHistory`、`medications`）/ `MedicalVisit` / `MedicalMedicine`（药箱），靠 `entity` 字段判别（同一 entry 桶混存）。
   - 车辆 `src/vehicle/types.ts`：`Vehicle` + `VehicleRecord`（加油油耗=相邻记录里程差/升数）。
   - 其他新落库字段：`GlobalMeta.autoRules`（自动记账规则，数组顺序即优先级）、`Scheduled.endCount`（周期结束次数）、`PersonalMeta.loanPlans`（贷款方案）、`PersonalMeta.importHistory`（导入历史）。
@@ -211,7 +212,7 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 - 安全区统一用 `var(--safe-area-inset-*)` 或项目封装变量，不要在业务组件里直接写 `env(safe-area-inset-*)`。
 - 页面是移动优先，主内容最大宽度约 960px；底部操作栏/键盘需处理 `--safe-area-inset-bottom`。
 - 图标使用 Iconify 类名，例如 `icon-[mdi--food]`。分类图标（`components/category/icon.tsx`）按 icon 值分四种渲染：图片 URL（`/`、`http`、`data:` 开头，走 `<img>`）、SVG 字符串、**emoji 纯文本**（非 `icon-` 开头按字符渲染，家小满同款风格，65 个默认分类已 emoji 化）、其余按 Iconify 类名。
-- **家小满对齐组件**（改 UI 优先复用，勿另造）：`components/ticket-card`（票券卡：打孔虚线+胶带贴纸+装饰角+吉祥物探头）、`components/segmented-tabs`（页面分段控件：浅容器+白色凸起激活胶囊）、`components/empty-state`（吉祥物空态，注意家小满的列表空态是纯文字，仅引导型空态才用插画）、`components/form-rows`（**行卡片表单基元**：FormSection 分组标题 / FormCard 白卡细分割线 / FormRow 左标签右值 / RowInput 行内透明输入 / CountedRowInput 带 n/255 计数，生活模块五个表单全部用它，勿再写 label+Input 堆叠式）、`components/wheel-date-picker`（**滚轮日期选择器**：底部二级抽屉 ✕/标题/橙✓ + 年月日时分五列 scroll-snap 滚轮，记账抽屉已换用；type="date" 为三列）。吉祥物立绘在 `src/assets/mascots/`（webp）。字体保持系统默认（用户已明确不用 Noto Sans SC webfont）。
+- **家小满对齐组件**（改 UI 优先复用，勿另造）：`components/ticket-card`（票券卡：打孔虚线+胶带贴纸+装饰角+吉祥物探头）、`components/segmented-tabs`（页面分段控件：浅容器+白色凸起激活胶囊）、`components/empty-state`（吉祥物空态，注意家小满的列表空态是纯文字，仅引导型空态才用插画）、`components/form-rows`（**行卡片表单基元**：FormSection 分组标题 / FormCard 白卡细分割线 / FormRow 左标签右值 / RowInput 行内透明输入 / CountedRowInput 带 n/255 计数，生活模块五个表单全部用它，勿再写 label+Input 堆叠式）、`components/wheel-date-picker`（**滚轮日期选择器**：底部二级抽屉 ✕/标题/橙✓ + scroll-snap 滚轮；datetime-local 五列、date 三列、month 两列只选年月；支持 open/onOpenChange 受控打开；中性样式为 #f4f4f4 底、白色胶囊、选中 #0a0a0a / 未选 #8b8b8c、17px semibold 标题）。吉祥物立绘在 `src/assets/mascots/`（webp）。字体保持系统默认（用户已明确不用 Noto Sans SC webfont）。
 - **底部 dock 加号按页签分派**（对齐家小满，`components/app-chrome/index.tsx`）：首页=「快捷新建」底部抽屉（纯文字按钮：记一笔/新增周期记账/添加物品/添加成员）；记账=dock 上方两卡（账单导入/记一笔，无遮罩）；归医=按子页签分派（健康档案→添加成员档案、药箱→添加药品、就诊记录→添加就诊，**无成员时 toast 拦截**，子页签经 `/medical?tab=` 传给 dock）；知物=直接添加物品（全部/实物/虚拟是筛选不分派）。
 - 生活模块表单抽屉底色用 `bg-ground!`（provider 的 `contentClassName` 追加）+ 白色 FormCard，与家小满「灰底白卡」同构；记一笔的分段控件是**外层白胶囊、选中浅色凸起**（与直觉相反，勿改回）。
 - 文案必须同时更新 `src/locale/lang/zh.json` 和 `en.json`；组件内用 `useIntl()` 的 `t()`，非组件代码用 `@/locale` 导出的 `t()`。两个语言包不参与 Biome 检查，手动保持格式一致（key 近似按字母序）。**语言包必须以 UTF-8 读写**：曾发生并发会话以 GBK 写入导致中文大面积损坏（423 处截断），恢复手段见第 11 节。
@@ -225,9 +226,10 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 - 全局壳层：顶部头像 + 「日计」标题 + AI 入口 + 首页/记账/归医/知物 Tab + 底部 dock（吉祥物随页签、加号按页签与子页签分派）（`components/app-chrome`）。
 - 首页：hero 大字问候（滚动折叠吸顶）、票券式今日总结、近期提醒、概览卡（`pages/home`）。
 - 记账页与分析页：票券式月度收支卡、筛选/分析胶囊、统计视图（`pages/ledger`、`pages/stat`、`components/stat`）。
-- 个人中心抽屉（`components/profile`，含物品/医疗/车辆/贷款/自动规则入口）。
+- 个人中心抽屉（`components/profile`，含物品/医疗/车辆/贷款/自动规则入口，关于 Cent 位于抽屉最底部；首页高级功能推广与 buy me coffee 已移除）。
 - 暖色设计令牌与深色模式（`index.css`）。
 - 记账底部抽屉：emoji 分类快捷卡、日期/币种/标签胶囊、内联备注（含自动规则建议胶囊）、滚轮日期选择器、4×4 键盘、下拉关闭（`components/bill-editor`、`wheel-date-picker`、`components/keyboard.tsx`、`components/ui/dialog/index.tsx`）。
+- 记账筛选（`components/ledger/filter-sheet.tsx`）：时间分「本月/上个月/其他月份」与「自定义起止日」两组互斥状态，月份只选年月，起止日可选到日；筛选后统计卡按区间汇总、标题取区间结束月，下方标签保持「本月收入/本月支出」。
 - 自动记账规则（`components/auto-rule` + `src/ledger/auto-rules.ts`，导入预览可开关套用）。
 - 智能导入增强：支付宝/微信来源引导卡 + 导入历史（`components/data-manager`）。
 - 周期记账：结束次数上限（`Scheduled.endCount`，启动补账按 cap 截断）。

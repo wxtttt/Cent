@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { type Dispatch, type SetStateAction, useMemo } from "react";
 import useCategory from "@/hooks/use-category";
 import { useCreators } from "@/hooks/use-creator";
@@ -649,6 +650,7 @@ export function DateInput({
             onClear={() => onChange?.(undefined)}
         >
             <DatePicker
+                type="date"
                 value={value}
                 displayFormatter={(v) =>
                     v === undefined
@@ -657,7 +659,12 @@ export function DateInput({
                             : t("to-newest")
                         : `${v.format("YY/MM/DD")}`
                 }
-                onChange={(e) => onChange?.(e)}
+                // 终止日滚轮只选日期，补到当天末尾保证按天过滤含当日
+                onChange={(e) =>
+                    onChange?.(
+                        type === "end" ? dayjs(e).endOf("day").valueOf() : e,
+                    )
+                }
                 onBlur={onBlur}
             />
         </Clearable>

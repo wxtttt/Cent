@@ -35,6 +35,10 @@ export const budgetRange = (
             console.warn("防止无限循环，迭代次数已达到上限。");
             break;
         }
+        // 目标日期早于当前周期起点：之后只会更晚，不可能覆盖目标，直接结束
+        if (!currentRange && now.isBefore(rangeStart)) {
+            break;
+        }
 
         let rangeEnd: Dayjs;
         // 使用 add() 和 subtract(1, 'day') 确保范围的边界准确
@@ -74,8 +78,12 @@ export const budgetRange = (
             break;
         }
 
-        // 更新下一个周期的开始日期
-        rangeStart = rangeStart.add(value, unit);
+        // 更新下一个周期的开始日期；重复配置不前进时避免死循环
+        const nextStart = rangeStart.add(value, unit);
+        if (!nextStart.isAfter(rangeStart)) {
+            break;
+        }
+        rangeStart = nextStart;
     }
 
     return [ranges, currentRange];

@@ -21,6 +21,7 @@ import { showLoanCalculator } from "../loan-calculator";
 import { showPreset } from "../preset";
 import { showScheduled } from "../scheduled";
 import { showSettings } from "../settings";
+import { AboutSettingsProvider, showAboutSettings } from "../settings/about";
 import { showWidgetList } from "../widget";
 
 function GridAction({
@@ -476,6 +477,21 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                         ))}
                     </div>
                 </div>
+                {/* 关于置于抽屉最底部，对齐家小满个人页的底部入口行 */}
+                <button
+                    type="button"
+                    className="mt-4 flex w-full cursor-pointer items-center gap-3 rounded-panel bg-panel px-4 py-3.5 text-left transition-colors hover:bg-ground-muted"
+                    onClick={() => {
+                        showAboutSettings();
+                    }}
+                >
+                    <i className="icon-[mdi--information-outline] size-5 text-ink-secondary" />
+                    <span className="flex-1 text-[15px] text-ink">
+                        {t("about-cent")}
+                    </span>
+                    <i className="icon-[mdi--chevron-right] size-5 text-ink-secondary" />
+                </button>
+                <AboutSettingsProvider />
             </div>
         </div>
     );

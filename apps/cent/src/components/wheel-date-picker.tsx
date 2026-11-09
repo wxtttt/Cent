@@ -16,14 +16,17 @@ type Props = {
     value?: number;
     onChange?: (value: number) => void;
     children?: ReactNode;
-    /** date 只滚年月日；datetime-local 滚年月日时分 */
-    type?: "datetime-local" | "date";
+    /** date 只滚年月日；month 只滚年月；datetime-local 滚年月日时分 */
+    type?: "datetime-local" | "date" | "month";
     /** 兼容旧 API：date 模式始终保留原时分 */
     fixedTime?: boolean;
     displayFormatter?: string | ((d?: dayjs.Dayjs) => string);
     /** 抽屉标题，记账抽屉里传「记账」 */
     title?: string;
     onBlur?: () => void;
+    /** 受控开合，筛选中「其他月份」需要直接唤起滚轮 */
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 };
 
 // 家小满式滚轮：行高约等于选中胶囊高度，窗口露出 5 行，上下边缘渐隐
@@ -95,8 +98,8 @@ function WheelColumn({
                     className={cn(
                         "flex w-full snap-center items-center justify-center text-[17px]",
                         i === index
-                            ? "font-semibold text-ink"
-                            : "text-ink-secondary/80",
+                            ? "font-medium text-[#0a0a0a]"
+                            : "text-[#8b8b8c]",
                     )}
                     style={{ height: ITEM_HEIGHT }}
                 >
@@ -119,10 +122,13 @@ export function WheelDatePicker({
     displayFormatter,
     title,
     onBlur,
+    open: controlledOpen,
+    onOpenChange,
 }: Props) {
     const t = useIntl();
     const isZh = intl.locale === "zh";
-    const [open, setOpen] = useState(false);
+    const [innerOpen, setInnerOpen] = useState(false);
+    const open = controlledOpen ?? innerOpen;
 
     const initial = dayjs(value ?? Date.now());
     const [year, setYear] = useState(initial.year());
@@ -168,15 +174,24 @@ export function WheelDatePicker({
     const current = value ? dayjs(value) : undefined;
 
     const commit = () => {
-        const ts = dayjs(
-            `${year}-${pad(month + 1)}-${pad(day)} ${pad(hour)}:${pad(minute)}`,
-            "YYYY-MM-DD HH:mm",
+        const base = dayjs(
+            `${year}-${pad(month + 1)}-${pad(day)}`,
+            "YYYY-MM-DD",
+        );
+        // month 只到月份粒度，落在这个月 1 号零点
+        const ts = (
+            type === "month"
+                ? base.startOf("month")
+                : type === "date"
+                  ? base.startOf("day")
+                  : base.hour(hour).minute(minute)
         ).valueOf();
         onChange?.(ts);
     };
 
     const close = (next: boolean) => {
-        setOpen(next);
+        setInnerOpen(next);
+        onOpenChange?.(next);
         if (!next) {
             onBlur?.();
         }
@@ -195,7 +210,7 @@ export function WheelDatePicker({
                 <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
                     <DialogContent
                         from="bottom"
-                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-ground shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-[#f4f4f4] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
                     >
                         <DialogTitle className="sr-only">
                             {title ?? t("time")}
@@ -208,22 +223,24 @@ export function WheelDatePicker({
                             data-sheet-drag
                             className="relative flex items-center justify-between px-4 pb-2 pt-3"
                         >
-                            <div className="absolute inset-x-0 top-1.5 mx-auto h-1 w-10 rounded-full bg-ink/15" />
+                            <div className="absolute inset-x-0 top-1.5 mx-auto h-1 w-10 rounded-full bg-black/15" />
                             <button
                                 type="button"
+                                data-no-focus-ring
                                 aria-label={t("close")}
-                                className="flex size-11 items-center justify-center rounded-full bg-panel text-ink shadow-[0_2px_12px_rgba(92,62,30,0.18)]"
+                                className="flex size-11 items-center justify-center rounded-full bg-white text-[#0a0a0a] shadow-[0_2px_12px_rgba(0,0,0,0.12)] focus-visible:outline-none"
                                 onClick={() => close(false)}
                             >
                                 <i className="icon-[mdi--close] size-5" />
                             </button>
-                            <span className="pointer-events-none absolute inset-x-0 text-center text-[17px] font-semibold text-ink">
+                            <span className="pointer-events-none absolute inset-x-0 text-center text-[17px] font-semibold text-[#0a0a0a]">
                                 {title ?? t("time")}
                             </span>
                             <button
                                 type="button"
+                                data-no-focus-ring
                                 aria-label={t("confirm")}
-                                className="flex size-11 items-center justify-center rounded-full bg-brand text-on-brand shadow-[0_2px_12px_rgba(247,133,60,0.4)]"
+                                className="flex size-11 items-center justify-center rounded-full bg-brand text-on-brand shadow-[0_2px_12px_rgba(247,133,60,0.4)] focus-visible:outline-none"
                                 onClick={() => {
                                     commit();
                                     close(false);
@@ -237,7 +254,7 @@ export function WheelDatePicker({
                             <div className="relative px-6">
                                 <div
                                     aria-hidden
-                                    className="pointer-events-none absolute inset-x-6 rounded-full bg-panel shadow-[0_10px_24px_-8px_rgba(92,62,30,0.28)]"
+                                    className="pointer-events-none absolute inset-x-6 rounded-full bg-white shadow-[0_10px_24px_-8px_rgba(0,0,0,0.12)]"
                                     style={{
                                         height: ITEM_HEIGHT + 4,
                                         top:
@@ -248,9 +265,11 @@ export function WheelDatePicker({
                                 <div
                                     className={cn(
                                         "relative grid gap-1",
-                                        type === "date"
-                                            ? "grid-cols-3"
-                                            : "grid-cols-[1.35fr_1fr_1fr_1fr_1fr]",
+                                        type === "month"
+                                            ? "grid-cols-[1.35fr_1fr]"
+                                            : type === "date"
+                                              ? "grid-cols-3"
+                                              : "grid-cols-[1.35fr_1fr_1fr_1fr_1fr]",
                                     )}
                                 >
                                     <WheelColumn
@@ -263,12 +282,14 @@ export function WheelDatePicker({
                                         index={month}
                                         onIndexChange={setMonth}
                                     />
-                                    <WheelColumn
-                                        items={dayItems}
-                                        index={day - 1}
-                                        onIndexChange={(i) => setDay(i + 1)}
-                                    />
-                                    {type !== "date" && (
+                                    {type !== "month" && (
+                                        <WheelColumn
+                                            items={dayItems}
+                                            index={day - 1}
+                                            onIndexChange={(i) => setDay(i + 1)}
+                                        />
+                                    )}
+                                    {type === "datetime-local" && (
                                         <>
                                             <WheelColumn
                                                 items={hourItems}

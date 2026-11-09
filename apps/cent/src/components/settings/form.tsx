@@ -3,9 +3,7 @@ import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { useUserStore } from "@/store/user";
 import modal from "../modal";
-import SponsorBanner, { SponsorProvider } from "../sponsor";
 import { Button } from "../ui/button";
-import AboutSettingsItem, { AdvancedGuideItem } from "./about";
 import AgentApiSettingsItem from "./agent-api";
 import AssistantSettingsItem from "./assistant";
 import LabSettingsItem from "./lab";
@@ -103,7 +101,6 @@ export default function SettingsForm({
             <div className="divide-y divide-solid flex flex-col overflow-hidden">
                 <UserInfo />
                 <div className="flex-1 overflow-y-auto flex flex-col py-4">
-                    <SponsorBanner />
                     <div>
                         <div className="text-xs opacity-60 px-8">
                             {t("book-settings")}
@@ -128,15 +125,12 @@ export default function SettingsForm({
                         <div className="flex flex-col divide-y">
                             <MapSettingsItem />
                             <LabSettingsItem />
-                            <AboutSettingsItem />
                             <ThemeSettingsItem />
                             <LanguageSettingsItem />
-                            <AdvancedGuideItem />
                         </div>
                     </div>
                 </div>
             </div>
-            <SponsorProvider />
         </PopupLayout>
     );
 }

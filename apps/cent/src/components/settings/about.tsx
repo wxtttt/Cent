@@ -7,8 +7,6 @@ import { isMeasurementEnabled } from "@/measurement";
 import { checkForUpdate } from "@/utils/pwa";
 
 import createConfirmProvider from "../confirm";
-import { SponsorAboutItem } from "../sponsor";
-import { Button } from "../ui/button";
 import Version from "./version";
 
 function Form({ onCancel }: { onCancel?: () => void }) {
@@ -109,7 +107,6 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                     </div>
                     <i className="icon-[mdi--arrow-top-right]"></i>
                 </a>
-                <SponsorAboutItem />
                 <div className="w-full flex flex-col items-center gap-3 px-4 pb-4">
                     <div className="text-sm text-foreground/80">
                         {t("download-app")}
@@ -156,48 +153,4 @@ const [AboutSettingsProvider, showAboutSettings] = createConfirmProvider(Form, {
         "h-full w-full max-h-full max-w-full rounded-none sm:rounded-md sm:max-h-[min(520px,calc(100vh-32px))] sm:w-[90vw] sm:max-w-[500px]",
 });
 
-export default function AboutSettingsItem() {
-    const t = useIntl();
-    return (
-        <div className="lab">
-            <Button
-                onClick={() => {
-                    showAboutSettings();
-                }}
-                variant="ghost"
-                className="w-full py-4 rounded-none h-auto"
-            >
-                <div className="w-full px-4 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--about-circle-outline] size-5"></i>
-                        {t("about-cent")}
-                    </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
-                </div>
-            </Button>
-            <AboutSettingsProvider />
-        </div>
-    );
-}
-
-export function AdvancedGuideItem() {
-    const t = useIntl();
-    return (
-        <div className="lab">
-            <a
-                href="https://glink25.github.io/post/Cent%E9%AB%98%E7%BA%A7%E8%AE%B0%E8%B4%A6%E6%8C%87%E5%8D%97/"
-                target="_blank"
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium hover:bg-accent hover:text-accent-foreground w-full p-4 rounded-none h-auto"
-                rel="noopener"
-            >
-                <div className="w-full px-4 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--book-open-blank-variant-outline] size-5 shrink-0"></i>
-                        {t("advance-billings-label")}
-                    </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
-                </div>
-            </a>
-        </div>
-    );
-}
+export { AboutSettingsProvider, showAboutSettings };
