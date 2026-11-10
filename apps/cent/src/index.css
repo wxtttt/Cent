@@ -154,6 +154,17 @@ body {
 	padding: var(--safe-area-top) var(--safe-area-inset-right)
 		var(--safe-area-inset-bottom) var(--safe-area-inset-left);
 	overflow: hidden;
+	/* iOS PWA(black-translucent) 的状态栏透出的是 #root padding 区露出的底色。
+	   header 用 ::before 向上出血会被 MainLayout 的 overflow:hidden 容器裁掉，
+	   因此直接把顶部安全区这一段染成 header 色，保证状态栏与「日计」栏同色；
+	   其余部分保持 transparent，不改变页面原有背景。暗色模式跟随 --dp-color-header。 */
+	background-image: linear-gradient(
+		to bottom,
+		var(--dp-color-header) 0,
+		var(--dp-color-header) var(--safe-area-top),
+		transparent var(--safe-area-top)
+	);
+	background-repeat: no-repeat;
 }
 
 /*除了.select-all,.select-auto,.select-none,.select-text，其他都禁用选择*/
