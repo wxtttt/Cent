@@ -24,7 +24,6 @@ import { useIntl } from "@/locale";
 import { cn } from "@/utils";
 import { Switch } from "../ui/switch";
 import CategoryIcon from "./icon";
-import { ICONS } from "./icons";
 import { CATEGORY_ILLUSTRATIONS } from "./illustrations";
 
 const NO_PARENT = "__noparent";
@@ -41,11 +40,6 @@ const createFormSchema = (t: any) =>
         defaultSelect: z.optional(z.boolean()),
     });
 
-const validSvgText = (text: string) =>
-    text.startsWith("<svg") && text.endsWith("</svg>");
-
-type IconTab = "illustrations" | "icons" | "custom";
-
 export default function CategoryEditForm({
     onCancel,
     onConfirm,
@@ -56,7 +50,7 @@ export default function CategoryEditForm({
     onConfirm?: (v: any) => void;
 }) {
     const t = useIntl();
-    const [iconTab, setIconTab] = useState<IconTab>("illustrations");
+    const namePlaceholder = t("category-name-placeholder");
     const [category, setCategory] = useState<Omit<BillCategory, "id">>(() => {
         if (edit === undefined || edit.id === undefined) {
             return {
@@ -125,16 +119,6 @@ export default function CategoryEditForm({
                         {title}
                     </span>
                 }
-                right={
-                    <button
-                        type="button"
-                        aria-label="close"
-                        onClick={onCancel}
-                        className="flex size-8 items-center justify-center rounded-full text-[#71717a] hover:bg-black/5 dark:text-ink-secondary"
-                    >
-                        <i className="icon-[lucide--x] size-5" />
-                    </button>
-                }
             >
                 <div className="flex items-center gap-5 px-6 pb-4 pt-3">
                     {!isGroup && (
@@ -157,23 +141,27 @@ export default function CategoryEditForm({
                                         {t("category-name")}
                                     </FormLabel>
                                     <FormControl>
-                                        <div className="flex items-center gap-2 border-b border-rule pb-1">
+                                        <div className="relative flex h-9 w-full items-center gap-2">
+                                            <span
+                                                aria-hidden
+                                                className="invisible max-w-full truncate whitespace-pre text-[14px]"
+                                            >
+                                                {field.value || namePlaceholder}
+                                            </span>
+                                            <i className="icon-[lucide--pencil] pointer-events-none relative z-10 size-3 shrink-0 text-[#c4c4c9]" />
                                             <Input
                                                 type="text"
                                                 maxLength={50}
-                                                placeholder={t(
-                                                    "category-name-placeholder",
-                                                )}
-                                                className="h-10 border-0 bg-transparent px-0 text-[16px] shadow-none focus-visible:ring-0"
+                                                placeholder={namePlaceholder}
+                                                className="absolute inset-0 h-9 border-0 bg-transparent px-0 text-[14px] font-normal text-ink shadow-none placeholder:text-[#b9b9be] focus-visible:ring-0"
                                                 {...field}
                                             />
-                                            <i className="icon-[lucide--pencil] size-4 shrink-0 text-[#a1a1aa]" />
                                         </div>
                                     </FormControl>
                                 </FormItem>
                             )}
                         />
-                        <div className="mt-2 flex items-center justify-between gap-2 text-[12px] text-ink-secondary">
+                        <div className="mt-2 flex h-8 items-center justify-between gap-2 rounded-lg bg-panel px-2.5 text-[12px] text-ink-secondary">
                             <FormField
                                 control={form.control}
                                 name="parent"
@@ -184,9 +172,9 @@ export default function CategoryEditForm({
                                             ? NO_PARENT
                                             : field.value;
                                     return (
-                                        <FormItem className="flex min-w-0 items-center gap-1">
+                                        <FormItem className="flex h-full min-w-0 items-center gap-1.5 space-y-0">
                                             <span className="shrink-0">
-                                                {t("category-parent")}:
+                                                {t("category-parent")}
                                             </span>
                                             <FormControl>
                                                 <Select
@@ -199,10 +187,13 @@ export default function CategoryEditForm({
                                                         )
                                                     }
                                                 >
-                                                    <SelectTrigger className="h-6 min-w-0 border-0 bg-transparent px-0 text-[12px] shadow-none">
+                                                    <SelectTrigger className="h-7 w-fit min-w-0 gap-1 rounded-md border-0 bg-transparent px-0 text-[12px] font-normal text-ink shadow-none [&_svg]:size-3 [&_svg]:opacity-60 focus-visible:ring-0">
                                                         <SelectValue />
                                                     </SelectTrigger>
-                                                    <SelectContent align="start">
+                                                    <SelectContent
+                                                        align="start"
+                                                        className="rounded-xl border-rule bg-panel p-1 shadow-lg"
+                                                    >
                                                         <SelectItem
                                                             value={NO_PARENT}
                                                         >
@@ -239,13 +230,13 @@ export default function CategoryEditForm({
                                 control={form.control}
                                 name="defaultSelect"
                                 render={({ field }) => (
-                                    <FormItem className="flex shrink-0 items-center gap-1">
+                                    <FormItem className="flex h-full shrink-0 items-center gap-1.5 space-y-0">
                                         <span>
                                             {t("sub-category-default-select")}
                                         </span>
                                         <FormControl>
                                             <Switch
-                                                className="scale-75"
+                                                className="data-[state=checked]:bg-brand data-[state=unchecked]:bg-[#d4d4d8]"
                                                 checked={Boolean(field.value)}
                                                 onCheckedChange={field.onChange}
                                             />
@@ -259,113 +250,35 @@ export default function CategoryEditForm({
 
                 {!isGroup && (
                     <>
-                        <div className="flex items-center justify-between px-6 pb-3">
+                        <div className="px-6 pb-3">
                             <span className="text-[13px] text-[#71717a]">
                                 {t("category-icon-label")}
                             </span>
-                            <div className="flex items-center gap-0.5 rounded-full bg-panel p-0.5 text-[11px]">
-                                {(
-                                    [
-                                        ["illustrations", "illustrations-tab"],
-                                        ["icons", "icons-tab"],
-                                        ["custom", "custom-tab"],
-                                    ] as const
-                                ).map(([value, labelKey]) => (
-                                    <button
-                                        key={value}
-                                        type="button"
-                                        onClick={() => setIconTab(value)}
-                                        className={cn(
-                                            "rounded-full px-2.5 py-1 text-ink-secondary",
-                                            iconTab === value &&
-                                                "bg-ground-muted font-medium text-ink",
-                                        )}
-                                    >
-                                        {t(labelKey)}
-                                    </button>
-                                ))}
-                            </div>
                         </div>
 
                         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hidden px-6">
-                            {iconTab === "illustrations" && (
-                                <div className="grid grid-cols-5 gap-3 pb-4">
+                            <div className="grid grid-cols-5 gap-3 pb-4">
+                                {CATEGORY_ILLUSTRATIONS.map((src) => (
                                     <button
+                                        key={src}
                                         type="button"
-                                        aria-label="custom"
-                                        onClick={() => setIconTab("custom")}
-                                        className="flex aspect-square items-center justify-center rounded-full border border-rule bg-panel"
+                                        aria-label="illustration"
+                                        onClick={() => selectIcon(src)}
+                                        className={cn(
+                                            "flex aspect-square items-center justify-center rounded-full border p-1.5",
+                                            category.icon === src
+                                                ? "border-brand bg-[#f6e0d2]"
+                                                : "border-transparent bg-panel",
+                                        )}
                                     >
-                                        <i className="icon-[lucide--plus] size-5 text-[#a1a1aa]" />
+                                        <img
+                                            src={src}
+                                            alt=""
+                                            className="size-full object-contain"
+                                        />
                                     </button>
-                                    {CATEGORY_ILLUSTRATIONS.map((src) => (
-                                        <button
-                                            key={src}
-                                            type="button"
-                                            aria-label="illustration"
-                                            onClick={() => selectIcon(src)}
-                                            className={cn(
-                                                "flex aspect-square items-center justify-center rounded-full border p-1.5",
-                                                category.icon === src
-                                                    ? "border-brand bg-[#f6e0d2]"
-                                                    : "border-transparent bg-panel",
-                                            )}
-                                        >
-                                            <img
-                                                src={src}
-                                                alt=""
-                                                className="size-full object-contain"
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                            {iconTab === "icons" && (
-                                <div className="grid grid-cols-5 gap-3 pb-4">
-                                    {ICONS.flatMap((set) =>
-                                        set.icons.map((icon) => (
-                                            <button
-                                                key={set.labelKey + icon.name}
-                                                type="button"
-                                                aria-label="icon"
-                                                onClick={() =>
-                                                    selectIcon(icon.className)
-                                                }
-                                                className={cn(
-                                                    "flex aspect-square items-center justify-center rounded-full border bg-panel p-2",
-                                                    category.icon ===
-                                                        icon.className
-                                                        ? "border-brand bg-[#f6e0d2]"
-                                                        : "border-transparent",
-                                                )}
-                                            >
-                                                <i className={icon.className} />
-                                            </button>
-                                        )),
-                                    )}
-                                </div>
-                            )}
-                            {iconTab === "custom" && (
-                                <div className="flex flex-col gap-2 pb-4">
-                                    <div className="text-[12px] text-ink-secondary">
-                                        {t("copy-and-paste-svg-below")}
-                                    </div>
-                                    <textarea
-                                        className="h-32 w-full rounded-lg border border-rule bg-panel p-2 text-[12px]"
-                                        placeholder={`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"></svg>`}
-                                        onChange={(e) => {
-                                            const svgText =
-                                                e.currentTarget.value;
-                                            if (
-                                                svgText &&
-                                                validSvgText(svgText)
-                                            ) {
-                                                selectIcon(svgText);
-                                            }
-                                        }}
-                                    />
-                                </div>
-                            )}
+                                ))}
+                            </div>
                         </div>
                     </>
                 )}
