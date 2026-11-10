@@ -20,7 +20,7 @@ export default function SegmentedTabs({
     return (
         <div
             className={cn(
-                "inline-flex items-center gap-1 rounded-full bg-ground-muted/70 p-1",
+                "inline-flex items-center gap-1 rounded-full bg-segmented p-1",
                 className,
             )}
         >
@@ -32,10 +32,10 @@ export default function SegmentedTabs({
                         type="button"
                         onClick={() => onChange(item.value)}
                         className={cn(
-                            "cursor-pointer rounded-full text-sm transition-all duration-[var(--dp-motion-interaction)]",
+                            "cursor-pointer rounded-full text-[13px] transition-all duration-[var(--dp-motion-interaction)]",
                             size === "sm" ? "px-3 py-1.5" : "px-5 py-2",
                             active
-                                ? "bg-panel font-semibold text-ink shadow-panel"
+                                ? "dp-text-medium bg-panel text-ink shadow-panel"
                                 : "text-ink-secondary hover:text-ink",
                         )}
                     >

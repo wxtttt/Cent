@@ -68,8 +68,8 @@ function Chip({
             className={cn(
                 "h-11 cursor-pointer rounded-xl border-[1.5px] px-5 text-[15px] transition-colors",
                 active
-                    ? "border-brand bg-[#ffefe6] font-medium text-brand"
-                    : "border-transparent bg-white text-ink",
+                    ? "border-[#ff7f32] bg-[#ffefe6] font-medium text-[#ff7f32]"
+                    : "border-transparent bg-white text-[#78726e]",
                 className,
             )}
             onClick={onClick}
@@ -101,8 +101,8 @@ function DateField({
             className={cn(
                 "flex h-11 flex-1 items-center justify-center rounded-xl border-[1.5px] text-[15px]",
                 active
-                    ? "border-brand bg-[#ffefe6] font-medium text-brand"
-                    : "border-transparent bg-white text-ink-secondary/70",
+                    ? "border-[#ff7f32] bg-[#ffefe6] font-medium text-[#ff7f32]"
+                    : "border-transparent bg-white text-[#78726e]",
             )}
         >
             <DatePicker
@@ -138,7 +138,7 @@ function AmountField({
                     e.target.value === "" ? undefined : Number(e.target.value),
                 );
             }}
-            className="h-11 min-w-0 flex-1 rounded-xl bg-white text-center text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
+            className="h-11 min-w-0 flex-1 rounded-xl bg-white text-center text-[15px] text-[#272322] outline-none placeholder:text-[#78726e]"
         />
     );
 }
@@ -210,13 +210,13 @@ function SheetForm({
                 className="flex flex-shrink-0 flex-col items-center pt-3"
             >
                 <div className="h-1 w-8 rounded-full bg-[#bdbbb7]" />
-                <div className="mt-3.5 text-[17px] font-bold text-ink">
+                <div className="mt-3.5 text-[17px] font-bold text-[#272322]">
                     {t("filter")}
                 </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-2 pt-7">
                 <section>
-                    <h3 className="text-[15px] font-bold text-ink">
+                    <h3 className="text-[15px] font-bold text-[#272322]">
                         {t("filter-time")}
                     </h3>
                     <div className="mt-3.5 flex gap-2.5">
@@ -258,7 +258,7 @@ function SheetForm({
                             onOpenChange={setStartOpen}
                             onChange={(v) => setCustom("customStart", v)}
                         />
-                        <span className="flex-shrink-0 text-ink">-</span>
+                        <span className="flex-shrink-0 text-[#71717a]">-</span>
                         <DateField
                             value={draft.customEnd}
                             placeholder={t("filter-end-time")}
@@ -291,7 +291,7 @@ function SheetForm({
                 </section>
 
                 <section className="mt-7">
-                    <h3 className="text-[15px] font-bold text-ink">
+                    <h3 className="text-[15px] font-bold text-[#272322]">
                         {t("filter-type")}
                     </h3>
                     <div className="mt-3.5 flex gap-2.5">
@@ -335,7 +335,7 @@ function SheetForm({
                 </section>
 
                 <section className="mt-7">
-                    <h3 className="text-[15px] font-bold text-ink">
+                    <h3 className="text-[15px] font-bold text-[#272322]">
                         {t("filter-members")}
                     </h3>
                     <div className="mt-3.5 flex flex-wrap gap-2.5">
@@ -386,7 +386,7 @@ function SheetForm({
                 </section>
 
                 <section className="mt-7">
-                    <h3 className="text-[15px] font-bold text-ink">
+                    <h3 className="text-[15px] font-bold text-[#272322]">
                         {t("filter-amount-range")}
                     </h3>
                     <div className="mt-3.5 flex items-center gap-2">
@@ -400,9 +400,7 @@ function SheetForm({
                                 }))
                             }
                         />
-                        <span className="flex-shrink-0 text-ink-secondary">
-                            -
-                        </span>
+                        <span className="flex-shrink-0 text-[#71717a]">-</span>
                         <AmountField
                             value={draft.maxAmountNumber}
                             placeholder={t("filter-max-amount")}
@@ -419,7 +417,7 @@ function SheetForm({
             <div className="flex flex-shrink-0 items-center gap-5 px-5 pb-[max(20px,var(--safe-area-inset-bottom))] pt-4">
                 <button
                     type="button"
-                    className="h-[52px] w-[36%] cursor-pointer rounded-[26px] bg-white text-[16px] font-medium text-ink"
+                    className="h-[52px] w-[36%] cursor-pointer rounded-[26px] bg-white text-[16px] font-medium text-[#272322]"
                     onClick={() => setDraft({})}
                 >
                     {t("filter-reset")}

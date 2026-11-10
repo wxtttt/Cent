@@ -20,7 +20,74 @@
 	--dp-color-header: #f3e6d3;
 	--dp-color-ground-muted: #eee0c8;
 	--dp-color-rule: #e9dcc6;
-	--dp-color-accent: #f7853c;
+	--dp-color-track: #f1eadf;
+	--dp-color-accent: #ff8435;
+	--dp-color-ink-tab: #c4bfba;
+	--dp-color-segmented: #f2e9dc;
+	--dp-color-greet-left: #e7e0cb;
+	--dp-color-greet-right: #f2e2c3;
+	/* APK 实测渐变（1080×2340 逐点取色）：页头暖米纵向淡出、票券卡奶白对角底、
+	   扇形柔边与胶带斜纹、首页 hero 奶油/黄圆/青绿弧 */
+	--dp-gradient-page-top: linear-gradient(
+		to bottom,
+		#f3e6d3 0%,
+		#f2e9dc 18%,
+		#f7efe3 52%,
+		#fbf7ef 100%
+	);
+	/* 统计卡渐变按 tab 区分（APK 1080×2340 逐点取样）：记账暖米起点在左下、
+	   知物/财富镜像到右下且更淡、首页/有期为纯奶白；扇形角位置由 TicketCard 的
+	   variant 决定，故这里用无 `at` 的径向渐变，圆心固定在圆形元素中心。 */
+	--dp-gradient-ticket: linear-gradient(
+		to top right,
+		#f8edde 0%,
+		#fcf7ec 42%,
+		#fffdf6 78%
+	);
+	--dp-gradient-ticket-ledger: linear-gradient(
+		to top right,
+		#f8edde 0%,
+		#fcf7ec 42%,
+		#fffdf6 78%
+	);
+	--dp-gradient-ticket-inventory: linear-gradient(
+		to top left,
+		#fbf4e9 0%,
+		#fdf9f1 42%,
+		#fffdf6 78%
+	);
+	--dp-gradient-ticket-wealth: linear-gradient(
+		to top left,
+		#fbf4e8 0%,
+		#fdf9f0 42%,
+		#fffdf6 78%
+	);
+	--dp-gradient-ticket-plain: linear-gradient(
+		to top right,
+		#fbf9f1 0%,
+		#fffdf6 62%
+	);
+	/* APK 扇形是实色硬边弧，只在最外缘留一点淡出做抗锯齿，不是大面积渐隐 */
+	--dp-ticket-yellow-corner: radial-gradient(
+		circle,
+		#faefcf 0%,
+		#faefcf 86%,
+		rgba(250, 239, 207, 0) 100%
+	);
+	--dp-ticket-green-corner: radial-gradient(
+		circle,
+		#ecf0e5 0%,
+		#ecf0e5 86%,
+		rgba(236, 240, 229, 0) 100%
+	);
+	/* 胶带实测（1080×2340 逐点取样反推）：纯色约 #ecd592、不透明度约 0.7 的半透明和纸胶带，
+	   骑跨卡顶时上半透出页面暖米、下半透出卡白，自然形成一条水平折痕分界。
+	   实测合成色：卡外 #eedaa6 / 卡内 #f2e1b1（首页为 #f0dfad / #f2e1af）。 */
+	--dp-ticket-tape: rgba(236, 213, 146, 0.72);
+	--dp-ticket-tape-crease: rgba(255, 255, 255, 0.38);
+	--dp-color-hero-cream: #f0dbc1;
+	--dp-color-hero-yellow: #f0d58b;
+	--dp-color-hero-green: #c0d2bf;
 	--dp-color-field: #2a2018;
 	--dp-color-on-field: #fdf9f3;
 	--dp-color-on-field-secondary: #d8cec2;
@@ -50,6 +117,23 @@
 	--safe-area-inset-bottom: max(env(safe-area-inset-bottom), 0px);
 	--safe-area-inset-left: env(safe-area-inset-left);
 	--safe-area-top: calc(var(--safe-area-inset-top) + var(--titlebar-height));
+}
+
+/* 侧边个人抽屉在 APK 里是一套独立的中性灰白体系（现场 1080×2340 逐点取色）：
+   背景 #f4f4f4、卡片纯白 #ffffff、主文字/图标 #383230、次级 #8a847f、
+   分隔线 #efeae5；与首页的暖米主题不同，不能用全局 ground/panel。
+   这里只在抽屉容器内重定义语义变量：@theme inline 编译出的工具类直接引用
+   var(--dp-color-*)，子元素会继承覆盖值；深色主题下不生效，保持原有暗色。 */
+html:not(.dark) .dp-drawer-surface {
+	--dp-color-ground: #f4f4f4;
+	--dp-color-panel: #ffffff;
+	--dp-color-ink: #383230;
+	--dp-color-ink-warm: #5f5955;
+	--dp-color-ink-secondary: #8a847f;
+	--dp-color-ground-muted: #ececec;
+	--dp-color-rule: #efeae5;
+	--dp-color-track: #f1f0ef;
+	--dp-color-ink-tab: #b3ada8;
 }
 
 .is-macos-app {
@@ -159,8 +243,11 @@ button {
 	--color-ink: var(--dp-color-ink);
 	--color-ink-warm: var(--dp-color-ink-warm);
 	--color-ink-secondary: var(--dp-color-ink-secondary);
+	--color-ink-tab: var(--dp-color-ink-tab);
+	--color-segmented: var(--dp-color-segmented);
 	--color-header: var(--dp-color-header);
 	--color-rule: var(--dp-color-rule);
+	--color-track: var(--dp-color-track);
 	--color-field: var(--dp-color-field);
 	--color-on-field: var(--dp-color-on-field);
 	--color-on-field-secondary: var(--dp-color-on-field-secondary);
@@ -214,7 +301,61 @@ button {
 	--dp-color-header: #201a14;
 	--dp-color-ground-muted: #221c16;
 	--dp-color-rule: #332a22;
+	--dp-color-track: #2a231c;
 	--dp-color-accent: #ff8a3d;
+	--dp-color-ink-tab: #7d7268;
+	--dp-color-segmented: #2a231c;
+	--dp-color-greet-left: #241e18;
+	--dp-color-greet-right: #2c241c;
+	--dp-gradient-page-top: linear-gradient(
+		to bottom,
+		#201a14 0%,
+		#221c16 26%,
+		#1b1611 62%,
+		#17130f 100%
+	);
+	--dp-gradient-ticket: linear-gradient(
+		to top right,
+		#2b231a 0%,
+		#251e17 44%,
+		#1f1913 82%
+	);
+	--dp-gradient-ticket-ledger: linear-gradient(
+		to top right,
+		#2b231a 0%,
+		#251e17 44%,
+		#1f1913 82%
+	);
+	--dp-gradient-ticket-inventory: linear-gradient(
+		to top left,
+		#2a2219 0%,
+		#241d16 44%,
+		#1f1913 82%
+	);
+	--dp-gradient-ticket-wealth: linear-gradient(
+		to top left,
+		#2a2219 0%,
+		#241d16 44%,
+		#1f1913 82%
+	);
+	--dp-gradient-ticket-plain: #1f1913;
+	--dp-ticket-yellow-corner: radial-gradient(
+		circle,
+		#3a3220 0%,
+		#3a3220 86%,
+		rgba(58, 50, 32, 0) 100%
+	);
+	--dp-ticket-green-corner: radial-gradient(
+		circle,
+		#243022 0%,
+		#243022 86%,
+		rgba(36, 48, 34, 0) 100%
+	);
+	--dp-ticket-tape: rgba(84, 69, 42, 0.82);
+	--dp-ticket-tape-crease: rgba(255, 255, 255, 0.08);
+	--dp-color-hero-cream: #2c241c;
+	--dp-color-hero-yellow: #3d3520;
+	--dp-color-hero-green: #232f26;
 	--dp-color-field: #0f0c09;
 	--dp-color-on-field: #fdf9f3;
 	--dp-color-on-field-secondary: #d8cec2;
@@ -305,6 +446,20 @@ button {
 		letter-spacing: -0.02em;
 	}
 	/* 键盘操作必须能看到当前位置，鼠标点击不显示 */
+}
+
+/* APK 的中文标题是「中黑」（Medium，≈500/600），而 Windows 中文字体只有
+   Regular(400) / Bold(700) 两档：font-medium(500) 归并到 400、
+   font-semibold(600) 归并到 700，所以想变细只能落到 400。
+   实测同高度笔画密度：APK 中黑 0.339、font-bold 0.451、纯 400 约 0.23，
+   400 比 700 更接近 APK 且字形干净。
+
+   注意：不要用 -webkit-text-stroke 去补中间字重。描边默认绘制在字形填充
+   之上，亚像素边缘会叠出灰边/双线，中文横竖笔画尤其明显（看起来像重影）；
+   改用 paint-order:stroke fill 也只是把虚边换成一圈外轮廓，同样不干净。
+   该规则不在 layer 内，优先级高于 Tailwind 的 font-* 工具类。 */
+.dp-text-medium {
+	font-weight: 500;
 }
 
 /* 焦点环放在 layer 外，确保能盖过组件里 reset 掉的 outline；表单控件自带的 focus 边框已经够明显 */
@@ -421,4 +576,14 @@ button {
 
 .scrollbar-hidden::-webkit-scrollbar {
 	display: none;
+}
+
+/* 家小满同款渐变：页头从顶栏暖米淡出到页面底，票券卡左下暖米→右上奶白。
+   页头渐变直接铺在页面容器背景上（限定 150px 高），不产生额外层级，
+   否则会盖住 confirm / 登录弹层（其基准 z 只有 4）。 */
+.page-top-fade {
+	background-color: var(--dp-color-ground);
+	background-image: var(--dp-gradient-page-top);
+	background-repeat: no-repeat;
+	background-size: 100% 150px;
 }

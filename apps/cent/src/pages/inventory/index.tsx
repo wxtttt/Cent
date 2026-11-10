@@ -146,7 +146,7 @@ export default function InventoryPage() {
 
     return (
         <div className="h-full overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 px-4 pb-32 pt-3">
+            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2.5 px-4 pb-32 pt-3">
                 <div className="flex items-center gap-3">
                     <CategoryFilterButton
                         categories={categories}
@@ -165,27 +165,30 @@ export default function InventoryPage() {
                     />
                 </div>
 
+                {/* 猫靠卡片右侧，需给「分段控件 → 卡顶」留出猫可见高度，
+                    否则猫头会顶进上方「虚拟」胶囊（APK 实测两者垂直错开） */}
                 <TicketCard
-                    className="mt-8"
+                    className="mt-9"
+                    variant="inventory"
                     mascot={
                         <img
                             src={xiaozhiPeek}
                             alt=""
                             draggable={false}
-                            className="pointer-events-none h-16 w-auto select-none"
+                            className="pointer-events-none h-full w-auto select-none"
                         />
                     }
                     top={
                         <>
-                            <h1 className="font-display text-2xl font-bold tracking-tight">
+                            <h1 className="dp-text-medium font-display text-xl tracking-tight">
                                 {t("inventory-overview")}
                             </h1>
-                            <div className="mt-3 grid grid-cols-2">
+                            <div className="mt-2 grid grid-cols-2">
                                 <div className="pr-4">
                                     <div className="text-xs text-ink-secondary">
                                         {t("inventory-total-assets")}
                                     </div>
-                                    <div className="mt-1 font-display text-3xl font-bold text-brand tabular-nums">
+                                    <div className="mt-1 font-display text-2xl font-bold text-brand tabular-nums">
                                         {money(overview.total)}
                                     </div>
                                 </div>
@@ -193,7 +196,7 @@ export default function InventoryPage() {
                                     <div className="text-xs text-ink-secondary">
                                         {t("inventory-daily-cost")}
                                     </div>
-                                    <div className="mt-1 font-display text-3xl font-bold text-ink/80 tabular-nums">
+                                    <div className="mt-1 font-display text-2xl font-bold text-ink/80 tabular-nums">
                                         {money(overview.daily)}
                                     </div>
                                 </div>
@@ -220,7 +223,8 @@ export default function InventoryPage() {
                 />
 
                 {visible.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-ink-secondary">
+                    // 家小满缺省态：纯文字居中，无插画与引导按钮
+                    <p className="py-12 text-center text-[13px] text-ink-secondary">
                         {items.length === 0
                             ? t("inventory-empty")
                             : t("inventory-empty-filtered")}
@@ -405,7 +409,7 @@ function StatusStat({
             <div className="text-xs text-ink-secondary">{label}</div>
             <div
                 className={cn(
-                    "mt-0.5 font-display text-xl font-bold tabular-nums",
+                    "mt-0.5 font-display text-lg font-bold tabular-nums",
                     tone ?? "text-ink",
                 )}
             >

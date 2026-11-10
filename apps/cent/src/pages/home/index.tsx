@@ -1,9 +1,8 @@
 import dayjs from "dayjs";
-import { useCallback, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useShallow } from "zustand/shallow";
 import xiaonuan from "@/assets/mascots/01-home-xiaonuan.webp";
-import xiaoji from "@/assets/mascots/02-bookkeeping-xiaoji.webp";
 import { showBookGuide } from "@/components/book/util";
 import {
     budgetEncountered,
@@ -37,6 +36,8 @@ const inRange = (time: number, start: number, end: number) =>
 // 首页底部不再放吉祥物（家小满同款：仅 hero 与 dock 出现）
 
 export default function Page() {
+    // SVG 的 clipPath / gradient id 必须每次挂载唯一，且去掉 useId 里的冒号
+    const svgId = useId().replace(/:/g, "");
     const t = useIntl();
     const { locale } = useLocale();
     const navigate = useNavigate();
@@ -127,10 +128,9 @@ export default function Page() {
                 0)
         );
     }, 0);
+    // 家小满缺省口径：没有设置预算时进度条保持空轨道，不按日期进度填橙色
     const budgetRatio =
-        budgetTotalValue > 0
-            ? Math.min(1, budgetUsed / budgetTotalValue)
-            : now.date() / now.daysInMonth();
+        budgetTotalValue > 0 ? Math.min(1, budgetUsed / budgetTotalValue) : 0;
 
     const dueToday = useMemo(
         () =>
@@ -315,17 +315,91 @@ export default function Page() {
                     <svg
                         aria-hidden
                         role="presentation"
-                        className="block h-[72px] w-full"
+                        className="block h-[64px] w-full"
                         preserveAspectRatio="none"
                         viewBox="0 0 393 72"
                     >
-                        <path
-                            d="M0 0 H393 V46 C358 58 322 68 240 65 C152 62 66 70 0 58 Z"
-                            fill="var(--dp-color-ground-muted)"
-                        />
+                        <defs>
+                            <clipPath id={`${svgId}-clip`}>
+                                <path d="M0 0 H393 V46 C358 58 322 68 240 65 C152 62 66 70 0 58 Z" />
+                            </clipPath>
+                            {/* 折叠态问候带：左暖灰 → 中奶油 → 右暖黄，取代原先硬边双色 */}
+                            <linearGradient
+                                id={`${svgId}-greet`}
+                                x1="0"
+                                y1="0"
+                                x2="1"
+                                y2="0"
+                            >
+                                <stop
+                                    offset="0%"
+                                    stopColor="var(--dp-color-greet-left)"
+                                />
+                                <stop
+                                    offset="48%"
+                                    stopColor="var(--dp-color-hero-cream)"
+                                />
+                                <stop
+                                    offset="100%"
+                                    stopColor="var(--dp-color-greet-right)"
+                                />
+                            </linearGradient>
+                            {/* 展开态 hero 的缩小版：右上黄圆、左下青绿弧 */}
+                            <radialGradient id={`${svgId}-sun`}>
+                                <stop offset="0%" stopColor="#f9e6ac" />
+                                <stop
+                                    offset="72%"
+                                    stopColor="var(--dp-color-hero-yellow)"
+                                />
+                                <stop
+                                    offset="100%"
+                                    stopColor="var(--dp-color-hero-yellow)"
+                                    stopOpacity="0.3"
+                                />
+                            </radialGradient>
+                            <radialGradient id={`${svgId}-arc`}>
+                                <stop offset="0%" stopColor="#d3e0cf" />
+                                <stop
+                                    offset="74%"
+                                    stopColor="var(--dp-color-hero-green)"
+                                />
+                                <stop
+                                    offset="100%"
+                                    stopColor="var(--dp-color-hero-green)"
+                                    stopOpacity="0.25"
+                                />
+                            </radialGradient>
+                        </defs>
+                        <g clipPath={`url(#${svgId}-clip)`}>
+                            <rect
+                                width="393"
+                                height="72"
+                                fill={`url(#${svgId}-greet)`}
+                            />
+                            {/* 右半暖黄斜切：APK 折叠态分界，降透明度让渐变透出来 */}
+                            <path
+                                d="M180 0 H393 V72 H250 Z"
+                                fill="var(--dp-color-greet-right)"
+                                opacity="0.5"
+                            />
+                            <circle
+                                cx="352"
+                                cy="6"
+                                r="58"
+                                fill={`url(#${svgId}-sun)`}
+                                opacity="0.8"
+                            />
+                            <circle
+                                cx="14"
+                                cy="88"
+                                r="52"
+                                fill={`url(#${svgId}-arc)`}
+                                opacity="0.65"
+                            />
+                        </g>
                     </svg>
                     <div className="absolute inset-0 flex items-center gap-2 px-4 pt-1">
-                        <h1 className="min-w-0 truncate text-[17px] font-bold text-ink-warm">
+                        <h1 className="dp-text-medium min-w-0 truncate text-[15px] text-ink-warm">
                             {greeting}，{name || t("me")}
                         </h1>
                         <div className="ml-auto flex flex-shrink-0 items-center gap-2">
@@ -333,7 +407,7 @@ export default function Page() {
                                 src={xiaonuan}
                                 alt=""
                                 draggable={false}
-                                className="h-11 w-auto select-none"
+                                className="h-[46px] w-auto select-none"
                             />
                             <div className="relative flex items-center">
                                 {avatars.length > 0 ? (
@@ -384,14 +458,14 @@ export default function Page() {
                 </div>
 
                 {/* 高度 = APK 卡减去概览行；左右两列各自流式排列（家小满右列行距更紧、
-                    不与左列钉底对齐）：左列行距 16px 行盒、右列 10px，进度条 7px 高 */}
-                <section className="relative mt-3 overflow-hidden rounded-panel bg-panel px-4 pb-2 pt-3">
+                    不与左列钉底对齐）：左列行距 12px、右列 8px，进度条 5px 高 */}
+                <section className="relative mt-2 overflow-hidden rounded-panel bg-panel px-3.5 pb-2 pt-3">
                     <div className="absolute inset-y-3 left-1/2 w-px bg-rule" />
                     <div className="grid grid-cols-2">
                         <div className="flex min-w-0 flex-col pr-4">
                             <button
                                 type="button"
-                                className="flex w-full cursor-pointer items-center gap-1.5 text-[13px] leading-none text-ink-secondary"
+                                className="flex w-full cursor-pointer items-center gap-1.5 text-xs leading-none text-ink-secondary"
                                 onClick={() => {
                                     showStat();
                                 }}
@@ -403,15 +477,15 @@ export default function Page() {
                                 </span>
                                 <i className="icon-[mdi--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
-                            <div className="mt-4 flex items-baseline gap-1 overflow-hidden font-display font-bold tracking-tight text-ink-warm">
-                                <span className="flex-shrink-0 text-base">
+                            <div className="mt-3 flex items-baseline gap-1 overflow-hidden font-display font-bold tracking-tight text-ink-warm">
+                                <span className="flex-shrink-0 text-sm">
                                     {baseCurrency.symbol}
                                 </span>
-                                <span className="truncate text-[30px] leading-none tabular-nums">
+                                <span className="truncate text-2xl leading-none tabular-nums">
                                     {money(monthExpense)}
                                 </span>
                             </div>
-                            <div className="mt-4 h-[7px] overflow-hidden rounded-full bg-rule">
+                            <div className="mt-3 h-[4px] overflow-hidden rounded-full bg-track">
                                 <div
                                     className="h-full rounded-full bg-brand transition-[width] duration-500"
                                     style={{
@@ -423,7 +497,7 @@ export default function Page() {
                         <div className="flex min-w-0 flex-col pl-4">
                             <button
                                 type="button"
-                                className="flex w-full cursor-pointer items-center gap-1.5 text-[13px] leading-none text-ink-secondary"
+                                className="flex w-full cursor-pointer items-center gap-1.5 text-xs leading-none text-ink-secondary"
                                 onClick={() => {
                                     showScheduled();
                                 }}
@@ -434,16 +508,16 @@ export default function Page() {
                                 </span>
                                 <i className="icon-[mdi--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
-                            <div className="mt-[10px] font-display font-bold tracking-tight text-ink-warm">
-                                <span className="text-[30px] leading-none tabular-nums">
+                            <div className="mt-2 font-display font-bold tracking-tight text-ink-warm">
+                                <span className="text-2xl leading-none tabular-nums">
                                     {doneToday}
                                 </span>
-                                <span className="text-[15px] text-ink-secondary">
+                                <span className="text-[13px] text-ink-secondary">
                                     {" "}
                                     / {dueToday.length}
                                 </span>
                             </div>
-                            <div className="mt-[10px] flex items-center gap-2 text-xs leading-none text-ink-secondary">
+                            <div className="mt-2 flex items-center gap-2 text-xs leading-none text-ink-secondary">
                                 <span className="size-3.5 flex-shrink-0 rounded-full border-2 border-rule"></span>
                                 <span className="truncate">
                                     {t("today-done")} {todoPercent}%
@@ -454,25 +528,26 @@ export default function Page() {
                 </section>
 
                 <TicketCard
-                    className="mt-8"
-                    mascotPos="right"
+                    className="mt-5"
+                    variant="home"
+                    decorations={false}
                     mascot={
                         <img
-                            src={xiaoji}
+                            src={xiaonuan}
                             alt=""
                             draggable={false}
-                            className="pointer-events-none h-[58px] w-auto select-none"
+                            className="pointer-events-none h-full w-auto select-none"
                         />
                     }
                     top={
                         <>
                             <div className="flex items-center gap-2">
                                 <i className="icon-[mdi--shimmer-outline] size-[18px] text-brand"></i>
-                                <h2 className="text-[17px] font-bold text-brand">
+                                <h2 className="dp-text-medium text-[15px] text-brand">
                                     {t("daily-summary")}
                                 </h2>
                             </div>
-                            <p className="mt-3 text-sm leading-6 text-ink-secondary">
+                            <p className="mt-2.5 text-[13px] leading-5 text-ink-secondary">
                                 {summaryBullets
                                     .map((item) => item.text)
                                     .join(" ")}
@@ -486,7 +561,7 @@ export default function Page() {
                                     <button
                                         key={item.key}
                                         type="button"
-                                        className="flex cursor-pointer items-center justify-between gap-3 py-1.5 text-left text-[13px] text-ink-secondary"
+                                        className="flex cursor-pointer items-center justify-between gap-3 py-1 text-left text-xs text-ink-secondary"
                                         onClick={() => {
                                             navigate(item.to);
                                         }}
@@ -501,11 +576,11 @@ export default function Page() {
                     }
                 />
 
-                <section className="mt-6">
-                    <h2 className="text-base font-bold">
+                <section className="mt-5">
+                    <h2 className="dp-text-medium text-[15px]">
                         {t("recent-reminders")}
                     </h2>
-                    <div className="mt-3 flex flex-col gap-2">
+                    <div className="mt-2 flex flex-col gap-2">
                         {reminders.length > 0 ? (
                             reminders.map((reminder) => (
                                 <button
@@ -557,8 +632,10 @@ export default function Page() {
                 </section>
 
                 {homeWidgets.length > 0 && (
-                    <section className="mt-6">
-                        <h2 className="text-base font-bold">{t("widgets")}</h2>
+                    <section className="mt-5">
+                        <h2 className="dp-text-medium text-[15px]">
+                            {t("widgets")}
+                        </h2>
                         <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scrollbar-hidden">
                             {homeWidgets.map((widget) => (
                                 <div

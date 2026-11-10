@@ -1,10 +1,9 @@
 import dayjs from "dayjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/shallow";
-import { goAddBill } from "@/components/bill-editor";
 import { budgetRange, budgetTotal } from "@/components/budget/util";
 import { isCancelError } from "@/components/confirm/state";
-import EmptyState, { MascotPeek } from "@/components/empty-state";
+import { MascotPeek } from "@/components/empty-state";
 import Ledger from "@/components/ledger";
 import {
     type LedgerQuickFilter,
@@ -22,8 +21,18 @@ import { useLedgerStore } from "@/store/ledger";
 import { useUiStore } from "@/store/ui";
 import { useUserStore } from "@/store/user";
 
-function RatioBar({ label, value }: { label: string; value: number }) {
+function RatioBar({
+    label,
+    value,
+    text,
+}: {
+    label: string;
+    value: number;
+    /** 家小满缺省口径：预算未设置时显示「未设置」且轨道保持空 */
+    text?: string;
+}) {
     const percent = Math.max(0, Math.round(value * 1000) / 10);
+    const unset = text !== undefined;
     return (
         <div className="min-w-0">
             {/* 家小满：标签与数值同行靠左 */}
@@ -31,16 +40,20 @@ function RatioBar({ label, value }: { label: string; value: number }) {
                 <span className="truncate text-xs text-ink-secondary">
                     {label}
                 </span>
-                <span className="text-sm font-semibold tabular-nums">
-                    {percent}%
+                <span
+                    className={`text-[13px] tabular-nums ${unset ? "font-normal text-ink-secondary" : "font-medium"}`}
+                >
+                    {text ?? `${percent}%`}
                 </span>
             </div>
             {/* 轨道中性灰（≈#f4f4f5）7px 高，与家小满实测一致 */}
-            <div className="mt-2.5 h-[7px] overflow-hidden rounded-full bg-black/5">
-                <div
-                    className="h-full rounded-full bg-brand"
-                    style={{ width: `${Math.min(100, percent)}%` }}
-                />
+            <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-black/5">
+                {!unset && (
+                    <div
+                        className="h-full rounded-full bg-brand"
+                        style={{ width: `${Math.min(100, percent)}%` }}
+                    />
+                )}
             </div>
         </div>
     );
@@ -187,7 +200,7 @@ export default function Page() {
                     <div className="flex items-center justify-between">
                         <button
                             type="button"
-                            className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm text-ink shadow-panel transition-colors hover:bg-ground-muted"
+                            className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1 text-[13px] text-ink shadow-panel transition-colors hover:bg-ground-muted"
                             onClick={() => {
                                 showLedgerFilter(quickFilter)
                                     .then((v) => setQuickFilter(v))
@@ -201,7 +214,7 @@ export default function Page() {
                         </button>
                         <button
                             type="button"
-                            className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm text-ink shadow-panel transition-colors hover:bg-ground-muted"
+                            className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1 text-[13px] text-ink shadow-panel transition-colors hover:bg-ground-muted"
                             onClick={() => {
                                 showStat();
                             }}
@@ -212,17 +225,18 @@ export default function Page() {
                     </div>
 
                     <TicketCard
-                        className="mt-8"
+                        className="mt-5"
+                        variant="ledger"
                         mascot={
                             <MascotPeek
                                 mascot="bookkeeping"
-                                className="h-16 w-auto"
+                                className="h-full w-auto"
                             />
                         }
                         top={
                             <>
                                 <div className="flex items-start justify-between gap-3">
-                                    <h1 className="font-display text-2xl font-bold tracking-tight">
+                                    <h1 className="dp-text-medium font-display text-xl tracking-tight">
                                         {cardTitle}
                                     </h1>
                                     <div className="flex-shrink-0 text-right">
@@ -236,13 +250,13 @@ export default function Page() {
                                     </div>
                                 </div>
 
-                                <div className="mt-4 grid grid-cols-2">
+                                <div className="mt-3 grid grid-cols-2">
                                     <div className="pr-4">
                                         <div className="text-xs text-ink-secondary">
                                             {t("this-month")}
                                             {t("income")}
                                         </div>
-                                        <div className="mt-1 flex items-baseline gap-0.5 font-display text-2xl font-bold text-semantic-income tabular-nums">
+                                        <div className="mt-1 flex items-baseline gap-0.5 font-display text-xl font-bold text-semantic-income tabular-nums">
                                             <span>{baseCurrency.symbol}</span>
                                             <span>{money(income)}</span>
                                         </div>
@@ -252,7 +266,7 @@ export default function Page() {
                                             {t("this-month")}
                                             {t("expense")}
                                         </div>
-                                        <div className="mt-1 flex items-baseline gap-0.5 font-display text-2xl font-bold text-semantic-expense tabular-nums">
+                                        <div className="mt-1 flex items-baseline gap-0.5 font-display text-xl font-bold text-semantic-expense tabular-nums">
                                             <span>{baseCurrency.symbol}</span>
                                             <span>{money(expense)}</span>
                                         </div>
@@ -269,6 +283,11 @@ export default function Page() {
                                 <RatioBar
                                     label={t("budget-rate")}
                                     value={budgetRate}
+                                    text={
+                                        activeBudgetTotal === 0
+                                            ? t("not-set")
+                                            : undefined
+                                    }
                                 />
                                 <RatioBar
                                     label={t("income-ratio")}
@@ -278,12 +297,7 @@ export default function Page() {
                         }
                     />
 
-                    <div className="flex items-baseline justify-between px-1 pb-1 pt-5">
-                        <h2 className="text-xl font-bold">{t("records")}</h2>
-                        <span className="text-xs text-ink-secondary">
-                            {t("total-records", { n: visibleBills.length })}
-                        </span>
-                    </div>
+                    {/* 家小满：票券卡下方直接是流水/空态文字，没有「记录」标题栏 */}
                 </div>
             </div>
 
@@ -298,16 +312,10 @@ export default function Page() {
                             showAssets
                         />
                     ) : (
-                        <div className="px-4 pt-6">
-                            <EmptyState
-                                mascot="bookkeeping"
-                                text={t("nothing-here-add-one-bill")}
-                                action={{
-                                    label: t("add-bill"),
-                                    onClick: () => goAddBill(),
-                                }}
-                            />
-                        </div>
+                        // 家小满缺省态：左对齐纯文字，无插画、无引导按钮
+                        <p className="px-4 pt-3 text-[13px] text-ink-secondary">
+                            {t("no-bill-records")}
+                        </p>
                     )}
                 </div>
             </div>

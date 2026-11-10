@@ -1,6 +1,6 @@
 import { Toaster } from "@glink25/toast";
 import { useEffect, useRef } from "react";
-import { Outlet } from "react-router";
+import { Outlet, useLocation } from "react-router";
 import AppChrome from "@/components/app-chrome";
 import { AutoRuleEditProvider, AutoRuleProvider } from "@/components/auto-rule";
 import { BillEditorProvider } from "@/components/bill-editor";
@@ -75,12 +75,21 @@ export default function MainLayout() {
 
     useInitPreset();
 
+    const { pathname } = useLocation();
+    // 家小满四个一级页签页：顶栏暖米底色向下柔和淡出到页面底（APK 实测约 150dp）
+    const showTopFade = ["/", "/ledger", "/medical", "/inventory"].includes(
+        pathname,
+    );
+
     return (
         <ThemeProvider>
             <TooltipProvider>
                 <div className="flex h-full w-full flex-col overflow-hidden bg-ground">
                     <AppChrome />
-                    <div className="min-h-0 flex-1 overflow-hidden">
+                    {/* 渐变作为容器背景实现，避免新增定位/层级元素盖住登录弹层 */}
+                    <div
+                        className={`min-h-0 flex-1 overflow-hidden ${showTopFade ? "page-top-fade" : ""}`}
+                    >
                         <Outlet />
                     </div>
                 </div>

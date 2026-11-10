@@ -260,13 +260,13 @@ function AssistantDock() {
                     </div>
                 </>
             )}
-            <div className="pointer-events-auto relative mx-auto flex w-full max-w-[560px] items-center gap-1 rounded-full border border-rule bg-panel/95 p-1.5 pl-2 shadow-panel backdrop-blur">
+            <div className="pointer-events-auto relative mx-auto flex w-full max-w-[560px] items-center gap-1 rounded-full bg-white p-1.5 pl-2 shadow-panel">
                 {mascot ? (
                     <img
                         src={mascot}
                         alt=""
                         draggable={false}
-                        className="size-9 flex-shrink-0 select-none object-contain"
+                        className="size-[30px] flex-shrink-0 select-none object-contain"
                     />
                 ) : (
                     <i className="icon-[mdi--shimmer-outline] size-5 flex-shrink-0 text-brand"></i>
@@ -283,7 +283,7 @@ function AssistantDock() {
                 <button
                     type="button"
                     aria-label={t("voice-input")}
-                    className="flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-ground-muted text-ink transition-colors hover:bg-rule/60"
+                    className="flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#f4f4f5] text-ink transition-colors hover:bg-[#e9e9eb]"
                     onClick={() => {
                         openAssistant();
                     }}
@@ -294,8 +294,10 @@ function AssistantDock() {
                     type="button"
                     aria-label={t("add-bill")}
                     className={cn(
-                        "flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-on-brand transition-transform hover:scale-[1.04] active:scale-95",
-                        hasMenu && menuVisible ? "bg-field" : "bg-brand",
+                        "flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full transition-transform hover:scale-[1.04] active:scale-95",
+                        hasMenu && menuVisible
+                            ? "bg-field text-on-field"
+                            : "bg-[#f4f4f5] text-ink",
                     )}
                     onClick={() => {
                         if (plusMode === "medical") {
@@ -384,9 +386,11 @@ export default function AppChrome() {
                         >
                             <span
                                 className={cn(
+                                    // APK 实测：激活项是粗黑体、未激活是中黑浅灰，
+                                    // 之前两者都偏细（激活 font-medium / 未激活 400）
                                     tab.active
-                                        ? "font-medium text-ink"
-                                        : "text-ink-secondary/70",
+                                        ? "font-bold text-ink"
+                                        : "dp-text-medium text-ink-tab",
                                 )}
                             >
                                 {tab.label}
