@@ -173,7 +173,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         },
         {
             key: "category",
-            label: t("edit-categories"),
+            label: t("category-management"),
             icon: "icon-[apk--category]",
             onClick: () => {
                 showCategoryList();
@@ -377,7 +377,6 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                             const key = day.format("YYYY-MM-DD");
                             const inMonth = day.isSame(cursor, "month");
                             const isToday = day.isSame(today, "day");
-                            const isFuture = day.isAfter(today, "day");
                             const hasBill = stats.days.has(key);
                             // 橙色内圈只在当天有记账时出现；今天额外保留白环+橙环，
                             // 所以当天没记账时只剩空心外圈。橙点统一 23px（实测内橙尺寸），
@@ -390,11 +389,12 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                                 // APK 实测日格与行距均约 31px。31px 格配 31px 环，
                                 // 360px 窄视口下七列（每列约 31.4px）也不会溢出
                                 "mx-auto flex size-[31px] cursor-pointer items-center justify-center rounded-full text-[13px] leading-none transition-colors",
-                                // APK 现场取色：普通日期 #5f5955，非本月/未来日期
-                                // #d3cec9（比 ink 淡一档，不用 opacity 以免连带淡化橙圈）
-                                !inMonth || (!hasBill && !isToday && isFuture)
+                                // 当月日期一律黑色（含未来日期），非当月沿用 APK 实测
+                                // 淡灰 #d3cec9；不用 opacity 以免连带淡化橙圈。
+                                // 今日橙环 / 有账单橙底的数字由内层 span 显式着色，不受影响。
+                                !inMonth
                                     ? "text-[#d3cec9] dark:text-ink-secondary/40"
-                                    : "text-[#5f5955] hover:text-brand dark:text-ink",
+                                    : "text-black hover:text-brand dark:text-white",
                             );
                             return (
                                 <button

@@ -221,6 +221,7 @@
   "categories-budget-description": "可以为不同类别分配具体预算。",
   "categories-budget-included": "包含分类预算",
   "category-delete-alert": "无法删除分类，该分类包含{n}条记录，请先移动至其他分类",
+  "category-management": "分类管理",
   "category-name": "分类名称",
   "category-parent": "大类",
   "category.apparel_beauty": "服饰与美容",
