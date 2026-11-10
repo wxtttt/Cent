@@ -249,7 +249,7 @@ export default function VoiceSettingsItem() {
             >
                 <div className="w-full px-4 flex justify-between items-center">
                     <div className={`flex items-center gap-2`}>
-                        <i className="icon-[lucide--mic] size-5"></i>
+                        <i className="icon-[apk--microphone] size-5"></i>
                         {t("voice-recording-settings")}
                     </div>
                     <i className="icon-[lucide--chevron-right] size-5"></i>

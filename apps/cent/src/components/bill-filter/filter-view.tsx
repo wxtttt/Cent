@@ -148,7 +148,7 @@ export default function BillFilterView({
                         setName(e.currentTarget.value);
                     }}
                 ></input>
-                <i className="icon-[lucide--pencil]"></i>
+                <i className="icon-[apk--edit]"></i>
             </label>
             <div className="flex-1 px-2 pb-4 overflow-y-auto">
                 <Collapsible.Root defaultOpen className="group">

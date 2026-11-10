@@ -23,7 +23,9 @@ export default function Deletable({
                 type="button"
                 onClick={onDelete}
             >
-                {icon ?? <i className="icon-[lucide--x] text-white size-3"></i>}
+                {icon ?? (
+                    <i className="icon-[apk--close] text-white size-3"></i>
+                )}
             </button>
         </div>
     );

@@ -174,7 +174,7 @@ export default function CategoryEditForm({
                                 size="sm"
                                 onClick={toDelete}
                             >
-                                <i className="icon-[lucide--trash-2]" />
+                                <i className="icon-[apk--trash]" />
                             </Button>
                         )}
                         <Button

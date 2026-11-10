@@ -65,7 +65,7 @@ export default function KeyboardForm({
                         onClick={onCancel}
                         className="absolute right-2"
                     >
-                        <i className="icon-[lucide--x] size-5"></i>
+                        <i className="icon-[apk--close] size-5"></i>
                     </Button>
                 </div>
                 <div className="w-full flex-1 flex flex-col px-4 py-2">

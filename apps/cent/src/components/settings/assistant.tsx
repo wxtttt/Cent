@@ -616,7 +616,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                                 }
                                                 className="h-7 px-2"
                                             >
-                                                <i className="icon-[lucide--pencil] size-4"></i>
+                                                <i className="icon-[apk--edit] size-4"></i>
                                             </Button>
                                             {
                                                 <Button
@@ -629,7 +629,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                                     }
                                                     className="h-7 px-2 text-red-500 hover:text-red-600"
                                                 >
-                                                    <i className="icon-[lucide--trash-2] size-4"></i>
+                                                    <i className="icon-[apk--trash] size-4"></i>
                                                 </Button>
                                             }
                                         </div>

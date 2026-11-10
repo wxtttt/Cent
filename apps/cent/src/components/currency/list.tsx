@@ -233,7 +233,7 @@ export default function CurrencyListForm({
                                                 );
                                             }}
                                         >
-                                            <i className="icon-[lucide--x]"></i>
+                                            <i className="icon-[apk--close]"></i>
                                         </Button>
                                     </>
                                 );

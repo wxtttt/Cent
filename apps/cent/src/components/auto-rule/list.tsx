@@ -111,7 +111,7 @@ export default function AutoRuleList({ onCancel }: { onCancel?: () => void }) {
                                 className="h-8 w-8 p-0 text-destructive"
                                 onClick={() => update(rule.id, undefined)}
                             >
-                                <i className="icon-[lucide--trash-2]" />
+                                <i className="icon-[apk--trash]" />
                             </Button>
                         </div>
                     ))

@@ -22,7 +22,7 @@ export default function VoiceForm({ onCancel }: { onCancel?: () => void }) {
             <div className="min-h-[320px] flex flex-col w-full h-full bg-background text-foreground items-center justify-center relative">
                 <div className="w-full flex justify-end items-center">
                     <Button variant={"ghost"} onClick={onCancel}>
-                        <i className="icon-[lucide--x]"></i>
+                        <i className="icon-[apk--close]"></i>
                     </Button>
                 </div>
                 {/* 麦克风/思考图标和动画 */}
@@ -41,7 +41,7 @@ export default function VoiceForm({ onCancel }: { onCancel?: () => void }) {
                             />
                             {/* 麦克风图标背景 */}
                             <div className="relative w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg">
-                                <i className="icon-[lucide--mic] text-white size-10" />
+                                <i className="icon-[apk--microphone] text-white size-10" />
                             </div>
                         </>
                     ) : (

@@ -177,7 +177,7 @@ export default function ScheduledListForm({
                                         });
                                     }}
                                 >
-                                    <i className="icon-[lucide--pencil]" />
+                                    <i className="icon-[apk--edit]" />
                                 </Button>
                                 <Button
                                     variant="destructive"
@@ -199,7 +199,7 @@ export default function ScheduledListForm({
                                         });
                                     }}
                                 >
-                                    <i className="icon-[lucide--trash-2]" />
+                                    <i className="icon-[apk--trash]" />
                                 </Button>
                             </div>
                         </div>

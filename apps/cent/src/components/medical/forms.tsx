@@ -128,7 +128,7 @@ export default function MedicalProfileForm({
                                 className="absolute -top-1 -right-1 flex size-6 cursor-pointer items-center justify-center rounded-full bg-panel text-ink-secondary shadow-[0_2px_8px_rgba(92,62,30,0.2)]"
                                 onClick={() => setAvatar(undefined)}
                             >
-                                <i className="icon-[lucide--x] size-3" />
+                                <i className="icon-[apk--close] size-3" />
                             </button>
                         )}
                     </div>

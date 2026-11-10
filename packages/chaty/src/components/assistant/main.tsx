@@ -449,7 +449,7 @@ function Actions() {
                                         className="rounded-sm p-1 opacity-60 hover:opacity-100 hover:bg-accent text-foreground/80 flex justify-center items-center"
                                         aria-label={t("deleteChat")}
                                     >
-                                        <i className="icon-[lucide--x] size-4"></i>
+                                        <i className="icon-[apk--close] size-4"></i>
                                     </button>
                                 </div>
                             );
@@ -576,7 +576,7 @@ function Content({ hideHeader }: { hideHeader?: boolean } = {}) {
                                         }
                                         className="hover:bg-accent rounded p-0.5"
                                     >
-                                        <i className="icon-[lucide--x] size-3"></i>
+                                        <i className="icon-[apk--close] size-3"></i>
                                     </button>
                                 </div>
                             ))}

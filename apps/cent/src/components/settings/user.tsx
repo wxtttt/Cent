@@ -113,7 +113,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                             toEditName(user);
                                         }}
                                     >
-                                        <i className="icon-[lucide--pencil]" />
+                                        <i className="icon-[apk--edit]" />
                                     </Button>
                                     <Button size={"sm"} asChild>
                                         <a

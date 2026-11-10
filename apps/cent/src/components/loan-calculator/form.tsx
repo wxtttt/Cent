@@ -158,7 +158,7 @@ export default function LoanCalculatorForm({
                                     className="flex size-5 cursor-pointer items-center justify-center rounded-full text-ink-secondary hover:bg-ground-muted"
                                     onClick={() => remove(plan.id)}
                                 >
-                                    <i className="icon-[lucide--x] size-3" />
+                                    <i className="icon-[apk--close] size-3" />
                                 </button>
                             </span>
                         ))}

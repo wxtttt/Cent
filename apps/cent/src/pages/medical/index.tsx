@@ -133,7 +133,7 @@ export default function MedicalPage() {
                         className="flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-panel shadow-panel"
                         onClick={search}
                     >
-                        <i className="icon-[lucide--search] size-5 text-ink" />
+                        <i className="icon-[apk--search] size-5 text-ink" />
                     </button>
                 </div>
 
@@ -144,7 +144,7 @@ export default function MedicalPage() {
                         onClick={() => setKeyword("")}
                     >
                         「{keyword}」
-                        <i className="icon-[lucide--x] size-3" />
+                        <i className="icon-[apk--close] size-3" />
                     </button>
                 )}
 
@@ -514,7 +514,7 @@ function DeleteButton({
             className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
             onClick={onClick}
         >
-            <i className="icon-[lucide--trash-2] size-4" />
+            <i className="icon-[apk--trash] size-4" />
         </button>
     );
 }

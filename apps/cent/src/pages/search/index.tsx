@@ -302,7 +302,7 @@ export default function Page() {
                             className="p-3 rounded-md"
                             onClick={triggerSearch}
                         >
-                            <i className="icon-[lucide--search]"></i>
+                            <i className="icon-[apk--search]"></i>
                         </Button>
                     </div>
                 </div>

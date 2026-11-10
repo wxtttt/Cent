@@ -151,7 +151,7 @@ export const ICONS = [
             { name: "movies", className: "icon-[lucide--film]" },
             { name: "fitness", className: "icon-[lucide--dumbbell]" },
             { name: "wellness", className: "icon-[lucide--smile]" },
-            { name: "shows", className: "icon-[lucide--mic]" },
+            { name: "shows", className: "icon-[apk--microphone]" },
         ],
     },
     {

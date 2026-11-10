@@ -120,7 +120,7 @@ export function DebugLogPanel() {
                                 className="h-6 w-6 p-0"
                                 onClick={() => setOpen(false)}
                             >
-                                <i className="icon-[lucide--x] size-3.5"></i>
+                                <i className="icon-[apk--close] size-3.5"></i>
                             </Button>
                         </div>
                     </div>

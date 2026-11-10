@@ -319,7 +319,7 @@ function RecordCard({
                 className="flex size-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                 onClick={onDelete}
             >
-                <i className="icon-[lucide--trash-2] size-4" />
+                <i className="icon-[apk--trash] size-4" />
             </button>
         </div>
     );

@@ -166,7 +166,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "budget",
             label: t("budget-manager"),
-            icon: "icon-[lucide--wallet]",
+            icon: "icon-[apk--budget]",
             onClick: () => {
                 showBudget();
             },
@@ -174,7 +174,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "category",
             label: t("edit-categories"),
-            icon: "icon-[lucide--layout-grid]",
+            icon: "icon-[apk--category]",
             onClick: () => {
                 showCategoryList();
             },
@@ -182,7 +182,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "widget",
             label: t("widget-settings"),
-            icon: "icon-[lucide--layout-dashboard]",
+            icon: "icon-[apk--home]",
             onClick: () => {
                 showWidgetList();
             },
@@ -190,13 +190,13 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "books",
             label: t("books"),
-            icon: "icon-[lucide--book-open-text]",
+            icon: "icon-[apk--ledger]",
             onClick: showBookGuide,
         },
         {
             key: "vehicle",
             label: t("vehicle-title"),
-            icon: "icon-[lucide--car]",
+            icon: "icon-[apk--vehicle]",
             onClick: () => {
                 navigate("/vehicle");
             },
@@ -214,7 +214,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             // 前 3 行（3+3+1）与 APK 宫格结构一致
             key: "loan",
             label: t("loan-calculator"),
-            icon: "icon-[lucide--landmark]",
+            icon: "icon-[apk--loan]",
             onClick: () => {
                 showLoanCalculator();
             },
@@ -222,7 +222,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "currency",
             label: t("currency-manager"),
-            icon: "icon-[lucide--japanese-yen]",
+            icon: "icon-[apk--gold]",
             onClick: () => {
                 showCurrencyList();
             },
@@ -230,7 +230,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "data",
             label: t("data-manager"),
-            icon: "icon-[lucide--database]",
+            icon: "icon-[apk--bill-export]",
             onClick: () => {
                 showDataManager();
             },
@@ -258,7 +258,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "import",
             label: t("quick-bill-import"),
-            icon: "icon-[lucide--download]",
+            icon: "icon-[apk--bill-import]",
             onClick: () => {
                 showDataManager();
             },
@@ -266,7 +266,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "auto-rule",
             label: t("auto-rule-manager"),
-            icon: "icon-[lucide--wand-sparkles]",
+            icon: "icon-[apk--bill-import-category]",
             onClick: () => {
                 showAutoRules();
             },
@@ -274,7 +274,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "scheduled",
             label: t("quick-scheduled"),
-            icon: "icon-[lucide--calendar-clock]",
+            icon: "icon-[apk--bill-import-history]",
             onClick: () => {
                 showScheduled();
             },
@@ -507,7 +507,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                         showAboutSettings();
                     }}
                 >
-                    <i className="icon-[lucide--info] size-[18px] text-ink-secondary" />
+                    <i className="icon-[apk--about] size-[18px] text-ink-secondary" />
                     <span className="flex-1 text-[14px] text-ink">
                         {t("about-cent")}
                     </span>

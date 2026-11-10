@@ -298,7 +298,7 @@ function MoreAction({
                         className="text-red-600"
                         onClick={onDelete}
                     >
-                        <i className="icon-[lucide--trash-2]"></i>
+                        <i className="icon-[apk--trash]"></i>
                         {t("delete")}
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
