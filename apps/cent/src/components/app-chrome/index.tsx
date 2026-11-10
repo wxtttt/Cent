@@ -362,7 +362,10 @@ export default function AppChrome() {
 
     return (
         <>
-            <header className="flex-shrink-0 bg-header">
+            {/* 让 header 背景向上出血铺满 iOS 安全区（状态栏后方），
+                使 PWA 状态栏透出与“我的日记”栏一致的米黄；
+                伪元素只作背景延伸，不改变 header 自身盒与后续流 */}
+            <header className="relative flex-shrink-0 bg-header before:absolute before:inset-x-0 before:bottom-full before:h-[var(--safe-area-top)] before:bg-header before:content-['']">
                 <div className="mx-auto flex w-full max-w-[960px] items-center gap-3 px-4 pt-3 sm:px-6">
                     <ProfileAvatar />
                     <div className="flex-1 text-center text-lg font-bold tracking-tight">
