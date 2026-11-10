@@ -121,7 +121,7 @@ export default function CategoryList({
                             reorder(ordered);
                         }}
                     >
-                        <i className="icon-[mdi--reorder-horizontal]"></i>
+                        <i className="icon-[lucide--grip]"></i>
                     </Button>
                 </div>
                 {tabs.map((v) => (
@@ -136,7 +136,7 @@ export default function CategoryList({
                                 toAddCategory(v.label);
                             }}
                         >
-                            <i className="icon-[mdi--plus]"></i>
+                            <i className="icon-[lucide--plus]"></i>
                             {t("add-new-category-group")}
                         </Button>
                         {v.value.map((parent, i) => {
@@ -172,9 +172,9 @@ export default function CategoryList({
                                                         reorder(ordered);
                                                     }}
                                                 >
-                                                    <i className="icon-[mdi--reorder-horizontal]"></i>
+                                                    <i className="icon-[lucide--grip]"></i>
                                                 </Button>
-                                                <i className=" group-[[data-state=open]]:icon-[mdi--chevron-down] group-[[data-state=closed]]:icon-[mdi--chevron-up]" />
+                                                <i className=" group-[[data-state=open]]:icon-[lucide--chevron-down] group-[[data-state=closed]]:icon-[lucide--chevron-up]" />
                                             </div>
                                         </div>
                                     </Collapsible.Trigger>
@@ -209,7 +209,7 @@ export default function CategoryList({
                                                     )
                                                 }
                                             >
-                                                <i className="icon-[mdi--plus]"></i>
+                                                <i className="icon-[lucide--plus]"></i>
                                                 {t("add")}
                                             </button>
                                         </div>

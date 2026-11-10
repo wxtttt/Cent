@@ -114,11 +114,11 @@ export default function MedicalProfileForm({
                                 />
                             ) : (
                                 <span className="flex size-24 items-center justify-center rounded-full bg-ground-muted text-ink-secondary">
-                                    <i className="icon-[mdi--account-outline] size-10" />
+                                    <i className="icon-[lucide--user] size-10" />
                                 </span>
                             )}
                             <span className="absolute right-0 bottom-0 flex size-7 items-center justify-center rounded-full bg-panel shadow-[0_2px_8px_rgba(92,62,30,0.2)]">
-                                <i className="icon-[mdi--camera-outline] size-4 text-ink" />
+                                <i className="icon-[lucide--camera] size-4 text-ink" />
                             </span>
                         </button>
                         {avatar && (
@@ -128,7 +128,7 @@ export default function MedicalProfileForm({
                                 className="absolute -top-1 -right-1 flex size-6 cursor-pointer items-center justify-center rounded-full bg-panel text-ink-secondary shadow-[0_2px_8px_rgba(92,62,30,0.2)]"
                                 onClick={() => setAvatar(undefined)}
                             >
-                                <i className="icon-[mdi--close] size-3" />
+                                <i className="icon-[lucide--x] size-3" />
                             </button>
                         )}
                     </div>
@@ -406,7 +406,7 @@ export function MedicalVisitForm({
                                 className="flex size-14 cursor-pointer items-center justify-center rounded-2xl bg-ground-muted text-ink-secondary"
                                 onClick={chooseImage}
                             >
-                                <i className="icon-[mdi--camera-outline] size-5" />
+                                <i className="icon-[lucide--camera] size-5" />
                             </button>
                         </FormBlock>
                     )}

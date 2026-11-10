@@ -223,7 +223,7 @@ export const EditTagGroupForm = ({
                         <Collapsible.Trigger>
                             <div className="text-xs opacity-60 flex items-center gap-1">
                                 {t("more-tag-settings")}
-                                <i className="w-4 h-4 icon-[mdi--chevron-right] transition-all rotate-90 group-[[data-state=closed]]:rotate-0"></i>
+                                <i className="w-4 h-4 icon-[lucide--chevron-right] transition-all rotate-90 group-[[data-state=closed]]:rotate-0"></i>
                             </div>
                         </Collapsible.Trigger>
                         <Collapsible.CollapsibleContent>

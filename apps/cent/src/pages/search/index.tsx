@@ -34,28 +34,28 @@ const SORTS = [
     {
         by: "time",
         order: "desc",
-        icon: "icon-[mdi--sort-clock-ascending-outline]",
+        icon: "icon-[lucide--clock-arrow-down]",
         label: "newest",
     },
     // 最早的在最上面
     {
         by: "time",
         order: "asc",
-        icon: "icon-[mdi--sort-clock-descending-outline]",
+        icon: "icon-[lucide--clock-arrow-up]",
         label: "oldest",
     },
     // 数额最大的在最上面
     {
         by: "amount",
         order: "desc",
-        icon: "icon-[mdi--sort-descending]",
+        icon: "icon-[lucide--arrow-up-a-z]",
         label: "highest-amount",
     },
     // 数额最小的在最上面
     {
         by: "amount",
         order: "asc",
-        icon: "icon-[mdi--sort-ascending]",
+        icon: "icon-[lucide--arrow-down-a-z]",
         label: "lowest-amount",
     },
 ] as const;
@@ -259,7 +259,7 @@ export default function Page() {
                             navigate(-1);
                         }}
                     >
-                        <i className="icon-[mdi--chevron-left] size-6"></i>
+                        <i className="icon-[lucide--chevron-left] size-6"></i>
                     </button>
                     <div className="flex-1 text-center text-lg font-bold">
                         {t("search")}
@@ -302,7 +302,7 @@ export default function Page() {
                             className="p-3 rounded-md"
                             onClick={triggerSearch}
                         >
-                            <i className="icon-[mdi--search]"></i>
+                            <i className="icon-[lucide--search]"></i>
                         </Button>
                     </div>
                 </div>
@@ -325,7 +325,7 @@ export default function Page() {
                                 size="sm"
                                 onClick={toSaveFilter}
                             >
-                                <i className="icon-[mdi--coffee-to-go-outline]" />
+                                <i className="icon-[lucide--coffee]" />
                                 {t("save-for-analyze")}
                             </Button>
                         )}
@@ -336,7 +336,7 @@ export default function Page() {
                         >
                             <Collapsible.Trigger asChild>
                                 <Button variant="ghost">
-                                    <i className="group-[[data-state=open]]:icon-[mdi--filter-variant-minus] group-[[data-state=closed]]:icon-[mdi--filter-variant-plus]"></i>
+                                    <i className="group-[[data-state=open]]:icon-[lucide--list-filter] group-[[data-state=closed]]:icon-[lucide--list-filter-plus]"></i>
                                     {t("filter")}
                                 </Button>
                             </Collapsible.Trigger>

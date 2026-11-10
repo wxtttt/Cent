@@ -69,7 +69,7 @@ function UserInfo() {
                             StorageAPI.loginWith(StorageAPI.type);
                         }}
                     >
-                        <i className="icon-[mdi--reload]"></i>
+                        <i className="icon-[lucide--rotate-ccw]"></i>
                         {t("re-login")}
                     </Button>
                 )}

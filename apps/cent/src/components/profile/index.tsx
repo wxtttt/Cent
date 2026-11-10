@@ -166,7 +166,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "budget",
             label: t("budget-manager"),
-            icon: "icon-[mdi--wallet-outline]",
+            icon: "icon-[lucide--wallet]",
             onClick: () => {
                 showBudget();
             },
@@ -174,7 +174,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "category",
             label: t("edit-categories"),
-            icon: "icon-[mdi--view-grid-outline]",
+            icon: "icon-[lucide--layout-grid]",
             onClick: () => {
                 showCategoryList();
             },
@@ -182,7 +182,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "widget",
             label: t("widget-settings"),
-            icon: "icon-[mdi--view-dashboard-outline]",
+            icon: "icon-[lucide--layout-dashboard]",
             onClick: () => {
                 showWidgetList();
             },
@@ -190,13 +190,13 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "books",
             label: t("books"),
-            icon: "icon-[mdi--book-open-page-variant-outline]",
+            icon: "icon-[lucide--book-open-text]",
             onClick: showBookGuide,
         },
         {
             key: "vehicle",
             label: t("vehicle-title"),
-            icon: "icon-[mdi--car-outline]",
+            icon: "icon-[lucide--car]",
             onClick: () => {
                 navigate("/vehicle");
             },
@@ -204,7 +204,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "tags",
             label: t("edit-tags"),
-            icon: "icon-[mdi--tag-outline]",
+            icon: "icon-[lucide--tag]",
             onClick: () => {
                 showTagList();
             },
@@ -214,7 +214,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             // 前 3 行（3+3+1）与 APK 宫格结构一致
             key: "loan",
             label: t("loan-calculator"),
-            icon: "icon-[mdi--bank-outline]",
+            icon: "icon-[lucide--landmark]",
             onClick: () => {
                 showLoanCalculator();
             },
@@ -222,7 +222,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "currency",
             label: t("currency-manager"),
-            icon: "icon-[mdi--currency-cny]",
+            icon: "icon-[lucide--japanese-yen]",
             onClick: () => {
                 showCurrencyList();
             },
@@ -230,7 +230,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "data",
             label: t("data-manager"),
-            icon: "icon-[mdi--database-outline]",
+            icon: "icon-[lucide--database]",
             onClick: () => {
                 showDataManager();
             },
@@ -238,7 +238,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "preset",
             label: t("preset"),
-            icon: "icon-[mdi--palette-outline]",
+            icon: "icon-[lucide--palette]",
             onClick: () => {
                 showPreset();
             },
@@ -246,7 +246,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "settings",
             label: t("settings"),
-            icon: "icon-[mdi--cog-outline]",
+            icon: "icon-[lucide--settings]",
             onClick: () => {
                 showSettings();
             },
@@ -258,7 +258,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "import",
             label: t("quick-bill-import"),
-            icon: "icon-[mdi--tray-arrow-down]",
+            icon: "icon-[lucide--download]",
             onClick: () => {
                 showDataManager();
             },
@@ -266,7 +266,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "auto-rule",
             label: t("auto-rule-manager"),
-            icon: "icon-[mdi--auto-fix]",
+            icon: "icon-[lucide--wand-sparkles]",
             onClick: () => {
                 showAutoRules();
             },
@@ -274,7 +274,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         {
             key: "scheduled",
             label: t("quick-scheduled"),
-            icon: "icon-[mdi--calendar-clock]",
+            icon: "icon-[lucide--calendar-clock]",
             onClick: () => {
                 showScheduled();
             },
@@ -303,13 +303,13 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                             className="size-full object-cover"
                         />
                     ) : (
-                        <i className="icon-[mdi--account] size-6 text-ink-secondary"></i>
+                        <i className="icon-[lucide--user] size-6 text-ink-secondary"></i>
                     )}
                 </div>
                 <span className="min-w-0 flex-1 truncate text-[16px] text-ink">
                     {name || t("profile")}
                 </span>
-                <i className="icon-[mdi--chevron-right] size-5 flex-shrink-0 text-ink-secondary"></i>
+                <i className="icon-[lucide--chevron-right] size-5 flex-shrink-0 text-ink-secondary"></i>
             </button>
 
             {expired && (
@@ -340,7 +340,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                         {/* 连续记录 1 天及以上才显示徽章，0 天时整块隐藏 */}
                         {stats.streak > 0 && (
                             <span className="flex items-center gap-1 rounded-full bg-[#fff1e7] px-2 py-0.5 text-[11px] font-medium text-[#d9631e] dark:bg-brand/10 dark:text-brand">
-                                <i className="icon-[mdi--fire] size-3"></i>
+                                <i className="icon-[lucide--flame] size-3"></i>
                                 {t("streak-pill", { n: stats.streak })}
                             </span>
                         )}
@@ -507,11 +507,11 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                         showAboutSettings();
                     }}
                 >
-                    <i className="icon-[mdi--information-outline] size-[18px] text-ink-secondary" />
+                    <i className="icon-[lucide--info] size-[18px] text-ink-secondary" />
                     <span className="flex-1 text-[14px] text-ink">
                         {t("about-cent")}
                     </span>
-                    <i className="icon-[mdi--chevron-right] size-[18px] text-ink-secondary" />
+                    <i className="icon-[lucide--chevron-right] size-[18px] text-ink-secondary" />
                 </button>
                 <AboutSettingsProvider />
             </div>
@@ -554,7 +554,7 @@ export function ProfileAvatar({ className }: { className?: string }) {
                     className="size-full object-cover"
                 />
             ) : (
-                <i className="icon-[mdi--account] size-5"></i>
+                <i className="icon-[lucide--user] size-5"></i>
             )}
         </button>
     );

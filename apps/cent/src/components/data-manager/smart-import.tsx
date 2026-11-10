@@ -247,8 +247,8 @@ export function SmartImport({ onCancel }: { onCancel?: () => void }) {
                                         ? "text-brand"
                                         : "text-ink",
                                     tr.id === "alipay"
-                                        ? "icon-[mdi--alipay]"
-                                        : "icon-[mdi--wechat]",
+                                        ? "icon-[lucide--wallet]"
+                                        : "icon-[lucide--message-circle]",
                                 )}
                             />
                             <span className="text-xs font-medium">
@@ -373,7 +373,7 @@ export function SmartImport({ onCancel }: { onCancel?: () => void }) {
             <div className="flex-shrink-0 px-4 pb-4 flex justify-end">
                 <Button onClick={toImport} disabled={loading || !file}>
                     {loading && (
-                        <i className="icon-[mdi--loading] animate-spin"></i>
+                        <i className="icon-[lucide--loader-circle] animate-spin"></i>
                     )}
                     {t("import")}
                 </Button>

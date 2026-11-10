@@ -58,7 +58,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                     onClick={handleCheckUpdate}
                 >
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--update] size-5"></i>
+                        <i className="icon-[lucide--refresh-cw] size-5"></i>
                         <div className="text-sm">
                             {checkingUpdate
                                 ? t("update-checking")
@@ -66,9 +66,9 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                         </div>
                     </div>
                     {checkingUpdate ? (
-                        <i className="icon-[mdi--loading] size-5 animate-spin"></i>
+                        <i className="icon-[lucide--loader-circle] size-5 animate-spin"></i>
                     ) : (
-                        <i className="icon-[mdi--chevron-right] size-5"></i>
+                        <i className="icon-[lucide--chevron-right] size-5"></i>
                     )}
                 </button>
                 <a
@@ -78,10 +78,10 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                     rel="noopener"
                 >
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--alternate-email] size-5"></i>
+                        <i className="icon-[lucide--at-sign] size-5"></i>
                         <div className="text-sm">{t("feedback")}</div>
                     </div>
-                    <i className="icon-[mdi--arrow-top-right]"></i>
+                    <i className="icon-[lucide--arrow-up-right]"></i>
                 </a>
                 <a
                     className="w-full min-h-10 pb-2 flex justify-between items-center px-4"
@@ -90,10 +90,10 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                     rel="noopener"
                 >
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--rss-box] size-5"></i>
+                        <i className="icon-[lucide--rss] size-5"></i>
                         <div className="text-sm">{t("blog")}</div>
                     </div>
-                    <i className="icon-[mdi--arrow-top-right]"></i>
+                    <i className="icon-[lucide--arrow-up-right]"></i>
                 </a>
                 <a
                     className="w-full min-h-10 pb-2 flex justify-between items-center px-4"
@@ -102,10 +102,10 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                     rel="noopener"
                 >
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--github] size-5"></i>
+                        <i className="icon-[lucide--github] size-5"></i>
                         <div className="text-sm">Github</div>
                     </div>
-                    <i className="icon-[mdi--arrow-top-right]"></i>
+                    <i className="icon-[lucide--arrow-up-right]"></i>
                 </a>
                 <div className="w-full flex flex-col items-center gap-3 px-4 pb-4">
                     <div className="text-sm text-foreground/80">
@@ -136,7 +136,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                 )}
                 {/* <div className="w-full min-h-10 pb-2 flex justify-between items-center px-4 opacity-60">
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--github] size-5"></i>
+                        <i className="icon-[lucide--github] size-5"></i>
                         <div className="text-sm">Github</div>
                     </div>
                     <div className="text-xs">{t("preparing")}</div>

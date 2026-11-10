@@ -340,7 +340,7 @@ function ModelSwitcher() {
                     className="inline-flex h-8 max-w-[160px] cursor-pointer items-center gap-1 rounded-full px-2 text-xs text-foreground/70 hover:bg-muted hover:text-foreground"
                 >
                     <span className="truncate">{label}</span>
-                    <i className="icon-[mdi--unfold-more-horizontal] size-3.5 flex-shrink-0 opacity-70"></i>
+                    <i className="icon-[lucide--chevrons-up-down] size-3.5 flex-shrink-0 opacity-70"></i>
                 </button>
             </PopoverTrigger>
             <PopoverContent className="w-56 p-1" align="start" side="top">
@@ -363,7 +363,7 @@ function ModelSwitcher() {
                                 {config.name}
                             </span>
                             {config.id === selectedConfigId && (
-                                <i className="icon-[mdi--check] size-4"></i>
+                                <i className="icon-[lucide--check] size-4"></i>
                             )}
                         </button>
                     ))}
@@ -382,7 +382,7 @@ function Actions() {
     return (
         <div className="flex items-center">
             <Button variant="ghost" onClick={() => setCurrentChatId(undefined)}>
-                <i className="icon-[mdi--comment-add-outline] size-5"></i>
+                <i className="icon-[lucide--message-square-plus] size-5"></i>
             </Button>
             <Popover open={isChatMenuOpen} onOpenChange={setIsChatMenuOpen}>
                 <PopoverTrigger asChild>
@@ -390,7 +390,7 @@ function Actions() {
                         variant="ghost"
                         className="border-none shadow-none !text-foreground px-2"
                     >
-                        <i className="icon-[mdi--menu] size-5"></i>
+                        <i className="icon-[lucide--menu] size-5"></i>
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-1" align="end">
@@ -417,7 +417,7 @@ function Actions() {
                                     }`}
                                 >
                                     {currentChatId === chat.id && (
-                                        <i className="ml-auto icon-[mdi--check]"></i>
+                                        <i className="ml-auto icon-[lucide--check]"></i>
                                     )}
                                     <button
                                         type="button"
@@ -449,7 +449,7 @@ function Actions() {
                                         className="rounded-sm p-1 opacity-60 hover:opacity-100 hover:bg-accent text-foreground/80 flex justify-center items-center"
                                         aria-label={t("deleteChat")}
                                     >
-                                        <i className="icon-[mdi--close] size-4"></i>
+                                        <i className="icon-[lucide--x] size-4"></i>
                                     </button>
                                 </div>
                             );
@@ -515,7 +515,7 @@ function Content({ hideHeader }: { hideHeader?: boolean } = {}) {
                     ))
                 ) : (
                     <div className="w-full h-full flex flex-col gap-4 justify-center items-center">
-                        <i className="icon-[mdi--shimmer-outline] size-12 text-lg bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600"></i>
+                        <i className="icon-[lucide--sparkles] size-12 text-lg bg-gradient-to-tr from-cyan-400 via-blue-500 to-purple-600"></i>
                         {runtime.emptyStateSlogan ?? t("emptyState")}
                     </div>
                 )}
@@ -559,7 +559,7 @@ function Content({ hideHeader }: { hideHeader?: boolean } = {}) {
                                     key={`${file.name}-${index}`}
                                     className="flex-shrink-0 bg-muted rounded p-2 text-xs flex items-center gap-2"
                                 >
-                                    <i className="icon-[mdi--file-outline] size-4"></i>
+                                    <i className="icon-[lucide--file] size-4"></i>
                                     <span className="max-w-24 truncate">
                                         {file.name}
                                     </span>
@@ -576,7 +576,7 @@ function Content({ hideHeader }: { hideHeader?: boolean } = {}) {
                                         }
                                         className="hover:bg-accent rounded p-0.5"
                                     >
-                                        <i className="icon-[mdi--close] size-3"></i>
+                                        <i className="icon-[lucide--x] size-3"></i>
                                     </button>
                                 </div>
                             ))}
@@ -631,7 +631,7 @@ function Content({ hideHeader }: { hideHeader?: boolean } = {}) {
                                     }));
                                 }}
                             >
-                                <i className="icon-[mdi--plus] size-5"></i>
+                                <i className="icon-[lucide--plus] size-5"></i>
                             </Button>
                             <ModelSwitcher />
                         </div>
@@ -642,7 +642,7 @@ function Content({ hideHeader }: { hideHeader?: boolean } = {}) {
                                 onClick={abortCurrentChat}
                                 aria-label={t("stopResponse")}
                             >
-                                <i className="icon-[mdi--stop] size-4"></i>
+                                <i className="icon-[lucide--square] size-4"></i>
                             </Button>
                         ) : (
                             <Button
@@ -652,7 +652,7 @@ function Content({ hideHeader }: { hideHeader?: boolean } = {}) {
                                 onClick={() => send()}
                                 aria-label={t("sendMessage")}
                             >
-                                <i className="icon-[mdi--send] size-4"></i>
+                                <i className="icon-[lucide--send] size-4"></i>
                             </Button>
                         )}
                     </div>

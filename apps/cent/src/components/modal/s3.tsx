@@ -247,7 +247,7 @@ const LoadingForm = ({
                                             {t("custom-user-name")}
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <i className="icon-[mdi--help-circle-outline] cursor-pointer"></i>
+                                                    <i className="icon-[lucide--circle-help] cursor-pointer"></i>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="text-xs p-2">
                                                     <p>

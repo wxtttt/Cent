@@ -102,7 +102,7 @@ export function CountedRowInput({
 /** 选择行的右箭头 */
 export function RowChevron() {
     return (
-        <i className="icon-[mdi--chevron-right] size-4 flex-shrink-0 text-ink-secondary/60" />
+        <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0 text-ink-secondary/60" />
     );
 }
 

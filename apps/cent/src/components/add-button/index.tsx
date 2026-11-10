@@ -13,7 +13,7 @@ export default function ComplexAddButton({
     if (!voiceRecordingEnabled) {
         return (
             <BaseButton onClick={onClick}>
-                <i className="icon-[mdi--add] text-[white] size-7"></i>
+                <i className="icon-[lucide--plus] text-[white] size-7"></i>
             </BaseButton>
         );
     }

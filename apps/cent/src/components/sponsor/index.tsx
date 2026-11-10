@@ -23,7 +23,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
             <div className="flex-1 flex flex-col overflow-y-auto py-4 gap-4">
                 <div className="px-4 flex flex-col gap-2">
                     <div className="text-base font-semibold flex items-center gap-2">
-                        <i className="icon-[mdi--coffee-outline] size-5 text-yellow-400"></i>
+                        <i className="icon-[lucide--coffee] size-5 text-yellow-400"></i>
                         {t("sponsor-intro-title")}
                     </div>
                     <div className="text-sm opacity-70 leading-relaxed">
@@ -65,7 +65,7 @@ export default function SponsorBanner() {
                 }}
                 className="relative w-full flex items-center gap-2 rounded-lg border bg-accent/30 hover:bg-accent/50 transition-colors px-3 py-2 cursor-pointer"
             >
-                <i className="icon-[mdi--coffee-outline] size-5 shrink-0 text-yellow-400"></i>
+                <i className="icon-[lucide--coffee] size-5 shrink-0 text-yellow-400"></i>
                 <div className="flex-1 text-sm pr-5">{t("sponsor-title")}</div>
                 <button
                     type="button"
@@ -77,7 +77,7 @@ export default function SponsorBanner() {
                         setClosed(true);
                     }}
                 >
-                    <i className="icon-[mdi--close-circle] size-4 opacity-60"></i>
+                    <i className="icon-[lucide--circle-x] size-4 opacity-60"></i>
                 </button>
             </div>
         </div>
@@ -95,10 +95,10 @@ export function SponsorAboutItem() {
             className="w-full min-h-10 pb-2 flex justify-between items-center px-4 cursor-pointer text-left"
         >
             <div className="flex items-center gap-2">
-                <i className="icon-[mdi--coffee-outline] size-5 text-yellow-400"></i>
+                <i className="icon-[lucide--coffee] size-5 text-yellow-400"></i>
                 <div className="text-sm">{t("sponsor-title")}</div>
             </div>
-            <i className="icon-[mdi--chevron-right]"></i>
+            <i className="icon-[lucide--chevron-right]"></i>
         </button>
     );
 }

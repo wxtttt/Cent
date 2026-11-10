@@ -34,7 +34,7 @@ export default function BudgetListForm({
                         await reorder(ordered);
                     }}
                 >
-                    <i className="icon-[mdi--reorder-horizontal]"></i>
+                    <i className="icon-[lucide--grip]"></i>
                 </Button>
             </div>
             <div className="w-full flex-1 overflow-y-auto flex flex-col gap-2 p-2">
@@ -49,7 +49,7 @@ export default function BudgetListForm({
                         await add(newBudget);
                     }}
                 >
-                    <i className="icon-[mdi--add]" />
+                    <i className="icon-[lucide--plus]" />
                     {t("add-a-budget")}
                 </Button>
                 {budgets.map((budget) => {
@@ -117,7 +117,7 @@ export default function BudgetListForm({
                                                     await update(id, newBudget);
                                                 }}
                                             >
-                                                <i className="icon-[mdi--edit-outline]" />
+                                                <i className="icon-[lucide--pencil]" />
                                             </Button>
                                             <Button
                                                 variant="destructive"
@@ -132,7 +132,7 @@ export default function BudgetListForm({
                                                     await update(id);
                                                 }}
                                             >
-                                                <i className="icon-[mdi--delete]" />
+                                                <i className="icon-[lucide--trash-2]" />
                                             </Button>
                                         </div>
                                     </div>

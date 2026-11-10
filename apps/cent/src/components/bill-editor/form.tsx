@@ -462,7 +462,7 @@ export default function EditorForm({
                                             className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
                                         >
                                             <div className="flex size-11 items-center justify-center rounded-2xl bg-ground-muted text-ink-secondary">
-                                                <i className="icon-[mdi--dots-horizontal] size-6" />
+                                                <i className="icon-[lucide--ellipsis] size-6" />
                                             </div>
                                             <span className="text-xs text-ink-secondary">
                                                 {t("more")}
@@ -504,7 +504,7 @@ export default function EditorForm({
                                                 );
                                             }}
                                         >
-                                            <i className="icon-[mdi--cog-outline] size-4" />
+                                            <i className="icon-[lucide--settings] size-4" />
                                             {t("edit-categories")}
                                         </button>
                                     </PopoverContent>
@@ -584,7 +584,7 @@ export default function EditorForm({
                                 }}
                             >
                                 <div className="flex h-9 items-center gap-1.5 rounded-full bg-panel px-3 text-sm">
-                                    <i className="icon-[mdi--calendar-blank-outline] size-4 text-ink-secondary" />
+                                    <i className="icon-[lucide--calendar] size-4 text-ink-secondary" />
                                     <span className="whitespace-nowrap text-[15px] font-medium text-ink">
                                         {dateLabel}
                                     </span>
@@ -598,7 +598,7 @@ export default function EditorForm({
                                 >
                                     <SelectTrigger className="h-9 w-fit flex-shrink-0 gap-1.5 rounded-full border-0 bg-panel px-3 text-sm shadow-none [&>svg]:hidden">
                                         <div className="flex items-center gap-1.5">
-                                            <i className="icon-[mdi--wallet-outline] size-4 text-ink-secondary" />
+                                            <i className="icon-[lucide--wallet] size-4 text-ink-secondary" />
                                             <span className="whitespace-nowrap text-[15px] font-medium text-ink">
                                                 {targetCurrency?.label}
                                             </span>
@@ -618,7 +618,7 @@ export default function EditorForm({
                                 </Select>
                             ) : (
                                 <div className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-panel px-3 text-sm">
-                                    <i className="icon-[mdi--wallet-outline] size-4 text-ink-secondary" />
+                                    <i className="icon-[lucide--wallet] size-4 text-ink-secondary" />
                                     <span className="whitespace-nowrap text-ink">
                                         {baseCurrency.label}
                                     </span>
@@ -647,7 +647,7 @@ export default function EditorForm({
                                     showTagList();
                                 }}
                             >
-                                <i className="icon-[mdi--tag-outline] size-5" />
+                                <i className="icon-[lucide--tag] size-5" />
                             </button>
 
                             {isCreate && (
@@ -656,7 +656,7 @@ export default function EditorForm({
                                     className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-panel px-3 text-sm text-ink-secondary"
                                     onClick={toAddAgain}
                                 >
-                                    <i className="icon-[mdi--reload] size-4" />
+                                    <i className="icon-[lucide--rotate-ccw] size-4" />
                                     <span className="whitespace-nowrap">
                                         {t("add-again")}
                                     </span>
@@ -689,7 +689,7 @@ export default function EditorForm({
                                     className={iconChipClass}
                                     onClick={chooseImage}
                                 >
-                                    <i className="icon-[mdi--image-plus-outline] size-5" />
+                                    <i className="icon-[lucide--image-plus] size-5" />
                                 </button>
                             )}
 
@@ -707,7 +707,7 @@ export default function EditorForm({
                                         className={iconChipClass}
                                         onClick={handlePickLocation}
                                     >
-                                        <i className="icon-[mdi--map-marker] size-5" />
+                                        <i className="icon-[lucide--map-pin] size-5" />
                                     </button>
                                 </Deletable>
                             ) : (
@@ -721,7 +721,7 @@ export default function EditorForm({
                                         }));
                                     }}
                                 >
-                                    <i className="icon-[mdi--add-location] size-5" />
+                                    <i className="icon-[lucide--map-pin-plus] size-5" />
                                 </CurrentLocation>
                             )}
                         </div>
@@ -791,7 +791,7 @@ export default function EditorForm({
                                         }));
                                     }}
                                 >
-                                    <i className="icon-[mdi--auto-fix] size-3" />
+                                    <i className="icon-[lucide--wand-sparkles] size-3" />
                                     {t("auto-rule-suggest", {
                                         category: suggestedCategoryName,
                                     })}

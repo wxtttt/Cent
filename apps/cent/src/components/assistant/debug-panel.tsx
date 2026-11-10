@@ -30,8 +30,8 @@ function Entry({ entry }: { entry: ToolLogEntry }) {
                 <i
                     className={`size-3 ${
                         open
-                            ? "icon-[mdi--chevron-down]"
-                            : "icon-[mdi--chevron-right]"
+                            ? "icon-[lucide--chevron-down]"
+                            : "icon-[lucide--chevron-right]"
                     }`}
                 ></i>
                 <span className="font-mono text-xs flex-1 truncate">
@@ -90,7 +90,7 @@ export function DebugLogPanel() {
                 className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full border bg-background px-2 py-1 text-[10px] shadow hover:bg-accent cursor-pointer"
                 title="Tool log"
             >
-                <i className="icon-[mdi--bug-outline] size-3.5"></i>
+                <i className="icon-[lucide--bug] size-3.5"></i>
                 <span>log</span>
                 {entries.length > 0 && (
                     <span className="bg-muted rounded-full px-1.5">
@@ -120,7 +120,7 @@ export function DebugLogPanel() {
                                 className="h-6 w-6 p-0"
                                 onClick={() => setOpen(false)}
                             >
-                                <i className="icon-[mdi--close] size-3.5"></i>
+                                <i className="icon-[lucide--x] size-3.5"></i>
                             </Button>
                         </div>
                     </div>

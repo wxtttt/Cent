@@ -283,7 +283,7 @@ export default function InventoryItemForm({
                                 className="flex size-14 cursor-pointer items-center justify-center rounded-2xl bg-ground-muted text-ink-secondary"
                                 onClick={chooseImage}
                             >
-                                <i className="icon-[mdi--camera-outline] size-5" />
+                                <i className="icon-[lucide--camera] size-5" />
                             </button>
                         </FormBlock>
                     )}

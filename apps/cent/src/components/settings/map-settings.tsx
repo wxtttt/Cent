@@ -119,9 +119,9 @@ function MapConfigForm({ onCancel }: { onCancel?: () => void }) {
                                 className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                             >
                                 {showAmapKey ? (
-                                    <i className="icon-[mdi--eye-off] size-4"></i>
+                                    <i className="icon-[lucide--eye-off] size-4"></i>
                                 ) : (
-                                    <i className="icon-[mdi--eye] size-4"></i>
+                                    <i className="icon-[lucide--eye] size-4"></i>
                                 )}
                             </button>
                         </div>
@@ -160,9 +160,9 @@ function MapConfigForm({ onCancel }: { onCancel?: () => void }) {
                                 className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                             >
                                 {showAmapSecurityCode ? (
-                                    <i className="icon-[mdi--eye-off] size-4"></i>
+                                    <i className="icon-[lucide--eye-off] size-4"></i>
                                 ) : (
-                                    <i className="icon-[mdi--eye] size-4"></i>
+                                    <i className="icon-[lucide--eye] size-4"></i>
                                 )}
                             </button>
                         </div>
@@ -249,10 +249,10 @@ export default function MapSettingsItem() {
             >
                 <div className="w-full px-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--map-outline] size-5"></i>
+                        <i className="icon-[lucide--map] size-5"></i>
                         {t("map-settings")}
                     </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
+                    <i className="icon-[lucide--chevron-right] size-5"></i>
                 </div>
             </Button>
             <MapConfigFormProvider />

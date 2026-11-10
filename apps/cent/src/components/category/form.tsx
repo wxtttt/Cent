@@ -174,7 +174,7 @@ export default function CategoryEditForm({
                                 size="sm"
                                 onClick={toDelete}
                             >
-                                <i className="icon-[mdi--trash-can-outline]" />
+                                <i className="icon-[lucide--trash-2]" />
                             </Button>
                         )}
                         <Button

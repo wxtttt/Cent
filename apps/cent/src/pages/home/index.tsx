@@ -437,7 +437,7 @@ export default function Page() {
                                                 className="size-full object-cover"
                                             />
                                         ) : (
-                                            <i className="icon-[mdi--account] m-auto size-4 text-ink-secondary"></i>
+                                            <i className="icon-[lucide--user] m-auto size-4 text-ink-secondary"></i>
                                         )}
                                     </div>
                                 )}
@@ -450,7 +450,7 @@ export default function Page() {
                                         showBookGuide();
                                     }}
                                 >
-                                    <i className="icon-[mdi--swap-horizontal] size-3"></i>
+                                    <i className="icon-[lucide--arrow-left-right] size-3"></i>
                                 </button>
                             </div>
                         </div>
@@ -470,12 +470,12 @@ export default function Page() {
                                     showStat();
                                 }}
                             >
-                                <i className="icon-[mdi--wallet-outline] size-4 flex-shrink-0 text-brand"></i>
+                                <i className="icon-[lucide--wallet] size-4 flex-shrink-0 text-brand"></i>
                                 <span className="truncate">
                                     {t("this-month")}
                                     {t("expense")}
                                 </span>
-                                <i className="icon-[mdi--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
+                                <i className="icon-[lucide--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
                             <div className="mt-3 flex items-baseline gap-1 overflow-hidden font-display font-bold tracking-tight text-ink-warm">
                                 <span className="flex-shrink-0 text-sm">
@@ -502,11 +502,11 @@ export default function Page() {
                                     showScheduled();
                                 }}
                             >
-                                <i className="icon-[mdi--calendar-check-outline] size-4 flex-shrink-0 text-brand"></i>
+                                <i className="icon-[lucide--calendar-check] size-4 flex-shrink-0 text-brand"></i>
                                 <span className="truncate">
                                     {t("today-todo")}
                                 </span>
-                                <i className="icon-[mdi--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
+                                <i className="icon-[lucide--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
                             <div className="mt-2 font-display font-bold tracking-tight text-ink-warm">
                                 <span className="text-2xl leading-none tabular-nums">
@@ -542,7 +542,7 @@ export default function Page() {
                     top={
                         <>
                             <div className="flex items-center gap-2">
-                                <i className="icon-[mdi--shimmer-outline] size-[18px] text-brand"></i>
+                                <i className="icon-[lucide--sparkles] size-[18px] text-brand"></i>
                                 <h2 className="dp-text-medium text-[15px] text-brand">
                                     {t("daily-summary")}
                                 </h2>
@@ -569,7 +569,7 @@ export default function Page() {
                                         <span className="line-clamp-2">
                                             {item.text}
                                         </span>
-                                        <i className="icon-[mdi--chevron-right] size-4 flex-shrink-0"></i>
+                                        <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0"></i>
                                     </button>
                                 ))}
                         </div>

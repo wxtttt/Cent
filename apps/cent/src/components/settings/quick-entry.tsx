@@ -142,9 +142,9 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                 className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                             >
                                 {showSecret ? (
-                                    <i className="icon-[mdi--eye-off] size-4"></i>
+                                    <i className="icon-[lucide--eye-off] size-4"></i>
                                 ) : (
-                                    <i className="icon-[mdi--eye] size-4"></i>
+                                    <i className="icon-[lucide--eye] size-4"></i>
                                 )}
                             </button>
                         </div>
@@ -198,7 +198,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                 }}
                                 className="w-full"
                             >
-                                <i className="icon-[mdi--content-copy] size-4 mr-2"></i>
+                                <i className="icon-[lucide--copy] size-4 mr-2"></i>
                                 {t("copy-quick-entry-config")}
                             </Button>
                             {configText && (
@@ -251,7 +251,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                         rel="noopener noreferrer"
                         className="text-xs opacity-60 hover:opacity-80 transition-opacity flex items-center gap-1 text-blue-500 hover:text-blue-600 underline"
                     >
-                        <i className="icon-[mdi--help-circle-outline] size-4"></i>
+                        <i className="icon-[lucide--circle-help] size-4"></i>
                         {t("quick-entry-help-link")}
                     </a>
                 </div>
@@ -282,10 +282,10 @@ export default function QuickEntrySettingsItem() {
             >
                 <div className="w-full px-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--lightning-bolt-outline] size-5"></i>
+                        <i className="icon-[lucide--zap] size-5"></i>
                         {t("quick-entry-settings")}
                     </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
+                    <i className="icon-[lucide--chevron-right] size-5"></i>
                 </div>
             </Button>
             <QuickEntrySettingsProvider />

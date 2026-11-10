@@ -115,7 +115,7 @@ const GitVersionChecker: React.FC = () => {
 
                     {/* 加载中状态 */}
                     {isLoading && (
-                        <i className="icon-[mdi--loading] animate-spin"></i>
+                        <i className="icon-[lucide--loader-circle] animate-spin"></i>
                     )}
 
                     {/* 最新 Hash 展示 */}

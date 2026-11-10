@@ -104,7 +104,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                     <div className="px-4 py-2">
                         <div className="text-xs p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-md">
                             <div className="flex items-start gap-2">
-                                <i className="icon-[mdi--information-outline] size-4 flex-shrink-0 mt-0.5"></i>
+                                <i className="icon-[lucide--info] size-4 flex-shrink-0 mt-0.5"></i>
                                 <div>{t("voice-recording-setup-tip")}</div>
                             </div>
                         </div>
@@ -249,10 +249,10 @@ export default function VoiceSettingsItem() {
             >
                 <div className="w-full px-4 flex justify-between items-center">
                     <div className={`flex items-center gap-2`}>
-                        <i className="icon-[mdi--microphone-outline] size-5"></i>
+                        <i className="icon-[lucide--mic] size-5"></i>
                         {t("voice-recording-settings")}
                     </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
+                    <i className="icon-[lucide--chevron-right] size-5"></i>
                 </div>
             </Button>
             <VoiceSettingsProvider />

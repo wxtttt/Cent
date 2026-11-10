@@ -60,7 +60,7 @@ export default function TagList({
             right={
                 <div className="flex items-center gap-2">
                     <Button onClick={() => toUpdateTag()} variant="secondary">
-                        <i className="icon-[mdi--tag-plus-outline]"></i>
+                        <i className="icon-[lucide--tags]"></i>
                     </Button>
 
                     <Button onClick={() => toUpdateTagGroup()}>
@@ -113,7 +113,7 @@ export default function TagList({
                                                             );
                                                         }}
                                                     >
-                                                        <i className="icon-[mdi--arrow-collapse-up]"></i>
+                                                        <i className="icon-[lucide--chevrons-up]"></i>
                                                     </Button>
                                                 )}
                                                 <Button
@@ -123,7 +123,7 @@ export default function TagList({
                                                         toUpdateTagGroup(group)
                                                     }
                                                 >
-                                                    <i className="icon-[mdi--settings]"></i>
+                                                    <i className="icon-[lucide--settings]"></i>
                                                 </Button>
                                             </>
                                         )}

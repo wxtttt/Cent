@@ -15,7 +15,7 @@ export default function LanguageSettingsItem() {
         <div className="w-full px-4 py-1 text-sm">
             <div className="w-full px-4 flex justify-between items-center text-sm font-medium">
                 <div className="flex items-center gap-2">
-                    <i className="icon-[mdi--language] size-5"></i>
+                    <i className="icon-[lucide--languages] size-5"></i>
                     {t("language")}
                 </div>
                 <Select

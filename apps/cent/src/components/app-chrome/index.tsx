@@ -183,8 +183,8 @@ function AssistantDock() {
     ];
 
     const ledgerActions: [LedgerAction, string, string][] = [
-        ["import", "mdi--tray-arrow-down", "bill-import"],
-        ["manual", "mdi--square-edit-outline", "add-bill"],
+        ["import", "icon-[lucide--download]", "bill-import"],
+        ["manual", "icon-[lucide--square-pen]", "add-bill"],
     ];
 
     // 归医/知物的加号直接开表单，没有菜单态
@@ -269,7 +269,7 @@ function AssistantDock() {
                         className="size-[30px] flex-shrink-0 select-none object-contain"
                     />
                 ) : (
-                    <i className="icon-[mdi--shimmer-outline] size-5 flex-shrink-0 text-brand"></i>
+                    <i className="icon-[lucide--sparkles] size-5 flex-shrink-0 text-brand"></i>
                 )}
                 <button
                     type="button"
@@ -288,7 +288,7 @@ function AssistantDock() {
                         openAssistant();
                     }}
                 >
-                    <i className="icon-[mdi--microphone-outline] size-5"></i>
+                    <i className="icon-[lucide--mic] size-5"></i>
                 </button>
                 <button
                     type="button"
@@ -316,8 +316,8 @@ function AssistantDock() {
                         className={cn(
                             "size-6 transition-transform",
                             hasMenu && menuVisible
-                                ? "icon-[mdi--close]"
-                                : "icon-[mdi--plus]",
+                                ? "icon-[lucide--x]"
+                                : "icon-[lucide--plus]",
                         )}
                     />
                 </button>

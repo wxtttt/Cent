@@ -140,13 +140,13 @@ export default function TicketCard({
                             aria-hidden
                             className="pointer-events-none absolute right-4 top-3 text-[#e8c66a]"
                         >
-                            <i className="icon-[mdi--star-four-points-outline] size-3.5" />
+                            <i className="icon-[lucide--sparkles] size-3.5" />
                         </div>
                         <div
                             aria-hidden
                             className="pointer-events-none absolute bottom-4 left-4 text-[#e8c66a]"
                         >
-                            <i className="icon-[mdi--star-four-points-outline] size-3" />
+                            <i className="icon-[lucide--sparkles] size-3" />
                         </div>
                     </>
                 )}

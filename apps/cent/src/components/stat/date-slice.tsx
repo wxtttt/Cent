@@ -171,7 +171,7 @@ export function DateSliced({
                             goTo(sliceIndex + 1);
                         }}
                     >
-                        <i className="icon-[mdi--chevron-left] size-5"></i>
+                        <i className="icon-[lucide--chevron-left] size-5"></i>
                     </button>
                     <div className="min-w-0 truncate text-base font-semibold">
                         {periodLabel(selectedViewId, current) ??
@@ -186,7 +186,7 @@ export function DateSliced({
                             goTo(sliceIndex - 1);
                         }}
                     >
-                        <i className="icon-[mdi--chevron-right] size-5"></i>
+                        <i className="icon-[lucide--chevron-right] size-5"></i>
                     </button>
                 </div>
                 {onClickSettings && (
@@ -196,7 +196,7 @@ export function DateSliced({
                         className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                         onClick={onClickSettings}
                     >
-                        <i className="icon-[mdi--tune-variant] size-4"></i>
+                        <i className="icon-[lucide--sliders-horizontal] size-4"></i>
                     </button>
                 )}
             </div>

@@ -74,7 +74,7 @@ function SortableListItemWithEnable({
                     onMouseDown={(e) => e.stopPropagation()}
                     onTouchStart={(e) => e.stopPropagation()}
                 />
-                <i className="icon-[mdi--reorder-horizontal]"></i>
+                <i className="icon-[lucide--grip]"></i>
             </div>
         </div>
     );

@@ -133,7 +133,7 @@ export default function MedicalPage() {
                         className="flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-panel shadow-panel"
                         onClick={search}
                     >
-                        <i className="icon-[mdi--magnify] size-5 text-ink" />
+                        <i className="icon-[lucide--search] size-5 text-ink" />
                     </button>
                 </div>
 
@@ -144,7 +144,7 @@ export default function MedicalPage() {
                         onClick={() => setKeyword("")}
                     >
                         「{keyword}」
-                        <i className="icon-[mdi--close] size-3" />
+                        <i className="icon-[lucide--x] size-3" />
                     </button>
                 )}
 
@@ -289,7 +289,7 @@ function SectionHeader({
         <div className="flex items-center justify-between">
             <h2 className="dp-text-medium font-display text-[17px]">{title}</h2>
             <Button variant="ghost" size="sm" onClick={onAdd}>
-                <i className="icon-[mdi--plus]" />
+                <i className="icon-[lucide--plus]" />
                 {addLabel}
             </Button>
         </div>
@@ -331,7 +331,7 @@ function ProfileCard({
                     />
                 ) : (
                     <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                        <i className="icon-[mdi--account-outline] size-6" />
+                        <i className="icon-[lucide--user] size-6" />
                     </div>
                 )}
                 <div className="min-w-0 flex-1">
@@ -404,7 +404,7 @@ function MedicineCard({
                 onClick={onEdit}
             >
                 <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                    <i className="icon-[mdi--pill-multiple] size-6" />
+                    <i className="icon-[lucide--pill] size-6" />
                 </div>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
@@ -488,7 +488,7 @@ function VisitCard({
             </div>
             {visit.images && visit.images.length > 0 && (
                 <div className="mt-2 flex gap-1.5 border-t border-dashed border-rule pt-2">
-                    <i className="icon-[mdi--image-multiple-outline] size-4 text-ink-secondary" />
+                    <i className="icon-[lucide--images] size-4 text-ink-secondary" />
                     <span className="text-xs text-ink-secondary">
                         {t("medical-visit-attachments", {
                             n: visit.images.length,
@@ -514,7 +514,7 @@ function DeleteButton({
             className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
             onClick={onClick}
         >
-            <i className="icon-[mdi--delete-outline] size-4" />
+            <i className="icon-[lucide--trash-2] size-4" />
         </button>
     );
 }

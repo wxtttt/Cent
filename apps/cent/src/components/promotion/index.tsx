@@ -177,7 +177,7 @@ export function Promotion() {
                                 e.stopPropagation();
                             }}
                         >
-                            <i className="icon-[mdi--close-circle]"></i>
+                            <i className="icon-[lucide--circle-x]"></i>
                         </button>
                         <div className="absolute bottom-1 right-1 text-xs opacity-60">
                             {index + 1}/{promotions.length}

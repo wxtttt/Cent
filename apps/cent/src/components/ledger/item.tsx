@@ -120,7 +120,7 @@ export function BaseBillItem({
 
             {comment && (
                 <div className="mt-2 flex items-start gap-1.5 text-sm text-ink-secondary">
-                    <i className="icon-[mdi--comment-processing-outline] mt-0.5 size-4 flex-shrink-0"></i>
+                    <i className="icon-[lucide--message-square] mt-0.5 size-4 flex-shrink-0"></i>
                     <span className="line-clamp-2">{comment}</span>
                 </div>
             )}
@@ -144,8 +144,8 @@ export function BaseBillItem({
                         className={cn(
                             "size-4 flex-shrink-0",
                             tags && tags.length > 0
-                                ? "icon-[mdi--tag-outline]"
-                                : "icon-[mdi--book-outline]",
+                                ? "icon-[lucide--tag]"
+                                : "icon-[lucide--book]",
                         )}
                     ></i>
                     <span className="truncate">
@@ -162,7 +162,7 @@ export function BaseBillItem({
                             className="size-5 rounded-full object-cover"
                         />
                     ) : (
-                        <i className="icon-[mdi--account-circle-outline] size-4"></i>
+                        <i className="icon-[lucide--circle-user] size-4"></i>
                     )}
                     <span className="max-w-[80px] truncate">
                         {creatorLabel}

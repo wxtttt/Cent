@@ -323,7 +323,7 @@ function CategoryFilterButton({
                 {t("filter")}
                 <i
                     className={cn(
-                        "icon-[mdi--chevron-down] size-4",
+                        "icon-[lucide--chevron-down] size-4",
                         active ? "text-brand" : "text-ink-secondary",
                     )}
                 />
@@ -485,7 +485,7 @@ function ItemCard({
                             className="size-full object-cover"
                         />
                     ) : (
-                        <i className="icon-[mdi--package-variant-closed] size-6 text-ink-secondary" />
+                        <i className="icon-[lucide--package] size-6 text-ink-secondary" />
                     )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -528,7 +528,7 @@ function ItemCard({
                     className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                     onClick={onCycleStatus}
                 >
-                    <i className="icon-[mdi--cycle] size-4" />
+                    <i className="icon-[lucide--bike] size-4" />
                 </button>
                 <button
                     type="button"
@@ -536,7 +536,7 @@ function ItemCard({
                     className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                     onClick={onDelete}
                 >
-                    <i className="icon-[mdi--delete-outline] size-4" />
+                    <i className="icon-[lucide--trash-2] size-4" />
                 </button>
             </div>
         </div>

@@ -240,7 +240,7 @@ function SettingsView({ onCancel }: { onCancel?: () => void }) {
                     onClick={handleCopyPrompt}
                     disabled={busy}
                 >
-                    <i className="icon-[mdi--content-copy] size-4 mr-1"></i>
+                    <i className="icon-[lucide--copy] size-4 mr-1"></i>
                     {t("agent-api-copy-prompt")}
                 </Button>
 

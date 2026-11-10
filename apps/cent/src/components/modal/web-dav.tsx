@@ -75,7 +75,7 @@ const LoadingForm = ({
                 rel="noopener"
             >
                 {t("sync-with-web-dav")}
-                <i className="icon-[mdi--question-mark-circle-outline]"></i>
+                <i className="icon-[lucide--circle-help]"></i>
             </a>
             <Form {...form}>
                 <div className="w-full flex-1 flex flex-col gap-4 px-4 overflow-y-auto">
@@ -139,9 +139,9 @@ const LoadingForm = ({
                                             className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                                         >
                                             {showPassword ? (
-                                                <i className="icon-[mdi--eye-off] size-4"></i>
+                                                <i className="icon-[lucide--eye-off] size-4"></i>
                                             ) : (
-                                                <i className="icon-[mdi--eye] size-4"></i>
+                                                <i className="icon-[lucide--eye] size-4"></i>
                                             )}
                                         </button>
                                     </div>
@@ -163,7 +163,7 @@ const LoadingForm = ({
                                         rel="noopener"
                                     >
                                         {t("proxy-url")}
-                                        <i className="icon-[mdi--question-mark-circle-outline]"></i>
+                                        <i className="icon-[lucide--circle-help]"></i>
                                     </a>
                                 </FormLabel>
                                 <FormControl>
@@ -182,7 +182,7 @@ const LoadingForm = ({
                             rel="noopener"
                         >
                             {t("custom-user")}
-                            <i className="icon-[mdi--question-mark-circle-outline]"></i>
+                            <i className="icon-[lucide--circle-help]"></i>
                         </a>
                         <FormField
                             control={form.control}
@@ -194,7 +194,7 @@ const LoadingForm = ({
                                             {t("custom-user-name")}
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <i className="icon-[mdi--help-circle-outline] cursor-pointer"></i>
+                                                    <i className="icon-[lucide--circle-help] cursor-pointer"></i>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="text-xs p-2">
                                                     <p>

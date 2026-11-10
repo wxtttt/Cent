@@ -29,7 +29,7 @@ export function MessageBubble({
                                         key={`${file.name}-${file.lastModified}-${file.size}`}
                                         className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-1"
                                     >
-                                        <i className="icon-[mdi--paperclip] size-3.5"></i>
+                                        <i className="icon-[lucide--paperclip] size-3.5"></i>
                                         <span className="truncate max-w-20">
                                             {file.name}
                                         </span>
@@ -74,7 +74,7 @@ export function MessageBubble({
                 <Collapsible.Root className="bg-muted/50 rounded-md p-2 text-xs select-all">
                     <div className="flex items-center justify-between w-full gap-1">
                         <Collapsible.Trigger className="flex items-center gap-2 flex-1 cursor-pointer hover:bg-accent/50 p-1 rounded min-w-0">
-                            <i className="icon-[mdi--tools] size-4"></i>
+                            <i className="icon-[lucide--wrench] size-4"></i>
                             <span className="font-medium truncate">{name}</span>
                             {message.formatted.runningTime !== undefined && (
                                 <span className="opacity-60 text-[10px] shrink-0">
@@ -93,7 +93,7 @@ export function MessageBubble({
                                 }}
                                 className="shrink-0 p-1 rounded hover:bg-accent/50 cursor-pointer text-muted-foreground hover:text-foreground"
                             >
-                                <i className="icon-[mdi--play] size-3.5"></i>
+                                <i className="icon-[lucide--play] size-3.5"></i>
                             </button>
                         )}
                     </div>

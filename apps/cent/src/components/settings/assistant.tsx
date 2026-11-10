@@ -292,9 +292,9 @@ function ConfigForm({
                                 className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                             >
                                 {showApiKey ? (
-                                    <i className="icon-[mdi--eye-off] size-4"></i>
+                                    <i className="icon-[lucide--eye-off] size-4"></i>
                                 ) : (
-                                    <i className="icon-[mdi--eye] size-4"></i>
+                                    <i className="icon-[lucide--eye] size-4"></i>
                                 )}
                             </button>
                         </div>
@@ -554,7 +554,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                     onClick={handleCreateConfig}
                     className="w-full"
                 >
-                    <i className="icon-[mdi--plus] size-4"></i>
+                    <i className="icon-[lucide--plus] size-4"></i>
                     {t("create-ai-config")}
                 </Button>
             }
@@ -616,7 +616,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                                 }
                                                 className="h-7 px-2"
                                             >
-                                                <i className="icon-[mdi--pencil] size-4"></i>
+                                                <i className="icon-[lucide--pencil] size-4"></i>
                                             </Button>
                                             {
                                                 <Button
@@ -629,7 +629,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                                     }
                                                     className="h-7 px-2 text-red-500 hover:text-red-600"
                                                 >
-                                                    <i className="icon-[mdi--delete] size-4"></i>
+                                                    <i className="icon-[lucide--trash-2] size-4"></i>
                                                 </Button>
                                             }
                                         </div>
@@ -677,10 +677,10 @@ export default function AssistantSettingsItem() {
             >
                 <div className="w-full px-4 flex justify-between items-center">
                     <div className={cn("flex items-center gap-2")}>
-                        <i className="icon-[mdi--shimmer-outline] size-5"></i>
+                        <i className="icon-[lucide--sparkles] size-5"></i>
                         {t("ai-assistant")}
                     </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
+                    <i className="icon-[lucide--chevron-right] size-5"></i>
                 </div>
             </Button>
             <AssistantProvider />

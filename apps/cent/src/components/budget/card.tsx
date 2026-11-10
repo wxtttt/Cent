@@ -146,7 +146,7 @@ export default function BudgetCard({
                                         e.stopPropagation();
                                     }}
                                 >
-                                    <i className=" group-[[data-state=open]]:icon-[mdi--chevron-down] group-[[data-state=closed]]:icon-[mdi--chevron-up]" />
+                                    <i className=" group-[[data-state=open]]:icon-[lucide--chevron-down] group-[[data-state=closed]]:icon-[lucide--chevron-up]" />
                                 </Collapsible.Trigger>
                             )}
                         </div>

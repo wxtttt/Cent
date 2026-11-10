@@ -71,7 +71,7 @@ export function StaticItem({
                               : ""}
                         <Money value={money} />
                     </div>
-                    <i className="icon-[mdi--arrow-up-right]"></i>
+                    <i className="icon-[lucide--arrow-up-right]"></i>
                 </div>
             </div>
         </div>

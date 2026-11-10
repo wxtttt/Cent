@@ -262,7 +262,7 @@ export default function StatContent({
                             className="flex size-9 cursor-pointer items-center justify-center rounded-full text-ink transition-colors hover:bg-ground-muted"
                             onClick={onCancel}
                         >
-                            <i className="icon-[mdi--chevron-left] size-6"></i>
+                            <i className="icon-[lucide--chevron-left] size-6"></i>
                         </button>
                         <div className="flex-1 text-center text-lg font-bold">
                             {t("stat-title")}
@@ -314,7 +314,7 @@ export default function StatContent({
                                     className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                                     onClick={toAddFilter}
                                 >
-                                    <i className="icon-[mdi--plus] size-4"></i>
+                                    <i className="icon-[lucide--plus] size-4"></i>
                                 </button>
                                 <button
                                     type="button"
@@ -322,7 +322,7 @@ export default function StatContent({
                                     className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                                     onClick={toReOrder}
                                 >
-                                    <i className="icon-[mdi--menu] size-4"></i>
+                                    <i className="icon-[lucide--menu] size-4"></i>
                                 </button>
                                 <AssistantButton sidePanelRef={sidePanelRef} />
                             </div>
@@ -360,7 +360,7 @@ export default function StatContent({
                                 onClick={() => seeDetails()}
                             >
                                 {t("see-all-ledgers")}
-                                <i className="icon-[mdi--arrow-up-right]"></i>
+                                <i className="icon-[lucide--arrow-up-right]"></i>
                             </Button>
                         </div>
                     </div>

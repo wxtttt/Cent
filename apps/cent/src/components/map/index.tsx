@@ -189,7 +189,7 @@ export default function AMapContainer({
         return (
             <div className="w-full h-full flex items-center justify-center bg-muted/30 rounded-sm">
                 <div className="text-center p-4">
-                    <i className="icon-[mdi--alert-circle-outline] size-8 text-destructive mb-2"></i>
+                    <i className="icon-[lucide--circle-alert] size-8 text-destructive mb-2"></i>
                     <p className="text-sm text-muted-foreground">{error}</p>
                     <p className="text-xs text-muted-foreground mt-2">
                         {t("map-error-configure-in-settings")}

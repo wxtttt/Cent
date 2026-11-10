@@ -53,7 +53,7 @@ export default function PopupLayout({
                         }}
                     >
                         <div className="flex items-center justify-center">
-                            <i className="icon-[mdi--chevron-left] size-5"></i>
+                            <i className="icon-[lucide--chevron-left] size-5"></i>
                         </div>
                         {t("back")}
                     </button>

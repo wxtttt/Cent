@@ -294,7 +294,7 @@ export const PreviewForm = ({
                 </div>
                 {loading && (
                     <div className="absolute top-0 left-0 w-full h-full bg-background/60 flex items-center justify-center">
-                        <i className="icon-[mdi--loading] animate-spin"></i>
+                        <i className="icon-[lucide--loader-circle] animate-spin"></i>
                     </div>
                 )}
             </div>

@@ -210,7 +210,7 @@ export default function Page() {
                             }}
                         >
                             {t("filter")}
-                            <i className="icon-[mdi--chevron-down] size-4 text-ink-secondary"></i>
+                            <i className="icon-[lucide--chevron-down] size-4 text-ink-secondary"></i>
                         </button>
                         <button
                             type="button"
@@ -219,7 +219,7 @@ export default function Page() {
                                 showStat();
                             }}
                         >
-                            <i className="icon-[mdi--chart-box-outline] size-4 text-brand"></i>
+                            <i className="icon-[lucide--chart-column] size-4 text-brand"></i>
                             {t("analysis")}
                         </button>
                     </div>

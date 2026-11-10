@@ -538,7 +538,7 @@ export const CalculatorKeyboard = ({
                 )}
             >
                 {label === "c" ? (
-                    <i className="icon-[mdi--backspace-outline] size-6" />
+                    <i className="icon-[lucide--delete] size-6" />
                 ) : label === "-" ? (
                     "−"
                 ) : (
@@ -614,10 +614,10 @@ export const CalculatorKeyboard = ({
                     )}
                 >
                     {row.label === "c" ? (
-                        <i className="icon-[mdi--clear-outline]"></i>
+                        <i className="icon-[lucide--eraser]"></i>
                     ) : row.label === "r" ? (
                         <div className="flex flex-col gap-1 items-center">
-                            <i className="icon-[mdi--reload]"></i>
+                            <i className="icon-[lucide--rotate-ccw]"></i>
                             <div className="text-xs">{t("add-again")}</div>
                         </div>
                     ) : row.label === "x" ? (

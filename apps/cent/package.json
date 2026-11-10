@@ -78,6 +78,7 @@
 		"@biomejs/biome": "2.2.2",
 		"@eslint/js": "^9.33.0",
 		"@glink25/tailwind-config": "workspace:*",
+		"@iconify-json/lucide": "^1.2.152",
 		"@iconify-json/mdi": "^1.2.3",
 		"@iconify/tailwind4": "^1.0.6",
 		"@tailwindcss/vite": "^4.1.12",

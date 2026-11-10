@@ -231,7 +231,7 @@ export function WheelDatePicker({
                                 className="flex size-11 items-center justify-center rounded-full bg-white text-[#0a0a0a] shadow-[0_2px_12px_rgba(0,0,0,0.12)] focus-visible:outline-none"
                                 onClick={() => close(false)}
                             >
-                                <i className="icon-[mdi--close] size-5" />
+                                <i className="icon-[lucide--x] size-5" />
                             </button>
                             <span className="pointer-events-none absolute inset-x-0 text-center text-[17px] font-semibold text-[#0a0a0a]">
                                 {title ?? t("time")}
@@ -246,7 +246,7 @@ export function WheelDatePicker({
                                     close(false);
                                 }}
                             >
-                                <i className="icon-[mdi--check] size-6" />
+                                <i className="icon-[lucide--check] size-6" />
                             </button>
                         </div>
                         {/* 选中行高亮胶囊垫在滚轮文字下方 */}

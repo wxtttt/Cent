@@ -15,7 +15,7 @@ export default function ThemeSettingsItem() {
         <div className="w-full px-4 py-1 text-sm">
             <div className="w-full px-4 flex justify-between items-center text-sm font-medium">
                 <div className="flex items-center gap-2">
-                    <i className="icon-[mdi--clothes-hanger] size-5"></i>
+                    <i className="icon-[lucide--shirt] size-5"></i>
                     {t("theme")}
                 </div>
                 <Select

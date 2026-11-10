@@ -60,7 +60,7 @@ export default function Login() {
                     <div className="min-h-20 h-fit w-full flex flex-col gap-4 px-6">
                         {loading ? (
                             <div className="text-center">
-                                <i className="icon-[mdi--loading] animate-spin"></i>
+                                <i className="icon-[lucide--loader-circle] animate-spin"></i>
                                 {t("login")}
                             </div>
                         ) : (
@@ -76,7 +76,7 @@ export default function Login() {
                                             StorageAPI.loginWith("github");
                                         }}
                                     >
-                                        <i className="icon-[mdi--github]"></i>
+                                        <i className="icon-[lucide--github]"></i>
                                         <div className="flex-1">
                                             {t("login-to-github")}
                                         </div>
@@ -147,7 +147,7 @@ export default function Login() {
                                             StorageAPI.loginWith("webdav");
                                         }}
                                     >
-                                        <i className="icon-[mdi--floppy-disk]"></i>
+                                        <i className="icon-[lucide--save]"></i>
                                         <div className="flex-1">Web DAV</div>
                                     </Button>
                                 </div>
@@ -163,7 +163,7 @@ export default function Login() {
                                             StorageAPI.loginWith("s3");
                                         }}
                                     >
-                                        <i className="icon-[mdi--database]"></i>
+                                        <i className="icon-[lucide--database]"></i>
                                         <div className="flex-1">S3</div>
                                     </Button>
                                 </div>
@@ -179,7 +179,7 @@ export default function Login() {
                                             StorageAPI.loginWith("offline");
                                         }}
                                     >
-                                        <i className="icon-[mdi--local]"></i>
+                                        <i className="icon-[lucide--map-pin]"></i>
                                         <div className="flex-1">
                                             {t("offline-mode")}
                                         </div>

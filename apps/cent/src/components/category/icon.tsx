@@ -1,4 +1,5 @@
 import { cn } from "@/utils";
+import { normalizeIconClass } from "@/utils/icon-map";
 
 export default function CategoryIcon({
     icon,
@@ -95,5 +96,5 @@ export default function CategoryIcon({
     }
 
     // 否则当作 className 使用
-    return <i className={cn(icon, className)} />;
+    return <i className={cn(normalizeIconClass(icon), className)} />;
 }

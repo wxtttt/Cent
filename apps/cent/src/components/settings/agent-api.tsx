@@ -48,10 +48,10 @@ export default function AgentApiSettingsItem() {
             >
                 <div className="w-full px-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--api] size-5"></i>
+                        <i className="icon-[lucide--braces] size-5"></i>
                         {t("agent-api")}
                     </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
+                    <i className="icon-[lucide--chevron-right] size-5"></i>
                 </div>
             </Button>
             <AgentApiProvider />

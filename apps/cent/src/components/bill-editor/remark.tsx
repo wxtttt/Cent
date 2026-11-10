@@ -54,7 +54,7 @@ export function RemarkHint({
                     type="button"
                     className="flex items-center cursor-pointer"
                 >
-                    <i className="icon-[mdi--close-circle-outline]"></i>
+                    <i className="icon-[lucide--circle-x]"></i>
                 </button> */}
                 {/* <PopoverArrow className="fill-popover" /> */}
             </PopoverContent>

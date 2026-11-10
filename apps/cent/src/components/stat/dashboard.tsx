@@ -445,7 +445,7 @@ function TrendCard({
                                 }}
                             >
                                 {t("stat-view-details")}
-                                <i className="icon-[mdi--chevron-right] size-4"></i>
+                                <i className="icon-[lucide--chevron-right] size-4"></i>
                             </button>
                         </div>
                     )}
@@ -626,7 +626,7 @@ function StructureCard({
                                                     icon={category.icon}
                                                 />
                                             ) : (
-                                                <i className="icon-[mdi--shape-outline] size-5"></i>
+                                                <i className="icon-[lucide--shapes] size-5"></i>
                                             )
                                         ) : creator?.avatar_url ? (
                                             <img
@@ -635,7 +635,7 @@ function StructureCard({
                                                 className="size-full object-cover"
                                             />
                                         ) : (
-                                            <i className="icon-[mdi--account-outline] size-5"></i>
+                                            <i className="icon-[lucide--user] size-5"></i>
                                         )}
                                     </div>
                                     <div className="min-w-0 flex-1">
@@ -666,7 +666,7 @@ function StructureCard({
                                             </span>
                                         </div>
                                     </div>
-                                    <i className="icon-[mdi--chevron-right] size-4 flex-shrink-0 text-ink-secondary"></i>
+                                    <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0 text-ink-secondary"></i>
                                 </button>
                             );
                         })}
