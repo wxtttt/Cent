@@ -1,39 +1,100 @@
-import type { MouseEventHandler } from "react";
 import type { BillCategory } from "@/ledger/type";
-import { cn } from "@/utils";
 import CategoryIcon from "./icon";
 
-export function CategoryItem({
-    category,
-    selected,
-    onMouseDown,
-    onClick,
-    className,
+const iconButton =
+    "flex size-7 shrink-0 items-center justify-center rounded-full text-[#71717a] transition-colors hover:bg-black/5 hover:text-ink dark:text-ink-secondary dark:hover:bg-white/10";
+
+export function CategoryGroupHeader({
+    name,
+    onEdit,
+    onAdd,
+    onSort,
 }: {
-    category: BillCategory;
-    selected?: boolean;
-    onMouseDown?: MouseEventHandler<HTMLButtonElement>;
-    onClick?: MouseEventHandler<HTMLButtonElement>;
-    className?: string;
+    name: string;
+    onEdit?: () => void;
+    onAdd?: () => void;
+    onSort?: () => void;
 }) {
     return (
-        <button
-            type="button"
-            className={cn(
-                `rounded-lg border flex-1 py-1 px-2 h-8 flex items-center justify-center whitespace-nowrap cursor-pointer transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]`,
-                selected
-                    ? "bg-brand text-on-brand border-brand"
-                    : "bg-ground-muted text-ink border-rule hover:bg-rule/60",
-                className,
-            )}
-            onMouseDown={onMouseDown}
-            onClick={onClick}
-        >
-            <CategoryIcon
-                icon={category.icon}
-                className="w-4 h-4 flex-shrink-0"
-            />
-            <div className="mx-2 truncate">{category.name}</div>
-        </button>
+        <div className="flex h-9 items-center gap-1 rounded-lg bg-ground-muted px-3">
+            <span className="mr-auto text-[13px] font-semibold text-ink">
+                {name}
+            </span>
+            <button
+                type="button"
+                aria-label="add"
+                className={iconButton}
+                onClick={onAdd}
+            >
+                <i className="icon-[lucide--plus] size-4" />
+            </button>
+            <button
+                type="button"
+                aria-label="edit"
+                className={iconButton}
+                onClick={onEdit}
+            >
+                <i className="icon-[lucide--pencil] size-4" />
+            </button>
+            <button
+                type="button"
+                aria-label="sort"
+                className={iconButton}
+                onClick={onSort}
+            >
+                <i className="icon-[lucide--menu] size-4" />
+            </button>
+        </div>
+    );
+}
+
+export function CategoryRow({
+    category,
+    onDelete,
+    onEdit,
+    onSort,
+}: {
+    category: BillCategory;
+    onDelete?: () => void;
+    onEdit?: () => void;
+    onSort?: () => void;
+}) {
+    return (
+        <div className="flex h-[54px] items-center gap-3 border-b border-rule px-3 last:border-b-0">
+            <button
+                type="button"
+                aria-label="delete"
+                onClick={onDelete}
+                className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#ef4444] text-white"
+            >
+                <i className="icon-[lucide--minus] size-3" />
+            </button>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ground-muted">
+                <CategoryIcon icon={category.icon} className="size-7" />
+            </span>
+            <button
+                type="button"
+                onClick={onEdit}
+                className="min-w-0 flex-1 truncate text-left text-[15px] text-ink"
+            >
+                {category.name}
+            </button>
+            <button
+                type="button"
+                aria-label="edit"
+                className={iconButton}
+                onClick={onEdit}
+            >
+                <i className="icon-[lucide--pencil] size-4" />
+            </button>
+            <button
+                type="button"
+                aria-label="sort"
+                className={iconButton}
+                onClick={onSort}
+            >
+                <i className="icon-[lucide--menu] size-4" />
+            </button>
+        </div>
     );
 }

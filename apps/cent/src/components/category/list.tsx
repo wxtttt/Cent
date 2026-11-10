@@ -1,18 +1,18 @@
-import { Collapsible } from "radix-ui";
 import { useState } from "react";
-import { toast } from "sonner";
+import { StorageDeferredAPI } from "@/api/storage";
 import useCategory from "@/hooks/use-category";
 import PopupLayout from "@/layouts/popup-layout";
 import type { BillCategory, BillType } from "@/ledger/type";
-import { categoriesGridClassName, treeCategories } from "@/ledger/utils";
+import { treeCategories } from "@/ledger/utils";
 import { useIntl } from "@/locale";
-import { cn } from "@/utils";
+import { useBookStore } from "@/store/book";
 import modal from "../modal";
 import { showSortableList } from "../sortable";
-import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CategoryEditFormProvider, showCategoryEdit } from "./edit";
-import { CategoryItem } from "./item";
+import { CategoryGroupHeader, CategoryRow } from "./item";
+
+type Group = ReturnType<typeof treeCategories>[number];
 
 export default function CategoryList({
     edit,
@@ -23,7 +23,7 @@ export default function CategoryList({
     onConfirm?: (v: any) => void;
 }) {
     const t = useIntl();
-    const { categories, reorder, reset } = useCategory();
+    const { categories, reorder, update } = useCategory();
 
     const expenses = treeCategories(
         categories.filter((v) => v.type === "expense"),
@@ -31,192 +31,158 @@ export default function CategoryList({
     const incomes = treeCategories(
         categories.filter((v) => v.type === "income"),
     );
-    const tabs = [
-        { label: "expense" as BillType, value: expenses },
-        { label: "income" as BillType, value: incomes },
+    const tabs: { label: BillType; value: Group[] }[] = [
+        { label: "expense", value: expenses },
+        { label: "income", value: incomes },
     ];
-    const toAddChildCategory = (parentId: string) => {
-        showCategoryEdit({
-            id: undefined,
-            parent: parentId,
-            type: categories.find((c) => c.id === parentId)!.type,
-        });
-    };
-
-    const toAddCategory = async (type: BillType) => {
-        showCategoryEdit({
-            id: undefined,
-            type,
-        });
-    };
-
-    const toEditCategory = async (cate: BillCategory) => {
-        await showCategoryEdit(cate);
-    };
     const [tab, setTab] = useState<string>(edit ?? "expense");
+
+    const openForm = (
+        value:
+            | BillCategory
+            | { id: undefined; parent?: string; type: BillType },
+    ) => {
+        void showCategoryEdit(value);
+    };
+
+    const remove = async (cate: BillCategory) => {
+        const book = useBookStore.getState().currentBookId;
+        if (!book) {
+            return;
+        }
+        const ids = categories
+            .filter((c) => c.id === cate.id || c.parent === cate.id)
+            .map((c) => c.id);
+        const exist = await StorageDeferredAPI.filter(book, {
+            categories: ids,
+        });
+        if (exist.length > 0) {
+            modal.prompt({
+                title: t("category-delete-alert", { n: exist.length }),
+                cancellable: false,
+            });
+            return;
+        }
+        await update(cate.id, undefined);
+    };
+
+    const sort = async (value: BillCategory[]) => {
+        const ordered = await showSortableList(value);
+        reorder(ordered);
+    };
+
     return (
         <PopupLayout
-            className="overflow-hidden h-full"
+            className="h-full overflow-hidden bg-ground"
             onBack={onCancel}
-            title={t("edit-categories")}
-            right={
-                <Button
-                    onClick={async () => {
-                        await modal.prompt({
-                            title: t("sure-to-reset-categories"),
-                        });
-                        try {
-                            await reset();
-                            toast.success(t("reset-success"));
-                        } catch (error) {
-                            if (
-                                (error as Error).message.startsWith(
-                                    "still has transactions",
-                                )
-                            ) {
-                                toast.error(
-                                    t(
-                                        "reset-categories-failed-by-existing-custom-category-transcations",
-                                    ),
-                                );
-                            }
-                        }
-                    }}
-                >
-                    {t("reset")}
-                </Button>
+            title={
+                <span className="text-[18px] font-semibold text-ink">
+                    {t("category-management")}
+                </span>
             }
         >
             <Tabs
                 value={tab}
                 onValueChange={setTab}
-                className="px-2 pb-4 flex flex-col flex-1 overflow-hidden gap-2"
+                className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-4 pb-4"
             >
-                <div className="w-full flex justify-center">
-                    <div>
-                        <TabsList>
-                            {tabs.map((tab) => (
-                                <TabsTrigger key={tab.label} value={tab.label}>
-                                    {t(tab.label)}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
+                <div className="flex justify-center">
+                    <TabsList className="h-10 rounded-full bg-panel p-1 shadow-sm">
+                        {tabs.map((item) => (
+                            <TabsTrigger
+                                key={item.label}
+                                value={item.label}
+                                className="h-8 rounded-full px-8 text-[14px] data-[state=active]:bg-ground-muted data-[state=active]:font-semibold data-[state=active]:text-ink"
+                            >
+                                {t(item.label)}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
                 </div>
-                <div className="flex items-center justify-between">
-                    <div className="px-2 text-xs text-foreground/80">
-                        {t("click-category-to-edit")}
-                    </div>
-                    <Button
-                        variant="ghost"
-                        className="p-1 h-fit"
-                        onClick={async () => {
-                            const curTab = tabs.find((t) => t.label === tab);
-                            if (!curTab) {
-                                return;
+                <div className="flex items-center justify-between px-1">
+                    <span className="text-[16px] font-semibold text-ink">
+                        {t("category-labels")}
+                    </span>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            className="flex items-center gap-1 text-[13px] text-ink-secondary"
+                            onClick={() =>
+                                openForm({
+                                    id: undefined,
+                                    type: tab as BillType,
+                                })
                             }
-                            const ordered = await showSortableList(
-                                curTab.value,
-                            );
-                            reorder(ordered);
-                        }}
-                    >
-                        <i className="icon-[lucide--grip]"></i>
-                    </Button>
-                </div>
-                {tabs.map((v) => (
-                    <TabsContent
-                        key={v.label}
-                        value={v.label}
-                        className="mt-0 flex-1 overflow-y-auto scrollbar-hidden flex flex-col gap-4"
-                    >
-                        <Button
-                            variant="outline"
+                        >
+                            <i className="icon-[lucide--plus] size-4" />
+                            {t("add")}
+                        </button>
+                        <button
+                            type="button"
+                            aria-label="sort"
+                            className="text-ink-secondary"
                             onClick={() => {
-                                toAddCategory(v.label);
+                                const current = tabs.find(
+                                    (v) => v.label === tab,
+                                );
+                                if (current) {
+                                    void sort(current.value);
+                                }
                             }}
                         >
-                            <i className="icon-[lucide--plus]"></i>
-                            {t("add-new-category-group")}
-                        </Button>
-                        {v.value.map((parent, i) => {
-                            return (
-                                <Collapsible.Root
-                                    key={parent.id}
-                                    defaultOpen={i === 0}
-                                    className="rounded-md border shadow group"
-                                >
-                                    <Collapsible.Trigger asChild>
-                                        <div className="px-2 py-1 flex items-center justify-between">
-                                            <div>
-                                                <CategoryItem
-                                                    category={parent}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        e.preventDefault();
-                                                        toEditCategory(parent);
-                                                    }}
+                            <i className="icon-[lucide--menu] size-4" />
+                        </button>
+                    </div>
+                </div>
+                {tabs.map((item) => (
+                    <TabsContent
+                        key={item.label}
+                        value={item.label}
+                        className="mt-0 min-h-0 flex-1 overflow-y-auto scrollbar-hidden"
+                    >
+                        <div className="rounded-[18px] bg-panel px-1 py-1">
+                            {item.value.map((group) => (
+                                <div key={group.id}>
+                                    <CategoryGroupHeader
+                                        name={group.name}
+                                        onAdd={() =>
+                                            openForm({
+                                                id: undefined,
+                                                parent: group.id,
+                                                type: item.label,
+                                            })
+                                        }
+                                        onEdit={() => openForm(group)}
+                                        onSort={() => void sort(group.children)}
+                                    />
+                                    <div className="border-t border-rule">
+                                        {group.children.length === 0 ? (
+                                            <div className="py-3 text-center text-xs text-ink-secondary">
+                                                {t("inventory-empty")}
+                                            </div>
+                                        ) : (
+                                            group.children.map((child) => (
+                                                <CategoryRow
+                                                    key={child.id}
+                                                    category={child}
+                                                    onDelete={() =>
+                                                        void remove(child)
+                                                    }
+                                                    onEdit={() =>
+                                                        openForm(child)
+                                                    }
+                                                    onSort={() =>
+                                                        void sort(
+                                                            group.children,
+                                                        )
+                                                    }
                                                 />
-                                            </div>
-                                            <div>
-                                                <Button
-                                                    variant="ghost"
-                                                    className="p-1 h-fit"
-                                                    onClick={async (e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        const ordered =
-                                                            await showSortableList(
-                                                                parent.children,
-                                                            );
-                                                        reorder(ordered);
-                                                    }}
-                                                >
-                                                    <i className="icon-[lucide--grip]"></i>
-                                                </Button>
-                                                <i className=" group-[[data-state=open]]:icon-[lucide--chevron-down] group-[[data-state=closed]]:icon-[lucide--chevron-up]" />
-                                            </div>
-                                        </div>
-                                    </Collapsible.Trigger>
-                                    <Collapsible.Content className="border-t data-[state=open]:animate-collapse-open data-[state=closed]:animate-collapse-close data-[state=closed]:overflow-hidden">
-                                        <div
-                                            className={cn(
-                                                "p-4 grid gap-1 text-sm",
-                                                categoriesGridClassName(
-                                                    parent.children,
-                                                ),
-                                            )}
-                                        >
-                                            {parent.children.map((child) => {
-                                                return (
-                                                    <CategoryItem
-                                                        key={child.id}
-                                                        category={child}
-                                                        onClick={() =>
-                                                            toEditCategory(
-                                                                child,
-                                                            )
-                                                        }
-                                                    />
-                                                );
-                                            })}
-                                            <button
-                                                type="button"
-                                                className="rounded-lg border flex justify-center items-center"
-                                                onClick={() =>
-                                                    toAddChildCategory(
-                                                        parent.id,
-                                                    )
-                                                }
-                                            >
-                                                <i className="icon-[lucide--plus]"></i>
-                                                {t("add")}
-                                            </button>
-                                        </div>
-                                    </Collapsible.Content>
-                                </Collapsible.Root>
-                            );
-                        })}
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </TabsContent>
                 ))}
             </Tabs>

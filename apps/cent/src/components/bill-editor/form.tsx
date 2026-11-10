@@ -54,6 +54,26 @@ function CategoryTile({
     onClick?: () => void;
     className?: string;
 }) {
+    if (!category.icon) {
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                className={cn("flex min-w-0 flex-col items-center", className)}
+            >
+                <div
+                    className={cn(
+                        "flex h-[66px] w-full items-center justify-center rounded-2xl px-1 text-center text-xs leading-tight transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                        selected
+                            ? "bg-brand/10 font-medium text-brand ring-1 ring-brand/30"
+                            : "bg-ground-muted text-ink",
+                    )}
+                >
+                    <span>{category.name}</span>
+                </div>
+            </button>
+        );
+    }
     return (
         <button
             type="button"
@@ -505,7 +525,7 @@ export default function EditorForm({
                                             }}
                                         >
                                             <i className="icon-[lucide--settings] size-4" />
-                                            {t("edit-categories")}
+                                            {t("category-management")}
                                         </button>
                                     </PopoverContent>
                                 </Popover>

@@ -30,6 +30,7 @@ import modal from "../modal";
 import { Switch } from "../ui/switch";
 import CategoryIcon from "./icon";
 import { ICONS } from "./icons";
+import { CATEGORY_ILLUSTRATIONS } from "./illustrations";
 
 const NO_PARENT = "__noparent";
 
@@ -66,7 +67,7 @@ export default function CategoryEditForm({
                 name: "",
                 type: edit?.type ?? "expense",
                 color: "#fff",
-                icon: ICONS[0].icons[0].className,
+                icon: edit?.parent ? CATEGORY_ILLUSTRATIONS[0] : "",
                 ...edit,
             };
         }
@@ -74,6 +75,8 @@ export default function CategoryEditForm({
             ...edit,
         };
     });
+
+    const isGroup = category.parent === undefined;
 
     const formSchema = useMemo(() => createFormSchema(t), [t]);
     const form = useForm<z.infer<typeof formSchema>>({
@@ -190,7 +193,12 @@ export default function CategoryEditForm({
                 }
             >
                 <div className="flex justify-center items-center gap-4">
-                    <div className="p-4 size-16 aspect-square rounded-full overflow-hidden border flex justify-center items-center">
+                    <div
+                        className={cn(
+                            "p-4 size-16 aspect-square rounded-full overflow-hidden border flex justify-center items-center",
+                            isGroup && "hidden",
+                        )}
+                    >
                         {category?.icon && (
                             <CategoryIcon
                                 icon={category?.icon}
@@ -325,12 +333,18 @@ export default function CategoryEditForm({
                 </div>
 
                 <Tabs
-                    defaultValue="icons"
-                    className="w-full flex flex-col flex-1 overflow-hidden p-2 gap-2"
+                    defaultValue="illustrations"
+                    className={cn(
+                        "w-full flex flex-col flex-1 overflow-hidden p-2 gap-2",
+                        isGroup && "hidden",
+                    )}
                 >
                     <div className="w-full flex justify-center">
                         <div className="flex items-center gap-2">
                             <TabsList>
+                                <TabsTrigger value="illustrations">
+                                    {t("illustrations-tab")}
+                                </TabsTrigger>
                                 <TabsTrigger value="icons">
                                     {t("icons-tab")}
                                 </TabsTrigger>
@@ -341,6 +355,32 @@ export default function CategoryEditForm({
                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto border rounded-lg p-2">
+                        <TabsContent
+                            value="illustrations"
+                            className="flex flex-col gap-2"
+                        >
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(48px,1fr))] gap-2">
+                                {CATEGORY_ILLUSTRATIONS.map((src) => (
+                                    <button
+                                        key={src}
+                                        type="button"
+                                        onClick={() => {
+                                            setCategory((v) => ({
+                                                ...v,
+                                                icon: src,
+                                            }));
+                                        }}
+                                        className="flex size-12 items-center justify-center rounded-full border p-1"
+                                    >
+                                        <img
+                                            src={src}
+                                            alt=""
+                                            className="size-full object-contain"
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+                        </TabsContent>
                         <TabsContent
                             value="icons"
                             className="flex flex-col gap-2"

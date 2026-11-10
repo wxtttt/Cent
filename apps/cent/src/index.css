@@ -119,10 +119,10 @@
 	--safe-area-top: calc(var(--safe-area-inset-top) + var(--titlebar-height));
 }
 
-/* 侧边个人抽屉在 APK 里是一套独立的中性灰白体系（现场 1080×2340 逐点取色）：
+/* 侧边个人抽屉使用一套独立的中性灰白体系（现场 1080×2340 逐点取色）：
    背景 #f4f4f4、卡片纯白 #ffffff、主文字/图标 #383230、次级 #8a847f、
    分隔线 #efeae5；与首页的暖米主题不同，不能用全局 ground/panel。
-   这里只在抽屉容器内重定义语义变量：@theme inline 编译出的工具类直接引用
+   这里只在容器内重定义语义变量：@theme inline 编译出的工具类直接引用
    var(--dp-color-*)，子元素会继承覆盖值；深色主题下不生效，保持原有暗色。 */
 html:not(.dark) .dp-drawer-surface {
 	--dp-color-ground: #f4f4f4;
@@ -134,6 +134,19 @@ html:not(.dark) .dp-drawer-surface {
 	--dp-color-rule: #efeae5;
 	--dp-color-track: #f1f0ef;
 	--dp-color-ink-tab: #b3ada8;
+}
+
+/* 分类管理页同样采用中性灰白体系：浅灰底、纯白卡片、近黑文字、中性分隔线。
+   作用域限定在该页面容器内，不影响首页暖米主题；深色主题保持原有暗色。 */
+html:not(.dark) .dp-category-surface {
+	--dp-color-ground: #f4f4f4;
+	--dp-color-panel: #ffffff;
+	--dp-color-ink: #18181b;
+	--dp-color-ink-warm: #3f3f46;
+	--dp-color-ink-secondary: #8a8a93;
+	--dp-color-ground-muted: #f4f4f5;
+	--dp-color-rule: #f0f0f0;
+	--dp-color-ink-tab: #a1a1aa;
 }
 
 .is-macos-app {
