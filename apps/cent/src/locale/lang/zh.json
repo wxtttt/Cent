@@ -1152,5 +1152,12 @@
   "miscellaneous": "其它",
   "gift-income": "礼金",
   "category-labels": "分类标签",
-  "illustrations-tab": "插画"
+  "illustrations-tab": "插画",
+  "add-label": "添加",
+  "edit-category": "编辑分类",
+  "edit-group": "编辑分组",
+  "add-expense-category": "添加支出分类",
+  "add-income-category": "添加收入分类",
+  "category-icon-label": "分类图标",
+  "category-name-placeholder": "请输入分类名称（必填）"
 }

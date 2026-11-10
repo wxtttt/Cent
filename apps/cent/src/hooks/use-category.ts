@@ -139,31 +139,48 @@ export default function useCategory() {
     );
 
     const reorder = useCallback(async (ordered: Pick<BillCategory, "id">[]) => {
-        await useLedgerStore.getState().updateGlobalMeta((prev) => {
-            prev.categories = withDefaults(prev.categories);
-            const newCategories = ordered.map((t) =>
-                prev.categories?.find((v) => v.id === t.id),
-            );
-            if (newCategories.some((v) => v === undefined)) {
-                console.error("category order mismatch", newCategories);
+        const book = useBookStore.getState().currentBookId;
+        if (!book) {
+            return;
+        }
+        const store = useLedgerStore.getState();
+        const holder: { value?: BillCategory[] } = {};
+        await store.updateGlobalMeta((prev) => {
+            const current = withDefaults(prev.categories);
+            const byId = new Map(current.map((c) => [c.id, c]));
+            const next = ordered.map((o) => byId.get(o.id));
+            if (next.some((v) => v === undefined)) {
                 return prev;
             }
-            prev.categories = prev.categories.filter((v) =>
-                ordered.every((o) => o.id !== v.id),
+            // 只替换参与排序的槽位，其余分类（含其它分组的子项）位置不变，
+            // 避免把分组整体挪到数组头部打乱层级归属
+            const ids = new Set(ordered.map((o) => o.id));
+            let cursor = 0;
+            const result = current.map((c) =>
+                ids.has(c.id) ? next[cursor++]! : c,
             );
-            const index = newCategories[0]?.parent
-                ? prev.categories.findIndex(
-                      (c) => c.id === newCategories[0]?.parent,
-                  )
-                : 0;
-
-            prev.categories.splice(
-                index + 1,
-                0,
-                ...newCategories.filter((v) => v !== undefined),
-            );
+            prev.categories = result;
+            holder.value = result;
             return prev;
         });
+        // 存储层的变更通知早于 meta 落盘，落盘后再主动刷新一次
+        await store.refreshBillList();
+        if (holder.value) {
+            const saved = holder.value;
+            // 保证界面立即生效，不依赖异步通知回来的旧快照
+            useLedgerStore.setState((state) => {
+                const meta = state.infos?.meta;
+                if (!meta) {
+                    return {};
+                }
+                return {
+                    infos: {
+                        ...state.infos,
+                        meta: { ...meta, categories: saved },
+                    },
+                };
+            });
+        }
     }, []);
 
     const reset = useCallback(async () => {

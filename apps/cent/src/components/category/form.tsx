@@ -2,8 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { StorageDeferredAPI } from "@/api/storage";
-import { Button } from "@/components/ui/button";
 import {
     Form,
     FormControl,
@@ -19,14 +17,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useCategory from "@/hooks/use-category";
 import PopupLayout from "@/layouts/popup-layout";
 import type { BillCategory, BillType } from "@/ledger/type";
 import { useIntl } from "@/locale";
-import { useBookStore } from "@/store/book";
 import { cn } from "@/utils";
-import modal from "../modal";
 import { Switch } from "../ui/switch";
 import CategoryIcon from "./icon";
 import { ICONS } from "./icons";
@@ -37,19 +32,19 @@ const NO_PARENT = "__noparent";
 const createFormSchema = (t: any) =>
     z.object({
         name: z.string().check(
+            z.minLength(1, { message: t("category-name-placeholder") }),
             z.maxLength(50, {
                 message: t("max-name-length-limit", { n: 50 }),
             }),
         ),
-
-        // 可选字符串
         parent: z.optional(z.string()),
         defaultSelect: z.optional(z.boolean()),
     });
 
-const allIcons = ICONS;
 const validSvgText = (text: string) =>
     text.startsWith("<svg") && text.endsWith("</svg>");
+
+type IconTab = "illustrations" | "icons" | "custom";
 
 export default function CategoryEditForm({
     onCancel,
@@ -61,6 +56,7 @@ export default function CategoryEditForm({
     onConfirm?: (v: any) => void;
 }) {
     const t = useIntl();
+    const [iconTab, setIconTab] = useState<IconTab>("illustrations");
     const [category, setCategory] = useState<Omit<BillCategory, "id">>(() => {
         if (edit === undefined || edit.id === undefined) {
             return {
@@ -71,409 +67,320 @@ export default function CategoryEditForm({
                 ...edit,
             };
         }
-        return {
-            ...edit,
-        };
+        return { ...edit };
     });
 
     const isGroup = category.parent === undefined;
+    const isEdit = edit !== undefined && edit.id !== undefined;
+    const title = isEdit
+        ? t(isGroup ? "edit-group" : "edit-category")
+        : t(
+              category.type === "expense"
+                  ? "add-expense-category"
+                  : "add-income-category",
+          );
 
     const formSchema = useMemo(() => createFormSchema(t), [t]);
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema) as any,
-        defaultValues: category
-            ? {
-                  name: category.name,
-                  parent: category.parent,
-                  defaultSelect: category.defaultSelect,
-              }
-            : {
-                  name: "",
-              },
+        defaultValues: {
+            name: category.name,
+            parent: category.parent,
+            defaultSelect: category.defaultSelect,
+        },
     });
-    const {
-        expenses: allExpenses,
-        incomes: allIncomes,
-        categories: allCategories,
-        update,
-        add,
-        reorder,
-    } = useCategory();
-    const expenses = allExpenses;
-    const incomes = allIncomes;
+    const { expenses, incomes, update, add } = useCategory();
 
     const onSubmit = async (data: z.infer<typeof formSchema>) => {
         if (edit === undefined || edit.id === undefined) {
-            // add category
-            const newCategory = {
-                ...category,
-                ...data,
-            };
-            const newId = await add(newCategory);
+            const newId = await add({ ...category, ...data });
             onConfirm?.(newId);
             return;
         }
-        const originCate = {
-            icon: edit.icon,
-            name: edit.name,
-            parent: edit.parent,
-            defaultSelect: edit.defaultSelect,
-        };
-        const formattedData = {
-            ...data,
-            icon: category?.icon,
-        };
-        if (
-            originCate.icon === formattedData.icon &&
-            originCate.name === formattedData.name &&
-            originCate.parent === formattedData.parent &&
-            originCate.defaultSelect === formattedData.defaultSelect
-        ) {
-            console.log("nothing changed");
+        const formattedData = { ...data, icon: category.icon };
+        const unchanged =
+            edit.icon === formattedData.icon &&
+            edit.name === formattedData.name &&
+            edit.parent === formattedData.parent &&
+            edit.defaultSelect === formattedData.defaultSelect;
+        if (unchanged) {
+            onCancel?.();
             return;
         }
-
-        console.log("update category:", formattedData);
         await update(edit.id, formattedData);
         onConfirm?.(edit.id);
     };
 
-    const toDelete = async () => {
-        if (!edit?.id) {
-            return;
-        }
-        const book = useBookStore.getState().currentBookId;
-        if (!book) {
-            return;
-        }
-        const cates = allCategories.filter(
-            (c) => c.id === edit.id || c.parent === edit.id,
-        );
-        const exist = await StorageDeferredAPI.filter(book, {
-            categories: cates.map((c) => c.id),
-        });
-        if (exist.length > 0) {
-            modal.prompt({
-                title: t("category-delete-alert", { n: exist.length }),
-                cancellable: false,
-            });
-            return;
-        }
-        // 删除类别
-        await update(edit.id, undefined);
-        onConfirm?.(undefined);
-    };
+    const selectIcon = (icon: string) => setCategory((v) => ({ ...v, icon }));
+
     return (
         <Form {...form}>
             <PopupLayout
-                className="overflow-hidden w-full h-full flex-col gap-2 items-center"
+                handle
+                hideBack
+                className="h-full overflow-hidden bg-ground"
                 onBack={onCancel}
-                title={t("edit-category-details")}
+                title={
+                    <span className="text-[18px] font-semibold text-ink">
+                        {title}
+                    </span>
+                }
                 right={
-                    <div className="flex items-center gap-2 pr-2">
-                        {edit?.id && (
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={toDelete}
-                            >
-                                <i className="icon-[apk--trash]" />
-                            </Button>
-                        )}
-                        <Button
-                            size="sm"
-                            type="submit"
-                            onClick={() => {
-                                form.handleSubmit(onSubmit)();
-                            }}
-                        >
-                            {t("confirm")}
-                        </Button>
-                    </div>
+                    <button
+                        type="button"
+                        aria-label="close"
+                        onClick={onCancel}
+                        className="flex size-8 items-center justify-center rounded-full text-[#71717a] hover:bg-black/5 dark:text-ink-secondary"
+                    >
+                        <i className="icon-[lucide--x] size-5" />
+                    </button>
                 }
             >
-                <div className="flex justify-center items-center gap-4">
-                    <div
-                        className={cn(
-                            "p-4 size-16 aspect-square rounded-full overflow-hidden border flex justify-center items-center",
-                            isGroup && "hidden",
-                        )}
-                    >
-                        {category?.icon && (
-                            <CategoryIcon
-                                icon={category?.icon}
-                                className={cn("w-full h-full")}
-                            />
-                        )}
-                    </div>
-                    <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-5 px-6 pb-4 pt-3">
+                    {!isGroup && (
+                        <span className="flex size-[76px] shrink-0 items-center justify-center rounded-full bg-panel">
+                            {category.icon && (
+                                <CategoryIcon
+                                    icon={category.icon}
+                                    className="size-12"
+                                />
+                            )}
+                        </span>
+                    )}
+                    <div className="min-w-0 flex-1">
                         <FormField
                             control={form.control}
                             name="name"
                             render={({ field }) => (
-                                <FormItem className="flex justify-between items-center">
-                                    <FormLabel className="mb-0">
-                                        {t("category-name")}:
+                                <FormItem>
+                                    <FormLabel className="sr-only">
+                                        {t("category-name")}
                                     </FormLabel>
                                     <FormControl>
-                                        <Input
-                                            type="text"
-                                            maxLength={50}
-                                            className="max-w-[60%]"
-                                            {...field}
-                                        />
+                                        <div className="flex items-center gap-2 border-b border-rule pb-1">
+                                            <Input
+                                                type="text"
+                                                maxLength={50}
+                                                placeholder={t(
+                                                    "category-name-placeholder",
+                                                )}
+                                                className="h-10 border-0 bg-transparent px-0 text-[16px] shadow-none focus-visible:ring-0"
+                                                {...field}
+                                            />
+                                            <i className="icon-[lucide--pencil] size-4 shrink-0 text-[#a1a1aa]" />
+                                        </div>
                                     </FormControl>
                                 </FormItem>
                             )}
-                        ></FormField>
-                        <FormField
-                            control={form.control}
-                            name="parent"
-                            render={({ field }) => {
-                                const fieldValue = form.getValues("parent");
-                                const selectValue =
-                                    fieldValue === undefined ||
-                                    fieldValue === null
-                                        ? NO_PARENT
-                                        : field.value;
-                                return (
-                                    <FormItem className="flex justify-between items-center">
-                                        <FormLabel className="mb-0">
-                                            {t("category-parent")}:
-                                        </FormLabel>
-                                        <FormControl>
-                                            <Select
-                                                value={selectValue}
-                                                onValueChange={(value) => {
-                                                    let newValue:
-                                                        | string
-                                                        | undefined;
-                                                    if (value === NO_PARENT) {
-                                                        // 如果选择了 'NO_PARENT'，将 RHF 的值设置为 undefined
-                                                        newValue = undefined;
-                                                    } else {
-                                                        // 否则，设置为 Select 传来的实际值
-                                                        newValue = value;
-                                                    }
-                                                    // 调用 RHF 的 onChange 更新表单状态
-                                                    field.onChange(newValue);
-                                                }}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue
-                                                            placeholder={t(
-                                                                "parent-category",
-                                                            )}
-                                                        />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent align="end">
-                                                    <SelectItem
-                                                        value={NO_PARENT}
-                                                    >
-                                                        {t(
-                                                            "no-parent-category",
-                                                        )}
-                                                    </SelectItem>
-                                                    {(category.type ===
-                                                    "expense"
-                                                        ? expenses
-                                                        : incomes
-                                                    )
-                                                        .filter(
-                                                            (p) =>
-                                                                p.id !==
-                                                                edit?.id,
-                                                        )
-                                                        .map((p) => (
-                                                            <SelectItem
-                                                                key={p.id}
-                                                                value={p.id}
-                                                            >
-                                                                {p.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </FormControl>
-                                    </FormItem>
-                                );
-                            }}
-                        ></FormField>
-                        {
+                        />
+                        <div className="mt-2 flex items-center justify-between gap-2 text-[12px] text-ink-secondary">
                             <FormField
                                 control={form.control}
-                                name="defaultSelect"
+                                name="parent"
                                 render={({ field }) => {
+                                    const value =
+                                        field.value === undefined ||
+                                        field.value === null
+                                            ? NO_PARENT
+                                            : field.value;
                                     return (
-                                        <FormItem className="flex justify-between items-center h-9">
-                                            <FormLabel className="mb-0">
-                                                {t(
-                                                    "sub-category-default-select",
-                                                )}
-                                                :
-                                            </FormLabel>
+                                        <FormItem className="flex min-w-0 items-center gap-1">
+                                            <span className="shrink-0">
+                                                {t("category-parent")}:
+                                            </span>
                                             <FormControl>
-                                                <Switch
-                                                    checked={Boolean(
-                                                        field.value,
-                                                    )}
-                                                    onCheckedChange={
-                                                        field.onChange
+                                                <Select
+                                                    value={value}
+                                                    onValueChange={(v) =>
+                                                        field.onChange(
+                                                            v === NO_PARENT
+                                                                ? undefined
+                                                                : v,
+                                                        )
                                                     }
-                                                />
+                                                >
+                                                    <SelectTrigger className="h-6 min-w-0 border-0 bg-transparent px-0 text-[12px] shadow-none">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent align="start">
+                                                        <SelectItem
+                                                            value={NO_PARENT}
+                                                        >
+                                                            {t(
+                                                                "no-parent-category",
+                                                            )}
+                                                        </SelectItem>
+                                                        {(category.type ===
+                                                        "expense"
+                                                            ? expenses
+                                                            : incomes
+                                                        )
+                                                            .filter(
+                                                                (p) =>
+                                                                    p.id !==
+                                                                    edit?.id,
+                                                            )
+                                                            .map((p) => (
+                                                                <SelectItem
+                                                                    key={p.id}
+                                                                    value={p.id}
+                                                                >
+                                                                    {p.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </FormControl>
                                         </FormItem>
                                     );
                                 }}
-                            ></FormField>
-                        }
+                            />
+                            <FormField
+                                control={form.control}
+                                name="defaultSelect"
+                                render={({ field }) => (
+                                    <FormItem className="flex shrink-0 items-center gap-1">
+                                        <span>
+                                            {t("sub-category-default-select")}
+                                        </span>
+                                        <FormControl>
+                                            <Switch
+                                                className="scale-75"
+                                                checked={Boolean(field.value)}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                <Tabs
-                    defaultValue="illustrations"
-                    className={cn(
-                        "w-full flex flex-col flex-1 overflow-hidden p-2 gap-2",
-                        isGroup && "hidden",
-                    )}
-                >
-                    <div className="w-full flex justify-center">
-                        <div className="flex items-center gap-2">
-                            <TabsList>
-                                <TabsTrigger value="illustrations">
-                                    {t("illustrations-tab")}
-                                </TabsTrigger>
-                                <TabsTrigger value="icons">
-                                    {t("icons-tab")}
-                                </TabsTrigger>
-                                <TabsTrigger value="custom">
-                                    {t("custom-tab")}
-                                </TabsTrigger>
-                            </TabsList>
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto border rounded-lg p-2">
-                        <TabsContent
-                            value="illustrations"
-                            className="flex flex-col gap-2"
-                        >
-                            <div className="grid grid-cols-[repeat(auto-fill,minmax(48px,1fr))] gap-2">
-                                {CATEGORY_ILLUSTRATIONS.map((src) => (
+                {!isGroup && (
+                    <>
+                        <div className="flex items-center justify-between px-6 pb-3">
+                            <span className="text-[13px] text-[#71717a]">
+                                {t("category-icon-label")}
+                            </span>
+                            <div className="flex items-center gap-0.5 rounded-full bg-panel p-0.5 text-[11px]">
+                                {(
+                                    [
+                                        ["illustrations", "illustrations-tab"],
+                                        ["icons", "icons-tab"],
+                                        ["custom", "custom-tab"],
+                                    ] as const
+                                ).map(([value, labelKey]) => (
                                     <button
-                                        key={src}
+                                        key={value}
                                         type="button"
-                                        onClick={() => {
-                                            setCategory((v) => ({
-                                                ...v,
-                                                icon: src,
-                                            }));
-                                        }}
-                                        className="flex size-12 items-center justify-center rounded-full border p-1"
+                                        onClick={() => setIconTab(value)}
+                                        className={cn(
+                                            "rounded-full px-2.5 py-1 text-ink-secondary",
+                                            iconTab === value &&
+                                                "bg-ground-muted font-medium text-ink",
+                                        )}
                                     >
-                                        <img
-                                            src={src}
-                                            alt=""
-                                            className="size-full object-contain"
-                                        />
+                                        {t(labelKey)}
                                     </button>
                                 ))}
                             </div>
-                        </TabsContent>
-                        <TabsContent
-                            value="icons"
-                            className="flex flex-col gap-2"
-                        >
-                            {allIcons.map((iconSet) => (
-                                <div
-                                    key={iconSet.labelKey}
-                                    className="flex flex-col gap-2"
-                                >
-                                    <div className="text-sm">
-                                        {t(iconSet.labelKey)}
-                                    </div>
-                                    <div
-                                        className={
-                                            "grid grid-cols-[repeat(auto-fill,minmax(48px,1fr))] gap-2"
-                                        }
-                                    >
-                                        {iconSet.icons.map((icon) => (
-                                            <button
-                                                key={
-                                                    iconSet.labelKey + icon.name
-                                                }
-                                                type="button"
-                                                onClick={() => {
-                                                    setCategory(
-                                                        (v) =>
-                                                            ({
-                                                                ...v,
-                                                                icon: icon.className,
-                                                            }) as any,
-                                                    );
-                                                }}
-                                                className="size-12 p-2 rounded-full border flex justify-center items-center cursor-pointer"
-                                            >
-                                                <i
-                                                    className={cn(
-                                                        icon.className,
-                                                    )}
-                                                ></i>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </TabsContent>
-                        <TabsContent
-                            value="custom"
-                            className="w-full h-full flex flex-col gap-2 m-0"
-                        >
-                            <div className="w-full h-full flex flex-col gap-2">
-                                <div className="text-sm opacity-80 flex justify-between items-center px-2 gap-2">
-                                    <div className="flex flex-col gap-1">
-                                        <div>
-                                            {t("copy-and-paste-svg-below")}:
-                                        </div>
-                                        <div className="text-xs opacity-60">
-                                            {t("icon-svg-tip")}
-                                        </div>
-                                    </div>
+                        </div>
 
-                                    <Button size="sm">{t("clear")}</Button>
+                        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hidden px-6">
+                            {iconTab === "illustrations" && (
+                                <div className="grid grid-cols-5 gap-3 pb-4">
+                                    <button
+                                        type="button"
+                                        aria-label="custom"
+                                        onClick={() => setIconTab("custom")}
+                                        className="flex aspect-square items-center justify-center rounded-full border border-rule bg-panel"
+                                    >
+                                        <i className="icon-[lucide--plus] size-5 text-[#a1a1aa]" />
+                                    </button>
+                                    {CATEGORY_ILLUSTRATIONS.map((src) => (
+                                        <button
+                                            key={src}
+                                            type="button"
+                                            aria-label="illustration"
+                                            onClick={() => selectIcon(src)}
+                                            className={cn(
+                                                "flex aspect-square items-center justify-center rounded-full border p-1.5",
+                                                category.icon === src
+                                                    ? "border-brand bg-[#f6e0d2]"
+                                                    : "border-transparent bg-panel",
+                                            )}
+                                        >
+                                            <img
+                                                src={src}
+                                                alt=""
+                                                className="size-full object-contain"
+                                            />
+                                        </button>
+                                    ))}
                                 </div>
-                                <textarea
-                                    className="w-full flex-1 border rounded-lg p-2"
-                                    placeholder={`<svg data-render="mask" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z"/></svg>`}
-                                    onChange={(e) => {
-                                        const svgText = e.currentTarget.value;
-                                        if (
-                                            !svgText ||
-                                            !validSvgText(svgText)
-                                        ) {
-                                            setCategory(
-                                                (v) =>
-                                                    ({
-                                                        ...v,
-                                                        icon: v?.icon,
-                                                    }) as any,
-                                            );
-                                            return;
-                                        }
-                                        setCategory(
-                                            (v) =>
-                                                ({
-                                                    ...v,
-                                                    icon: svgText,
-                                                }) as any,
-                                        );
-                                    }}
-                                />
-                            </div>
-                        </TabsContent>
-                    </div>
-                </Tabs>
+                            )}
+                            {iconTab === "icons" && (
+                                <div className="grid grid-cols-5 gap-3 pb-4">
+                                    {ICONS.flatMap((set) =>
+                                        set.icons.map((icon) => (
+                                            <button
+                                                key={set.labelKey + icon.name}
+                                                type="button"
+                                                aria-label="icon"
+                                                onClick={() =>
+                                                    selectIcon(icon.className)
+                                                }
+                                                className={cn(
+                                                    "flex aspect-square items-center justify-center rounded-full border bg-panel p-2",
+                                                    category.icon ===
+                                                        icon.className
+                                                        ? "border-brand bg-[#f6e0d2]"
+                                                        : "border-transparent",
+                                                )}
+                                            >
+                                                <i className={icon.className} />
+                                            </button>
+                                        )),
+                                    )}
+                                </div>
+                            )}
+                            {iconTab === "custom" && (
+                                <div className="flex flex-col gap-2 pb-4">
+                                    <div className="text-[12px] text-ink-secondary">
+                                        {t("copy-and-paste-svg-below")}
+                                    </div>
+                                    <textarea
+                                        className="h-32 w-full rounded-lg border border-rule bg-panel p-2 text-[12px]"
+                                        placeholder={`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"></svg>`}
+                                        onChange={(e) => {
+                                            const svgText =
+                                                e.currentTarget.value;
+                                            if (
+                                                svgText &&
+                                                validSvgText(svgText)
+                                            ) {
+                                                selectIcon(svgText);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+
+                {isGroup && <div className="min-h-0 flex-1" />}
+
+                <div className="px-5 pb-5 pt-3">
+                    <button
+                        type="button"
+                        onClick={() => form.handleSubmit(onSubmit)()}
+                        className="h-[52px] w-full rounded-xl bg-brand text-[15px] font-medium text-on-brand"
+                    >
+                        {t("confirm")}
+                    </button>
+                </div>
             </PopupLayout>
         </Form>
     );

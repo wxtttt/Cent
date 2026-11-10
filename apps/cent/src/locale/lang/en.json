@@ -1141,5 +1141,12 @@
   "miscellaneous": "Other",
   "gift-income": "Cash Gift",
   "category-labels": "Category Labels",
-  "illustrations-tab": "Illustrations"
+  "illustrations-tab": "Illustrations",
+  "add-label": "Add",
+  "edit-category": "Edit Category",
+  "edit-group": "Edit Group",
+  "add-expense-category": "Add Expense Category",
+  "add-income-category": "Add Income Category",
+  "category-icon-label": "Category Icon",
+  "category-name-placeholder": "Category name (required)"
 }

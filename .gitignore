@@ -40,3 +40,6 @@ src-tauri/gen
 src-tauri/binaries
 .pnpm-store
 .zcode/ 
+
+# browser automation artifacts
+.playwright-cli/
