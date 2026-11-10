@@ -25,7 +25,7 @@
 
 - 分支命名沿用 `feat-<描述>-<yymmdd>` / `fix-<描述>-<yymmdd>`，不使用多级命名。
 - 拉取上游：`git fetch upstream`，需要同步时把 `upstream/main` 合入当前分支。
-- 工作区当前存在大量未提交改动（截至 2026-11-07：暖色 UI 对齐 + 生活模块 + 上游 zen 模块删除，约 400 个文件改动/删除）。动手前先 `git status` / `git diff` 了解上下文；不要清理、回滚或覆盖别人的未提交改动。
+- 截至 2026-11-10，暖色 UI 对齐与生活模块已分多批提交（最近一条 `02e9357` `style(ui): 家小满视觉对齐收尾`），工作区通常只剩少量 UI 微调。动手前先 `git status` / `git diff` 了解上下文；不要清理、回滚或覆盖别人的未提交改动，也不要把 `.playwright-cli/` 等自动化日志目录提交进仓库。
 - 不要主动 commit、push、提 MR 或部署，除非用户明确要求。
 
 ## 3. 目录结构
@@ -127,6 +127,7 @@ npx --yes wrangler@3.114.17 pages deploy dist --project-name cent-test --branch 
 HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pages deploy dist --project-name cent-test --branch main
 ```
 
+- `npx wrangler@3.114.17 whoami` 可确认登录态（本机已通过 OAuth 登录）。发布前务必先 `pnpm build` 刷新根目录 `dist/`，部署后访问 https://cent-test.pages.dev 验证。前面的代理前缀只作用于该条命令，不写盘、不改全局环境变量。
 - 部署会覆盖线上测试环境，只能在用户明确要求时执行。
 
 ## 6. 运行时架构
@@ -193,13 +194,13 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 
 | 令牌 | 值 | 用途 |
 | --- | --- | --- |
-| `--dp-color-ground` | `#f6ecdc` | 页面底色（暖奶茶色，对齐家小满） |
+| `--dp-color-ground` | `#fbf7ef` | 页面底色（暖米白，对齐家小满） |
 | `--dp-color-ground-muted` | `#eee0c8` | 次级底色 / 浅色块 |
 | `--dp-color-panel` | `#fffdf8` | 卡片、弹层、键盘按键 |
 | `--dp-color-ink` | `#2a2018` | 主文字 |
 | `--dp-color-ink-secondary` | `#8b8178` | 次要文字 |
 | `--dp-color-rule` | `#e9dcc6` | 边框 / 分割线 |
-| `--dp-color-accent` | `#f7853c` | 品牌色（`bg-brand`） |
+| `--dp-color-accent` | `#ff8435`（暗色 `#ff8a3d`） | 品牌色（`bg-brand`），四个一级页签页统一 |
 | `--color-expense` | `#1f9d63` | 支出语义色（绿色，`text-semantic-expense`） |
 | `--color-income` | `#e2544a` | 收入语义色（红色，`text-semantic-income`） |
 | `--dp-radius-panel` | `12px` | 普通面板圆角 |
@@ -207,6 +208,10 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 | `--dp-motion-interaction` | `160ms` | 交互过渡时长 |
 | `--dp-motion-easing` | `ease-out` | 交互缓动 |
 
+- **渐变只在 `index.css` 定义令牌**：`--dp-gradient-page-top`（页头暖米纵向）、`--dp-gradient-ticket{,-ledger,-inventory,-wealth,-plain}`（统计卡按页签区分方向）、`--dp-ticket-*-corner`（实色硬边扇形）、`--dp-ticket-tape`；组件不写死渐变，`TicketCard` 用 `variant` 选对应渐变、装饰角位置与吉祥物布局。暗色同名覆盖。
+- **抽屉配色作用域隔离**：`html:not(.dark) .dp-drawer-surface` 局部重定义 `--dp-color-*`，让个人抽屉用 APK 的中性灰白（背景 `#f4f4f4` / 卡片 `#ffffff` / 主文字 `#383230` / 星期 `#b3ada8`），首页等页面仍是暖米主题。`@theme inline` 编译出的工具类直接引用变量，子元素自动继承；挂点要同时覆盖弹层 `contentClassName` 与 `ProfileForm` 根节点，暗色主题不受影响。
+- **中文字重**：Windows 中文字体只有 400/700 两档（400≡500、600≡700），`dp-text-medium` 只保留 `font-weight:500`；**禁用 `-webkit-text-stroke` 补中黑**（笔画边缘会叠出灰边/双线重影）。iOS PWA 命中 `PingFang SC` Medium，天然更接近 APK 的中黑；金额数字保持 `font-bold`。
+- **DPR=1 的亚像素坑**：日历圆环必须整数环宽 31/27/23px（橙环、白环各 2px）；1.5px 环宽会被取整成「1px 实色 + 1px 半透明」，左上半圈发淡、白环断开。任何 <2px 的边框/环宽都要在实景截图里按圆周角度取色验证，不能只看 DOM 尺寸。
 - 注意语义色是反直觉的：支出为绿色、收入为红色，与现有账单卡片一致。
 - 深色模式通过 `.dark` 下的同名令牌覆盖实现，新增颜色必须同时考虑两套值。
 - 安全区统一用 `var(--safe-area-inset-*)` 或项目封装变量，不要在业务组件里直接写 `env(safe-area-inset-*)`。
@@ -226,7 +231,8 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 - 全局壳层：顶部头像 + 「日计」标题 + AI 入口 + 首页/记账/归医/知物 Tab + 底部 dock（吉祥物随页签、加号按页签与子页签分派）（`components/app-chrome`）。
 - 首页：hero 大字问候（滚动折叠吸顶）、票券式今日总结、近期提醒、概览卡（`pages/home`）。
 - 记账页与分析页：票券式月度收支卡、筛选/分析胶囊、统计视图（`pages/ledger`、`pages/stat`、`components/stat`）。
-- 个人中心抽屉（`components/profile`，含物品/医疗/车辆/贷款/自动规则入口，关于 Cent 位于抽屉最底部；首页高级功能推广与 buy me coffee 已移除）。
+- 个人中心抽屉（`components/profile`，含物品/医疗/车辆/贷款/自动规则入口，关于 Cent 位于抽屉最底部；首页高级功能推广与 buy me coffee 已移除）。APK 现场实测规格：`w-[80%] max-w-[340px]`；用户行 42px 头像 + 16px 昵称 + 20px 箭头、净高 74px；日历 31px 日格 / 31-27-23px 圆环，橙内圈仅在当天有账单时出现、连续记录徽章仅在 `streak>0` 时出现；宫格 67px 行高 / 91px 列间距 / 20px 图标 / 12px 标签，卡片间距 16px。Cent 保留 11 个功能项（APK 仅 7 项），第 7 位固定「贷款计算」以对齐前 3 行 3+3+1 结构。完整逐项实测与 22 条修订记录见 `docs/homefull-style-spec.md`。
+- 四个一级页签页的列表缺省态统一为**纯文字**（不配插画、引导按钮或「共 N 笔」栏）；空态文案有专用 i18n key，勿复用其它页面的键。
 - 暖色设计令牌与深色模式（`index.css`）。
 - 记账底部抽屉：emoji 分类快捷卡、日期/币种/标签胶囊、内联备注（含自动规则建议胶囊）、滚轮日期选择器、4×4 键盘、下拉关闭（`components/bill-editor`、`wheel-date-picker`、`components/keyboard.tsx`、`components/ui/dialog/index.tsx`）。
 - 记账筛选（`components/ledger/filter-sheet.tsx`）：时间分「本月/上个月/其他月份」与「自定义起止日」两组互斥状态，月份只选年月，起止日可选到日；筛选后统计卡按区间汇总、标题取区间结束月，下方标签保持「本月收入/本月支出」。
@@ -249,6 +255,8 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 6. 交付只给最终状态：代码、注释、提交信息中不写「已修改/改为」等过程说明；注释用中文解释「为什么」而不是「做了什么」。
 7. 不主动 commit、push、创建 MR 或部署；这些操作只在用户明确要求时执行，commit 信息遵循 Conventional Commits（仓库有 commitlint 与 husky pre-commit）。
 8. 不把任何密钥、Token、账号密码写入代码或文档；必要的凭据只放在本地 `.env.local` 或应用设置里。
+9. 做 APK 对齐时两侧都要**现场操作截图 + 像素测量**（见第 11 节），不能只凭存档截图或肉眼判断；不要修改或临时清空 `PYTHONHOME` / `PYTHONPATH` 等全局环境变量。
+10. 提交用 `git add -u` 之类只暂存已跟踪改动，避免把 `.playwright-cli/` 日志、临时对比图带进仓库。
 
 ## 11. 家小满参考资产与逆向环境
 
@@ -260,3 +268,9 @@ UI 对齐的参考对象是用户自有的 Flutter 应用「家小满」（`com.
 - **模拟器**：本机 `E:\Android\Sdk`（adb 在 `platform-tools`），已有 AVD `homefull`（Android 12 x86_64，家小满已安装并可登录）。驱动 Flutter UI 的方式：`adb shell uiautomator dump`（会激活 Flutter 语义树）+ `node E:\code\_apk_homefull\tools\ui-tap.mjs <ui.xml> <文本> --tap` 按语义节点点按；截图 `adb exec-out screencap -p`。注意语义坐标偶发漂移（窗口宽高比），点按失败时以截图实测为准。
 - 登录需要短信验证码（发到用户手机），需要登录态的页面截图时请用户在模拟器窗口操作。
 - **语言包损坏恢复**（2026-11-07 实战）：`zh/en.json` 被以 GBK 写坏后，完整内容可从 `dist/assets/{zh,en}-*.js`（编译后的 locale chunk，取 default 导出即整包对象）恢复；新增 key 可从 `.corrupted.bak` 里未损坏行抢救。前提是 dist 是较新的构建——所以改完语言包跑一次 `pnpm build` 也是给恢复留后路。注意语言包文件属仓库工作区，可能有**并发会话**同时改动，编辑前先确认最新内容，避免覆盖。
+- **APK ↔ 网页现场对照流程**（2026-11-10 实战，改 UI 必走）：存档 `ref-*.png` 只作交叉校验，不能代替现场取样。
+  - APK 侧：`adb shell monkey -p com.nightingales.homefull 1` 启动 → `adb shell input tap 44 112` 点头像开抽屉 → `adb shell sleep 1` 等动画 → `adb exec-out screencap -p > live-apk-*.png`。不要只拿旧截图取色。
+  - 网页侧：`@playwright/cli` 的会话状态**不跨命令保留**，初始化与操作要写在同一条 `run-code` 里：`open` 后 `setViewportSize(393,852)` → `goto` → 点「离线模式」→ 点「新建账本」→ 填名 → 确认 → 点该账本 → `mouse.click(36,35)` 点头像 → 截图。
+  - 两侧都缩到 393×852（`Image.LANCZOS`）再逐点取色/量 bbox；APK 原图 1080×2340，缩放系数 0.364，且**含 24px 系统状态栏**，比较垂直位置前先裁掉，否则会误判元素偏下、进而错误压缩布局。
+  - 验证组合：`pnpm lint` + 393×852 / 360×780 / 430×932 三视口无横向溢出与文字裁切 + 亮/暗主题变量未被污染。
+- **本机 Python**：全局 `PYTHONHOME` 指向 `D:\ShadowBot\shadowbot-6.3.39\python`（3.7 标准库），PATH 优先命中的 3.13 解释器与之混用会报 `_sre.MAGIC mismatch`。直接用带 Pillow / numpy 的完整路径 `/d/ShadowBot/shadowbot-6.3.39/python/python.exe` 即可；**不要清空或改动任何全局环境变量**，也不要给命令加 `PYTHONHOME= PYTHONPATH=` 这类前缀。
