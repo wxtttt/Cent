@@ -552,7 +552,7 @@ export default function EditorForm({
             }}
         >
             <PopupLayout
-                className="h-full scrollbar-hidden"
+                className="h-full scrollbar-hidden pb-0!"
                 hideBack
                 handle
                 title={
@@ -851,10 +851,11 @@ export default function EditorForm({
                             )}
                         </div>
 
-                        {/* amount */}
+                        {/* amount：iOS 底部安全区会吃掉内容区高度，顶部 spacer 压到 0 后
+                            金额框仍可能溢出到键盘底下；粘在内容区底部保证金额始终完整可见 */}
                         <div
                             data-sheet-drag
-                            className="mx-3 mt-4 flex-shrink-0 rounded-[22px] bg-panel px-4 py-3"
+                            className="sticky bottom-0 z-10 mx-3 mt-4 flex-shrink-0 rounded-[22px] bg-panel px-4 py-3"
                         >
                             {/* 金额清空时数字容器会塌 4px，固定行高避免白框在 60/64px 间跳动 */}
                             <div className="flex min-h-10 items-center gap-3">
@@ -940,8 +941,9 @@ export default function EditorForm({
                         </div>
                     </div>
 
-                    {/* keypad */}
-                    <div className="mt-3 flex flex-shrink-0 flex-col px-3 pb-3">
+                    {/* keypad：底部安全区由键盘区自己承担（取 max 不叠加），
+                        避免弹层与键盘各留一份、把内容区挤到盖住金额框 */}
+                    <div className="mt-3 flex flex-shrink-0 flex-col px-3 pb-[max(0.75rem,var(--safe-area-inset-bottom))]">
                         <Calculator.Keyboard
                             variant="sheet"
                             actionLabel={t("done")}

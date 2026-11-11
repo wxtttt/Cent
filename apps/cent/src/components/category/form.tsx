@@ -95,18 +95,26 @@ const IllustrationCell = ({
             data-icon={dataIcon}
             className="flex min-w-0 flex-col items-center gap-1"
         >
+            {/* 与记一笔分类格子同一套：padding-bottom:100% 保证 WebKit 下也是正圆 */}
             <button
                 type="button"
                 aria-label={label}
                 onClick={onClick}
                 className={cn(
-                    "flex aspect-square w-full items-center justify-center rounded-full border p-1.5",
+                    "relative block w-full shrink-0 rounded-full",
                     selected
-                        ? "border-brand bg-[#f6e0d2]"
-                        : "border-transparent bg-panel",
+                        ? "bg-[#f6e0d2] ring-1 ring-inset ring-brand"
+                        : "bg-panel",
                 )}
+                style={{ paddingBottom: "100%" }}
             >
-                <img src={src} alt="" className="size-full object-contain" />
+                <span className="absolute inset-0 flex items-center justify-center p-1.5">
+                    <img
+                        src={src}
+                        alt=""
+                        className="size-full object-contain"
+                    />
+                </span>
             </button>
             <span
                 className={cn(

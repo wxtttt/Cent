@@ -43,24 +43,30 @@ export const BillCategoryCell = ({
         onClick={onClick}
         className="flex w-full min-w-0 flex-col items-center gap-1"
     >
+        {/* 正方形用 padding-bottom:100%（百分比内边距始终相对宽度），不用 aspect-ratio：
+            WebKit 会把比例算到内容盒后再叠加 padding 与 border，把圆拉成椭圆。
+            描边改 inset ring、内边距放到绝对定位内层，外框不占任何额外尺寸。 */}
         <span
             className={cn(
-                "flex aspect-square w-full items-center justify-center rounded-full border p-1.5 transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                "relative block w-full shrink-0 rounded-full transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
                 selected
-                    ? "border-brand bg-[#f6e0d2]"
-                    : "border-transparent bg-panel",
+                    ? "bg-[#f6e0d2] ring-1 ring-inset ring-brand"
+                    : "bg-panel",
             )}
+            style={{ paddingBottom: "100%" }}
         >
-            {category.icon ? (
-                <CategoryIcon
-                    icon={category.icon}
-                    className="size-full object-contain"
-                />
-            ) : (
-                <span className="text-sm text-ink-secondary">
-                    {category.name.slice(0, 1)}
-                </span>
-            )}
+            <span className="absolute inset-0 flex items-center justify-center p-1.5">
+                {category.icon ? (
+                    <CategoryIcon
+                        icon={category.icon}
+                        className="size-full object-contain"
+                    />
+                ) : (
+                    <span className="text-sm text-ink-secondary">
+                        {category.name.slice(0, 1)}
+                    </span>
+                )}
+            </span>
         </span>
         <span
             className={cn(
