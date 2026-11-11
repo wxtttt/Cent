@@ -1,4 +1,5 @@
 import {
+    type CollisionDetection,
     closestCenter,
     DndContext,
     type DragEndEvent,
@@ -24,13 +25,29 @@ import { useBookStore } from "@/store/book";
 import modal from "../modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CategoryEditFormProvider, showCategoryEdit } from "./edit";
-import {
-    CategoryGroupHeader,
-    CategoryRow,
-    type CategorySortData,
-} from "./item";
+import { CategoryGroupBlock, type CategorySortData } from "./item";
 
 type Group = ReturnType<typeof treeCategories>[number];
+
+/**
+ * 分组只与分组碰撞、子项只与同组子项碰撞。
+ * 这样两层的 SortableContext 都能拿到有效的 activeIndex / overIndex，
+ * 拖动分组时其它分组会正常让位，组内子项则整体跟随。
+ */
+const layeredCollision: CollisionDetection = (args) => {
+    const activeData = args.active.data.current as CategorySortData | undefined;
+    const containers = args.droppableContainers.filter((container) => {
+        const data = container.data.current as CategorySortData | undefined;
+        if (!activeData || !data) {
+            return true;
+        }
+        if (activeData.kind === "group") {
+            return data.kind === "group";
+        }
+        return data.kind === "child" && data.parentId === activeData.parentId;
+    });
+    return closestCenter({ ...args, droppableContainers: containers });
+};
 
 export default function CategoryList({
     edit,
@@ -183,87 +200,45 @@ export default function CategoryList({
                         {t("add-label")}
                     </button>
                 </div>
-                {tabs.map((item) => {
-                    const sortableIds = item.value.flatMap((group) => [
-                        group.id,
-                        ...group.children.map((child) => child.id),
-                    ]);
-                    return (
-                        <TabsContent
-                            key={item.label}
-                            value={item.label}
-                            className="mt-0 min-h-0 flex-1 overflow-y-auto scrollbar-hidden"
+                {tabs.map((item) => (
+                    <TabsContent
+                        key={item.label}
+                        value={item.label}
+                        className="mt-0 min-h-0 flex-1 overflow-y-auto scrollbar-hidden"
+                    >
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={layeredCollision}
+                            onDragEnd={(event) =>
+                                handleDragEnd(event, item.value)
+                            }
+                            modifiers={[restrictToVerticalAxis]}
                         >
-                            <DndContext
-                                sensors={sensors}
-                                collisionDetection={closestCenter}
-                                onDragEnd={(event) =>
-                                    handleDragEnd(event, item.value)
-                                }
-                                modifiers={[restrictToVerticalAxis]}
+                            <SortableContext
+                                items={item.value.map((group) => group.id)}
+                                strategy={verticalListSortingStrategy}
                             >
-                                <SortableContext
-                                    items={sortableIds}
-                                    strategy={verticalListSortingStrategy}
-                                >
-                                    <div className="rounded-[18px] bg-panel px-1 py-1">
-                                        {item.value.map((group) => (
-                                            <div key={group.id}>
-                                                <CategoryGroupHeader
-                                                    id={group.id}
-                                                    name={group.name}
-                                                    onAdd={() =>
-                                                        openForm({
-                                                            id: undefined,
-                                                            parent: group.id,
-                                                            type: item.label,
-                                                        })
-                                                    }
-                                                    onEdit={() =>
-                                                        openForm(group)
-                                                    }
-                                                />
-                                                <div className="border-t border-rule">
-                                                    {group.children.length ===
-                                                    0 ? (
-                                                        <div className="py-3 text-center text-xs text-ink-secondary">
-                                                            {t(
-                                                                "inventory-empty",
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        group.children.map(
-                                                            (child) => (
-                                                                <CategoryRow
-                                                                    key={
-                                                                        child.id
-                                                                    }
-                                                                    category={
-                                                                        child
-                                                                    }
-                                                                    onDelete={() =>
-                                                                        void remove(
-                                                                            child,
-                                                                        )
-                                                                    }
-                                                                    onEdit={() =>
-                                                                        openForm(
-                                                                            child,
-                                                                        )
-                                                                    }
-                                                                />
-                                                            ),
-                                                        )
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </SortableContext>
-                            </DndContext>
-                        </TabsContent>
-                    );
-                })}
+                                <div className="rounded-[18px] bg-panel">
+                                    {item.value.map((group, index) => (
+                                        <CategoryGroupBlock
+                                            key={group.id}
+                                            group={group}
+                                            roundedStart={index === 0}
+                                            roundedEnd={
+                                                index === item.value.length - 1
+                                            }
+                                            emptyText={t("inventory-empty")}
+                                            onDelete={(child) =>
+                                                void remove(child)
+                                            }
+                                            onEdit={(child) => openForm(child)}
+                                        />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
+                    </TabsContent>
+                ))}
             </Tabs>
             <CategoryEditFormProvider />
         </PopupLayout>

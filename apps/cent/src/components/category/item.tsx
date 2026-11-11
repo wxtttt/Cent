@@ -1,12 +1,19 @@
-import { useSortable } from "@dnd-kit/sortable";
+import {
+    SortableContext,
+    useSortable,
+    verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { BillCategory } from "@/ledger/type";
+import { cn } from "@/utils";
 import CategoryIcon from "./icon";
 
 export type CategorySortData = {
     kind: "group" | "child";
     parentId?: string;
 };
+
+type Group = BillCategory & { children: BillCategory[] };
 
 const iconButton =
     "flex size-7 shrink-0 items-center justify-center rounded-full text-[#71717a] transition-colors hover:bg-black/5 hover:text-ink dark:text-ink-secondary dark:hover:bg-white/10";
@@ -29,9 +36,9 @@ function useRowSortable(id: string, data: CategorySortData) {
         listeners,
         setNodeRef,
         setActivatorNodeRef,
-        isDragging,
         style: {
-            transform: CSS.Transform.toString(transform),
+            // 分组整块高度不同，不能用默认变换里的 scaleY，否则拖动时整块会被压扁
+            transform: CSS.Translate.toString(transform),
             transition,
             position: "relative" as const,
             zIndex: isDragging ? 20 : undefined,
@@ -63,54 +70,73 @@ function DragHandle({
     );
 }
 
-export function CategoryGroupHeader({
-    id,
-    name,
+/**
+ * 一级分组与其二级分类是同一个可排序节点，拖动分组时整块一起移动。
+ * 组内子项通过嵌套 SortableContext 保持可单独排序。
+ */
+export function CategoryGroupBlock({
+    group,
+    roundedStart,
+    roundedEnd,
+    emptyText,
+    onDelete,
     onEdit,
-    onAdd,
 }: {
-    id: string;
-    name: string;
-    onEdit?: () => void;
-    onAdd?: () => void;
+    group: Group;
+    roundedStart?: boolean;
+    roundedEnd?: boolean;
+    emptyText?: string;
+    onDelete?: (category: BillCategory) => void;
+    onEdit?: (category: BillCategory) => void;
 }) {
     const { attributes, listeners, setNodeRef, setActivatorNodeRef, style } =
-        useRowSortable(id, { kind: "group" });
+        useRowSortable(group.id, { kind: "group" });
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className="flex h-9 items-center gap-1 rounded-lg bg-ground-muted px-3"
+            className={cn(
+                "overflow-hidden border-b border-rule bg-panel last:border-b-0",
+                roundedStart && "rounded-t-[18px]",
+                roundedEnd && "rounded-b-[18px]",
+            )}
         >
-            <span className="mr-auto text-[13px] font-semibold text-ink">
-                {name}
-            </span>
-            <button
-                type="button"
-                aria-label="add"
-                className={iconButton}
-                onClick={onAdd}
-            >
-                <i className="icon-[lucide--plus] size-4" />
-            </button>
-            <button
-                type="button"
-                aria-label="edit"
-                className={iconButton}
-                onClick={onEdit}
-            >
-                <i className="icon-[lucide--pencil] size-4" />
-            </button>
-            <DragHandle
-                attributes={attributes}
-                listeners={listeners}
-                setActivatorNodeRef={setActivatorNodeRef}
-            />
+            <div className="flex h-9 items-center gap-1 border-b border-rule bg-panel px-3">
+                <span className="mr-auto text-[13px] font-semibold text-ink">
+                    {group.name}
+                </span>
+                <DragHandle
+                    attributes={attributes}
+                    listeners={listeners}
+                    setActivatorNodeRef={setActivatorNodeRef}
+                />
+            </div>
+            <div>
+                <SortableContext
+                    items={group.children.map((c) => c.id)}
+                    strategy={verticalListSortingStrategy}
+                >
+                    {group.children.length === 0 ? (
+                        <div className="py-3 text-center text-xs text-ink-secondary">
+                            {emptyText}
+                        </div>
+                    ) : (
+                        group.children.map((child) => (
+                            <CategoryRow
+                                key={child.id}
+                                category={child}
+                                onDelete={() => onDelete?.(child)}
+                                onEdit={() => onEdit?.(child)}
+                            />
+                        ))
+                    )}
+                </SortableContext>
+            </div>
         </div>
     );
 }
 
-export function CategoryRow({
+function CategoryRow({
     category,
     onDelete,
     onEdit,
@@ -154,7 +180,7 @@ export function CategoryRow({
                 className={iconButton}
                 onClick={onEdit}
             >
-                <i className="icon-[lucide--pencil] size-4" />
+                <i className="icon-[lucide--square-pen] size-4" />
             </button>
             <DragHandle
                 attributes={attributes}

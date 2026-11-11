@@ -152,7 +152,8 @@ export default function EditorForm({
         if (!category) {
             return categoryId;
         }
-        const defaultSub = category.children.find((v) => v.defaultSelect);
+        // 选中一级分组时默认落到它的第一个二级分类
+        const defaultSub = category.children[0];
         if (!defaultSub) {
             return categoryId;
         }

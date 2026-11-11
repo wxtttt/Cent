@@ -144,30 +144,20 @@ export default function useCategory() {
             return;
         }
         const store = useLedgerStore.getState();
-        const holder: { value?: BillCategory[] } = {};
-        await store.updateGlobalMeta((prev) => {
-            const current = withDefaults(prev.categories);
-            const byId = new Map(current.map((c) => [c.id, c]));
-            const next = ordered.map((o) => byId.get(o.id));
-            if (next.some((v) => v === undefined)) {
-                return prev;
-            }
-            // 只替换参与排序的槽位，其余分类（含其它分组的子项）位置不变，
-            // 避免把分组整体挪到数组头部打乱层级归属
-            const ids = new Set(ordered.map((o) => o.id));
-            let cursor = 0;
-            const result = current.map((c) =>
-                ids.has(c.id) ? next[cursor++]! : c,
-            );
-            prev.categories = result;
-            holder.value = result;
-            return prev;
-        });
-        // 存储层的变更通知早于 meta 落盘，落盘后再主动刷新一次
-        await store.refreshBillList();
-        if (holder.value) {
-            const saved = holder.value;
-            // 保证界面立即生效，不依赖异步通知回来的旧快照
+        const current = withDefaults(store.infos?.meta.categories);
+        const byId = new Map(current.map((c) => [c.id, c]));
+        const next = ordered.map((o) => byId.get(o.id));
+        if (next.some((v) => v === undefined)) {
+            return;
+        }
+        // 只替换参与排序的槽位，其余分类（含其它分组的子项）位置不变，
+        // 避免把分组整体挪到数组头部打乱层级归属
+        const ids = new Set(ordered.map((o) => o.id));
+        let cursor = 0;
+        const result = current.map((c) =>
+            ids.has(c.id) ? next[cursor++]! : c,
+        );
+        const align = () =>
             useLedgerStore.setState((state) => {
                 const meta = state.infos?.meta;
                 if (!meta) {
@@ -176,11 +166,20 @@ export default function useCategory() {
                 return {
                     infos: {
                         ...state.infos,
-                        meta: { ...meta, categories: saved },
+                        meta: { ...meta, categories: result },
                     },
                 };
             });
-        }
+        // 拖拽松手时同步换序，dnd-kit 才能在同一帧按新位置收尾，
+        // 否则会先弹回旧位置、等异步落盘后才跳到新位置
+        align();
+        await store.updateGlobalMeta((prev) => {
+            prev.categories = result;
+            return prev;
+        });
+        // 落盘完成后再对齐一次，覆盖存储层可能带回的旧快照
+        await store.refreshBillList();
+        align();
     }, []);
 
     const reset = useCallback(async () => {

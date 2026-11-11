@@ -95,11 +95,12 @@ export class OfflineStorage<Item extends BaseItem = Bill> {
     ) {
         const { itemBucket } = this.getStore(storeFullName);
         await itemBucket.batch(actions, overlap);
-        this.notifyChange(storeFullName);
         const newMeta = actions.find((v) => v.type === "meta");
         if (newMeta) {
             await itemBucket.metaStorage.setValue(newMeta?.metaValue);
         }
+        // meta 落盘后再广播，否则监听方刷新时读到的仍是旧快照
+        this.notifyChange(storeFullName);
         this.toSync();
     }
 

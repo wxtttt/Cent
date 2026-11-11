@@ -22,11 +22,8 @@ import PopupLayout from "@/layouts/popup-layout";
 import type { BillCategory, BillType } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import { Switch } from "../ui/switch";
 import CategoryIcon from "./icon";
 import { CATEGORY_ILLUSTRATIONS } from "./illustrations";
-
-const NO_PARENT = "__noparent";
 
 const createFormSchema = (t: any) =>
     z.object({
@@ -37,7 +34,6 @@ const createFormSchema = (t: any) =>
             }),
         ),
         parent: z.optional(z.string()),
-        defaultSelect: z.optional(z.boolean()),
     });
 
 export default function CategoryEditForm({
@@ -80,23 +76,30 @@ export default function CategoryEditForm({
         defaultValues: {
             name: category.name,
             parent: category.parent,
-            defaultSelect: category.defaultSelect,
         },
     });
     const { expenses, incomes, update, add } = useCategory();
+    const parentOptions = (
+        category.type === "expense" ? expenses : incomes
+    ).filter((p) => p.id !== edit?.id);
+    // 一级分组固定，不再允许把分类挂到顶层
+    const resolveParent = (value?: string) =>
+        value && parentOptions.some((p) => p.id === value)
+            ? value
+            : parentOptions[0]?.id;
 
     const onSubmit = async (data: z.infer<typeof formSchema>) => {
+        const parent = resolveParent(data.parent);
         if (edit === undefined || edit.id === undefined) {
-            const newId = await add({ ...category, ...data });
+            const newId = await add({ ...category, ...data, parent });
             onConfirm?.(newId);
             return;
         }
-        const formattedData = { ...data, icon: category.icon };
+        const formattedData = { ...data, parent, icon: category.icon };
         const unchanged =
             edit.icon === formattedData.icon &&
             edit.name === formattedData.name &&
-            edit.parent === formattedData.parent &&
-            edit.defaultSelect === formattedData.defaultSelect;
+            edit.parent === formattedData.parent;
         if (unchanged) {
             onCancel?.();
             return;
@@ -161,16 +164,13 @@ export default function CategoryEditForm({
                                 </FormItem>
                             )}
                         />
-                        <div className="mt-2 flex h-8 items-center justify-between gap-2 rounded-lg bg-panel px-2.5 text-[12px] text-ink-secondary">
+                        <div className="mt-2 flex h-8 w-fit items-center rounded-lg bg-panel px-2.5 text-[12px] text-ink-secondary">
                             <FormField
                                 control={form.control}
                                 name="parent"
                                 render={({ field }) => {
                                     const value =
-                                        field.value === undefined ||
-                                        field.value === null
-                                            ? NO_PARENT
-                                            : field.value;
+                                        resolveParent(field.value) ?? "";
                                     return (
                                         <FormItem className="flex h-full min-w-0 items-center gap-1.5 space-y-0">
                                             <span className="shrink-0">
@@ -179,12 +179,8 @@ export default function CategoryEditForm({
                                             <FormControl>
                                                 <Select
                                                     value={value}
-                                                    onValueChange={(v) =>
-                                                        field.onChange(
-                                                            v === NO_PARENT
-                                                                ? undefined
-                                                                : v,
-                                                        )
+                                                    onValueChange={
+                                                        field.onChange
                                                     }
                                                 >
                                                     <SelectTrigger className="h-7 w-fit min-w-0 gap-1 rounded-md border-0 bg-transparent px-0 text-[12px] font-normal text-ink shadow-none [&_svg]:size-3 [&_svg]:opacity-60 focus-visible:ring-0">
@@ -194,55 +190,22 @@ export default function CategoryEditForm({
                                                         align="start"
                                                         className="rounded-xl border-rule bg-panel p-1 shadow-lg"
                                                     >
-                                                        <SelectItem
-                                                            value={NO_PARENT}
-                                                        >
-                                                            {t(
-                                                                "no-parent-category",
-                                                            )}
-                                                        </SelectItem>
-                                                        {(category.type ===
-                                                        "expense"
-                                                            ? expenses
-                                                            : incomes
-                                                        )
-                                                            .filter(
-                                                                (p) =>
-                                                                    p.id !==
-                                                                    edit?.id,
-                                                            )
-                                                            .map((p) => (
+                                                        {parentOptions.map(
+                                                            (p) => (
                                                                 <SelectItem
                                                                     key={p.id}
                                                                     value={p.id}
                                                                 >
                                                                     {p.name}
                                                                 </SelectItem>
-                                                            ))}
+                                                            ),
+                                                        )}
                                                     </SelectContent>
                                                 </Select>
                                             </FormControl>
                                         </FormItem>
                                     );
                                 }}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="defaultSelect"
-                                render={({ field }) => (
-                                    <FormItem className="flex h-full shrink-0 items-center gap-1.5 space-y-0">
-                                        <span>
-                                            {t("sub-category-default-select")}
-                                        </span>
-                                        <FormControl>
-                                            <Switch
-                                                className="data-[state=checked]:bg-brand data-[state=unchecked]:bg-[#d4d4d8]"
-                                                checked={Boolean(field.value)}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
                             />
                         </div>
                     </div>
