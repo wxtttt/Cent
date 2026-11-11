@@ -201,7 +201,7 @@ function AssistantDock() {
     const hasMenu = plusMode === "home" || plusMode === "ledger";
 
     return (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[3] px-4 pb-[max(12px,var(--safe-area-inset-bottom))]">
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[3] px-[18px] pb-[max(12px,var(--safe-area-inset-bottom))]">
             {/* 首页：快捷新建底部抽屉（纯文字按钮，与家小满一致） */}
             {plusMode === "home" && (
                 <Dialog open={menuVisible} onOpenChange={setMenuOpen}>
@@ -375,7 +375,7 @@ export default function AppChrome() {
             {/* iOS 状态栏区域由 #root 顶部安全区染色（见 index.css 的 #root 背景），
                 这里不再用 ::before 向上出血：MainLayout 的 overflow:hidden 容器会把它裁掉。 */}
             <header className="relative flex-shrink-0 bg-header">
-                <div className="mx-auto flex w-full max-w-[960px] items-center gap-3 px-4 pt-3 sm:px-6">
+                <div className="mx-auto flex w-full max-w-[960px] items-center gap-3 px-[18px] pt-3 sm:px-6">
                     <ProfileAvatar />
                     <div className="flex-1 text-center text-lg font-bold tracking-tight">
                         {t("APP_NAME")}

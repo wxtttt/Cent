@@ -146,7 +146,7 @@ export default function InventoryPage() {
 
     return (
         <div className="h-full overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2.5 px-4 pb-32 pt-3">
+            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2.5 px-[18px] pb-32 pt-3">
                 <div className="flex items-center gap-3">
                     <CategoryFilterButton
                         categories={categories}

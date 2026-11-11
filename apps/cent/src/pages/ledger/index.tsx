@@ -196,7 +196,7 @@ export default function Page() {
     return (
         <div className="flex h-full flex-col overflow-hidden page-show">
             <div className="flex-shrink-0">
-                <div className="mx-auto w-full max-w-[720px] px-4 pt-2">
+                <div className="mx-auto w-full max-w-[720px] px-[18px] pt-2">
                     <div className="flex items-center justify-between">
                         <button
                             type="button"

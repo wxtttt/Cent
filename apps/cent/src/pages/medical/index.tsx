@@ -115,7 +115,7 @@ export default function MedicalPage() {
 
     return (
         <div className="h-full overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 px-4 pb-32 pt-3">
+            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 px-[18px] pb-32 pt-3">
                 <div className="flex items-center gap-2">
                     <div className="min-w-0 flex-1">
                         <SegmentedTabs

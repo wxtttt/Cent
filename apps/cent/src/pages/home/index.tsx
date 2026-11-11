@@ -309,11 +309,11 @@ export default function Page() {
 
     return (
         <div className="h-full overflow-y-auto page-show dp-home-surface">
-            <div className="mx-auto w-full max-w-[720px] px-4 pb-32">
+            <div className="mx-auto w-full max-w-[720px] px-[18px] pb-32">
                 {/* 家小满折叠态问候带：灰米 / 浅黄双色斜切 + 中间上拱的浅弧下缘。
                     1080×2340 实拍折到 393 宽后逐列量得：左端 37、中部 24、右端 40，
                     高度 44；展开态 hero 才有的右上黄圆、左下青绿弧不出现在这里。 */}
-                <div className="relative -mx-4 select-none">
+                <div className="relative -mx-[18px] select-none">
                     <svg
                         aria-hidden
                         role="presentation"
@@ -374,7 +374,7 @@ export default function Page() {
                             vectorEffect="non-scaling-stroke"
                         />
                     </svg>
-                    <div className="absolute inset-0 flex items-center gap-2 px-4 pt-1">
+                    <div className="absolute inset-0 flex items-center gap-2 px-[18px] pt-1">
                         <h1 className="dp-text-medium min-w-0 truncate text-[15px] text-ink-warm">
                             {greeting}，{name || t("me")}
                         </h1>
@@ -437,9 +437,9 @@ export default function Page() {
                     不与左列钉底对齐）：左列行距 12px、右列 8px，进度条 5px 高 */}
                 {/* APK 概览卡：奶白底 + 1px #ede8dc 暖灰外框（逐点取色）。
                     用 inset 阴影画框而非 border，避免挤掉内容区 2px 打乱下方比例；
-                    圆角保持原有 12px 不动（APK 实测约 24px，待确认后再调） */}
-                <section className="relative mt-2 overflow-hidden rounded-panel bg-panel px-3.5 pb-2 pt-3 shadow-[inset_0_0_0_1px_var(--dp-color-home-frame)]">
-                    <div className="absolute inset-y-3 left-1/2 w-px bg-rule" />
+                    圆角与同页今日总结卡、其它页票券卡统一 24px（APK 实测约 24px） */}
+                <section className="relative mt-2 overflow-hidden rounded-[24px] bg-panel px-4 pb-4 pt-4 shadow-[inset_0_0_0_1px_var(--dp-color-home-frame)]">
+                    <div className="absolute inset-y-4 left-1/2 w-px bg-rule" />
                     <div className="grid grid-cols-2">
                         <div className="flex min-w-0 flex-col pr-4">
                             <button
@@ -461,7 +461,7 @@ export default function Page() {
                                 </span>
                                 <i className="icon-[lucide--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
-                            <div className="mt-3 flex items-baseline gap-1 overflow-hidden font-display font-bold tracking-tight text-ink-warm">
+                            <div className="mt-4 flex items-baseline gap-1 overflow-hidden font-display font-bold tracking-tight text-ink-warm">
                                 <span className="flex-shrink-0 text-sm">
                                     {baseCurrency.symbol}
                                 </span>
@@ -469,7 +469,7 @@ export default function Page() {
                                     {money(monthExpense)}
                                 </span>
                             </div>
-                            <div className="mt-3 h-[4px] overflow-hidden rounded-full bg-track">
+                            <div className="mt-4 h-[4px] overflow-hidden rounded-full bg-track">
                                 <div
                                     className="h-full rounded-full bg-brand transition-[width] duration-500"
                                     style={{
@@ -497,7 +497,7 @@ export default function Page() {
                                 </span>
                                 <i className="icon-[lucide--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
-                            <div className="mt-2 font-display font-bold tracking-tight text-ink-warm">
+                            <div className="mt-3 font-display font-bold tracking-tight text-ink-warm">
                                 <span className="text-2xl leading-none tabular-nums">
                                     {doneToday}
                                 </span>
@@ -506,7 +506,7 @@ export default function Page() {
                                     / {dueToday.length}
                                 </span>
                             </div>
-                            <div className="mt-2 flex items-center gap-2 text-xs leading-none text-ink-secondary">
+                            <div className="mt-3 flex items-center gap-2 text-xs leading-none text-ink-secondary">
                                 <span className="size-3.5 flex-shrink-0 rounded-full border-2 border-rule"></span>
                                 <span className="truncate">
                                     {t("today-done")} {todoPercent}%
@@ -517,7 +517,7 @@ export default function Page() {
                 </section>
 
                 <TicketCard
-                    className="mt-5"
+                    className="mt-7"
                     variant="home"
                     decorations={false}
                     mascot={
