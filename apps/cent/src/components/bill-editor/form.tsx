@@ -617,7 +617,7 @@ export default function EditorForm({
                                                     chooseGroupById(group.id)
                                                 }
                                                 className={cn(
-                                                    "relative flex h-10 min-w-[60px] shrink-0 items-center justify-center px-2 text-[12px] transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                                                    "relative flex h-10 min-w-[50px] shrink-0 items-center justify-center px-1.5 text-[12px] transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
                                                     active
                                                         ? "bg-panel font-medium text-brand"
                                                         : "text-ink-secondary/80 hover:text-ink-secondary",
@@ -637,10 +637,10 @@ export default function EditorForm({
                                 {/* 右缘只用渐变淡出暗示还能横滑，不再放箭头；滑到底自动隐藏 */}
                                 {!groupRowAtEnd && (
                                     <div
-                                        className="pointer-events-none absolute inset-y-0 right-0 w-10"
+                                        className="pointer-events-none absolute inset-y-0 right-0 w-20"
                                         style={{
                                             background:
-                                                "linear-gradient(to right, transparent, var(--dp-color-ground-muted) 80%)",
+                                                "linear-gradient(to right, transparent 0%, var(--dp-color-ground-muted) 100%)",
                                         }}
                                     />
                                 )}
@@ -692,7 +692,7 @@ export default function EditorForm({
                                             </div>
                                             {groupSubCategories.length > 5 && (
                                                 <div
-                                                    className="pointer-events-none absolute inset-y-0 right-0 w-6"
+                                                    className="pointer-events-none absolute inset-y-0 right-0 w-12"
                                                     style={{
                                                         background:
                                                             "linear-gradient(to left, var(--dp-color-panel), transparent)",
