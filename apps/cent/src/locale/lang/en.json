@@ -220,6 +220,8 @@
   "categories-budget-description": "Set budget for each category",
   "categories-budget-included": "categories budget included",
   "category-delete-alert": "Cannot delete,category, {n} records founded, please transfer them to another category first",
+  "category-delete-confirm": "Delete category \"{name}\"?",
+  "category-delete-title": "Delete Category",
   "category-management": "Category Management",
   "category-name": "Category Name",
   "category-parent": "Parent Category",

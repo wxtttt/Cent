@@ -24,6 +24,7 @@ import { useIntl } from "@/locale";
 import { useBookStore } from "@/store/book";
 import modal from "../modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { CategoryDeleteProvider, showCategoryDelete } from "./delete-dialog";
 import { CategoryEditFormProvider, showCategoryEdit } from "./edit";
 import { CategoryGroupBlock, type CategorySortData } from "./item";
 
@@ -106,7 +107,10 @@ export default function CategoryList({
             });
             return;
         }
-        await update(cate.id, undefined);
+        void showCategoryDelete({
+            name: cate.name,
+            onDelete: () => void update(cate.id, undefined),
+        }).catch(() => {});
     };
 
     const handleDragEnd = (event: DragEndEvent, groups: Group[]) => {
@@ -218,15 +222,11 @@ export default function CategoryList({
                                 items={item.value.map((group) => group.id)}
                                 strategy={verticalListSortingStrategy}
                             >
-                                <div className="rounded-[18px] bg-panel">
-                                    {item.value.map((group, index) => (
+                                <div className="flex flex-col gap-3">
+                                    {item.value.map((group) => (
                                         <CategoryGroupBlock
                                             key={group.id}
                                             group={group}
-                                            roundedStart={index === 0}
-                                            roundedEnd={
-                                                index === item.value.length - 1
-                                            }
                                             emptyText={t("inventory-empty")}
                                             onDelete={(child) =>
                                                 void remove(child)
@@ -241,6 +241,7 @@ export default function CategoryList({
                 ))}
             </Tabs>
             <CategoryEditFormProvider />
+            <CategoryDeleteProvider />
         </PopupLayout>
     );
 }

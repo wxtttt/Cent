@@ -5,7 +5,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { BillCategory } from "@/ledger/type";
-import { cn } from "@/utils";
 import CategoryIcon from "./icon";
 
 export type CategorySortData = {
@@ -76,15 +75,11 @@ function DragHandle({
  */
 export function CategoryGroupBlock({
     group,
-    roundedStart,
-    roundedEnd,
     emptyText,
     onDelete,
     onEdit,
 }: {
     group: Group;
-    roundedStart?: boolean;
-    roundedEnd?: boolean;
     emptyText?: string;
     onDelete?: (category: BillCategory) => void;
     onEdit?: (category: BillCategory) => void;
@@ -95,14 +90,10 @@ export function CategoryGroupBlock({
         <div
             ref={setNodeRef}
             style={style}
-            className={cn(
-                "overflow-hidden border-b border-rule bg-panel last:border-b-0",
-                roundedStart && "rounded-t-[18px]",
-                roundedEnd && "rounded-b-[18px]",
-            )}
+            className="overflow-hidden rounded-[18px] bg-panel"
         >
-            <div className="flex h-9 items-center gap-1 border-b border-rule bg-panel px-3">
-                <span className="mr-auto text-[13px] font-semibold text-ink">
+            <div className="flex h-8 items-center gap-1 border-b border-rule bg-[#ececee] px-3 dark:bg-ground-muted">
+                <span className="mr-auto text-[12px] font-semibold tracking-wide text-ink-secondary">
                     {group.name}
                 </span>
                 <DragHandle
