@@ -172,6 +172,7 @@ export function WheelDatePicker({
                   d ? d.format((displayFormatter as string) ?? "L") : "";
 
     const current = value ? dayjs(value) : undefined;
+    const displayText = display(current);
 
     const commit = () => {
         const base = dayjs(
@@ -202,7 +203,10 @@ export function WheelDatePicker({
             <DialogTrigger asChild>
                 <div className="relative flex cursor-pointer items-center justify-center">
                     {children}
-                    <div className="mx-2">{display(current)}</div>
+                    {/* 空文本时不渲染这个 mx-2 容器，否则会在 chip 右侧留下 16px 假间距 */}
+                    {displayText ? (
+                        <div className="mx-2">{displayText}</div>
+                    ) : null}
                 </div>
             </DialogTrigger>
             <DialogPortal>
@@ -228,10 +232,10 @@ export function WheelDatePicker({
                                 type="button"
                                 data-no-focus-ring
                                 aria-label={t("close")}
-                                className="flex size-11 items-center justify-center rounded-full bg-white text-[#0a0a0a] shadow-[0_2px_12px_rgba(0,0,0,0.12)] focus-visible:outline-none"
+                                className="flex size-9 items-center justify-center rounded-full bg-white text-[#0a0a0a] shadow-[0_2px_12px_rgba(0,0,0,0.12)] focus-visible:outline-none"
                                 onClick={() => close(false)}
                             >
-                                <i className="icon-[apk--close] size-5" />
+                                <i className="icon-[apk--close] size-3.5" />
                             </button>
                             <span className="pointer-events-none absolute inset-x-0 text-center text-[17px] font-semibold text-[#0a0a0a]">
                                 {title ?? t("time")}
@@ -240,13 +244,13 @@ export function WheelDatePicker({
                                 type="button"
                                 data-no-focus-ring
                                 aria-label={t("confirm")}
-                                className="flex size-11 items-center justify-center rounded-full bg-brand text-on-brand shadow-[0_2px_12px_rgba(247,133,60,0.4)] focus-visible:outline-none"
+                                className="flex size-9 items-center justify-center rounded-full bg-brand text-on-brand shadow-[0_2px_12px_rgba(247,133,60,0.4)] focus-visible:outline-none"
                                 onClick={() => {
                                     commit();
                                     close(false);
                                 }}
                             >
-                                <i className="icon-[lucide--check] size-6" />
+                                <i className="icon-[lucide--check] size-5" />
                             </button>
                         </div>
                         {/* 选中行高亮胶囊垫在滚轮文字下方 */}

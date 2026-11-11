@@ -26,6 +26,9 @@
 	--dp-color-segmented: #f2e9dc;
 	--dp-color-greet-left: #e7e0cb;
 	--dp-color-greet-right: #f2e2c3;
+	/* APK 折叠态波浪下缘压着 1px 高光描边；概览卡外框是 1px 暖灰细线 */
+	--dp-color-greet-edge: #fcf8f0;
+	--dp-color-home-frame: #ede8dc;
 	/* APK 实测渐变（1080×2340 逐点取色）：页头暖米纵向淡出、票券卡奶白对角底、
 	   扇形柔边与胶带斜纹、首页 hero 奶油/黄圆/青绿弧 */
 	--dp-gradient-page-top: linear-gradient(
@@ -91,7 +94,10 @@
 	--dp-color-field: #2a2018;
 	--dp-color-on-field: #fdf9f3;
 	--dp-color-on-field-secondary: #d8cec2;
-	--dp-color-panel: #fffdf8;
+	/* 卡片与弹层统一纯白：confirm、Select 等 Radix Portal 渲染到 body，
+	   拿不到页面级 .dp-*-surface 作用域；APK 实测所有抽屉卡片都是 #ffffff。
+	   暖米只由 --dp-color-ground、页头渐变、统计卡渐变等独立令牌承载。 */
+	--dp-color-panel: #ffffff;
 	--dp-color-on-accent: #ffffff;
 	--dp-typography-fallback: sans-serif;
 	--dp-typography-body: 16px;
@@ -147,6 +153,27 @@ html:not(.dark) .dp-category-surface {
 	--dp-color-ground-muted: #f4f4f5;
 	--dp-color-rule: #f0f0f0;
 	--dp-color-ink-tab: #a1a1aa;
+}
+
+/* 底部抽屉 / 表单统一走 APK 的中性灰白体系（1080×2340 逐点取色）：
+   抽屉底 #f4f4f4、卡片纯白 #ffffff、胶囊与分类块 #ececec、分隔线 #efeae5。
+   这些弹层通过 Radix Portal 挂到 body，拿不到页面级作用域，必须在其容器上重定义；
+   只覆盖背景类令牌，不动 ink 字色，也不改全局 --dp-color-ground（首页暖米主视觉）。
+   内部若已有 .dp-drawer-surface / .dp-category-surface，子元素变量就近优先，互不影响。 */
+html:not(.dark) .dp-sheet-surface {
+	--dp-color-ground: #f4f4f4;
+	--dp-color-panel: #ffffff;
+	--dp-color-ground-muted: #ececec;
+	--dp-color-rule: #efeae5;
+	--dp-color-track: #f1f0ef;
+}
+
+/* 首页卡片的 APK 实测底色是奶白 #fffdf6，只在这个页面作用域内局部覆盖；
+   全局默认面板色保持纯白，个人抽屉与分类管理各有自己的中性纯白作用域。
+   @theme inline 编译出的 bg-panel 直接引用变量，首页容器内的卡片自动继承。
+   暗色主题不加此规则，沿用暗色 panel。 */
+html:not(.dark) .dp-home-surface {
+	--dp-color-panel: #fffdf6;
 }
 
 .is-macos-app {
@@ -331,6 +358,8 @@ button {
 	--dp-color-segmented: #2a231c;
 	--dp-color-greet-left: #241e18;
 	--dp-color-greet-right: #2c241c;
+	--dp-color-greet-edge: #2f271f;
+	--dp-color-home-frame: #3b3128;
 	--dp-gradient-page-top: linear-gradient(
 		to bottom,
 		#201a14 0%,

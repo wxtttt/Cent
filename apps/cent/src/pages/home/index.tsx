@@ -308,22 +308,25 @@ export default function Page() {
     const avatars = creators.slice(0, 2);
 
     return (
-        <div className="h-full overflow-y-auto page-show">
+        <div className="h-full overflow-y-auto page-show dp-home-surface">
             <div className="mx-auto w-full max-w-[720px] px-4 pb-32">
-                {/* 家小满同款问候带：奶油底 + 波浪下缘，常驻不折叠 */}
+                {/* 家小满折叠态问候带：灰米 / 浅黄双色斜切 + 中间上拱的浅弧下缘。
+                    1080×2340 实拍折到 393 宽后逐列量得：左端 37、中部 24、右端 40，
+                    高度 44；展开态 hero 才有的右上黄圆、左下青绿弧不出现在这里。 */}
                 <div className="relative -mx-4 select-none">
                     <svg
                         aria-hidden
                         role="presentation"
-                        className="block h-[64px] w-full"
+                        className="block h-[44px] w-full"
                         preserveAspectRatio="none"
-                        viewBox="0 0 393 72"
+                        viewBox="0 0 393 44"
                     >
                         <defs>
                             <clipPath id={`${svgId}-clip`}>
-                                <path d="M0 0 H393 V46 C358 58 322 68 240 65 C152 62 66 70 0 58 Z" />
+                                <path d="M0 0 H393 V39 C330 43 265 33 196 24 C130 17 60 26 0 37 Z" />
                             </clipPath>
-                            {/* 折叠态问候带：左暖灰 → 中奶油 → 右暖黄，取代原先硬边双色 */}
+                            {/* APK 实测两端色：左 #e7e0cb、右 #f2e2c3，中部只有很窄的过渡，
+                                不是原先的「中奶油 + 右上黄圆 + 左下青绿弧」渐变 */}
                             <linearGradient
                                 id={`${svgId}-greet`}
                                 x1="0"
@@ -336,67 +339,40 @@ export default function Page() {
                                     stopColor="var(--dp-color-greet-left)"
                                 />
                                 <stop
-                                    offset="48%"
-                                    stopColor="var(--dp-color-hero-cream)"
+                                    offset="44%"
+                                    stopColor="var(--dp-color-greet-left)"
+                                />
+                                <stop
+                                    offset="56%"
+                                    stopColor="var(--dp-color-greet-right)"
                                 />
                                 <stop
                                     offset="100%"
                                     stopColor="var(--dp-color-greet-right)"
                                 />
                             </linearGradient>
-                            {/* 展开态 hero 的缩小版：右上黄圆、左下青绿弧 */}
-                            <radialGradient id={`${svgId}-sun`}>
-                                <stop offset="0%" stopColor="#f9e6ac" />
-                                <stop
-                                    offset="72%"
-                                    stopColor="var(--dp-color-hero-yellow)"
-                                />
-                                <stop
-                                    offset="100%"
-                                    stopColor="var(--dp-color-hero-yellow)"
-                                    stopOpacity="0.3"
-                                />
-                            </radialGradient>
-                            <radialGradient id={`${svgId}-arc`}>
-                                <stop offset="0%" stopColor="#d3e0cf" />
-                                <stop
-                                    offset="74%"
-                                    stopColor="var(--dp-color-hero-green)"
-                                />
-                                <stop
-                                    offset="100%"
-                                    stopColor="var(--dp-color-hero-green)"
-                                    stopOpacity="0.25"
-                                />
-                            </radialGradient>
                         </defs>
                         <g clipPath={`url(#${svgId}-clip)`}>
                             <rect
                                 width="393"
-                                height="72"
+                                height="44"
                                 fill={`url(#${svgId}-greet)`}
                             />
-                            {/* 右半暖黄斜切：APK 折叠态分界，降透明度让渐变透出来 */}
+                            {/* 双色分界是从 (180,0) 向右下弯的斜楔，而非竖直硬边 */}
                             <path
-                                d="M180 0 H393 V72 H250 Z"
+                                d="M180 0 Q190 24 230 44 H393 V0 Z"
                                 fill="var(--dp-color-greet-right)"
-                                opacity="0.5"
-                            />
-                            <circle
-                                cx="352"
-                                cy="6"
-                                r="58"
-                                fill={`url(#${svgId}-sun)`}
-                                opacity="0.8"
-                            />
-                            <circle
-                                cx="14"
-                                cy="88"
-                                r="52"
-                                fill={`url(#${svgId}-arc)`}
-                                opacity="0.65"
                             />
                         </g>
+                        {/* APK 折叠态在浅弧下缘压了一条 1px #fcf8f0 高光描边，
+                            纯 clipPath 硬切会让问候带和下方的界线看起来像「没画上」 */}
+                        <path
+                            d="M0 37 C60 26 130 17 196 24 C265 33 330 43 393 39"
+                            fill="none"
+                            stroke="var(--dp-color-greet-edge)"
+                            strokeWidth="1"
+                            vectorEffect="non-scaling-stroke"
+                        />
                     </svg>
                     <div className="absolute inset-0 flex items-center gap-2 px-4 pt-1">
                         <h1 className="dp-text-medium min-w-0 truncate text-[15px] text-ink-warm">
@@ -459,7 +435,10 @@ export default function Page() {
 
                 {/* 高度 = APK 卡减去概览行；左右两列各自流式排列（家小满右列行距更紧、
                     不与左列钉底对齐）：左列行距 12px、右列 8px，进度条 5px 高 */}
-                <section className="relative mt-2 overflow-hidden rounded-panel bg-panel px-3.5 pb-2 pt-3">
+                {/* APK 概览卡：奶白底 + 1px #ede8dc 暖灰外框（逐点取色）。
+                    用 inset 阴影画框而非 border，避免挤掉内容区 2px 打乱下方比例；
+                    圆角保持原有 12px 不动（APK 实测约 24px，待确认后再调） */}
+                <section className="relative mt-2 overflow-hidden rounded-panel bg-panel px-3.5 pb-2 pt-3 shadow-[inset_0_0_0_1px_var(--dp-color-home-frame)]">
                     <div className="absolute inset-y-3 left-1/2 w-px bg-rule" />
                     <div className="grid grid-cols-2">
                         <div className="flex min-w-0 flex-col pr-4">
@@ -470,7 +449,12 @@ export default function Page() {
                                     showStat();
                                 }}
                             >
-                                <i className="icon-[lucide--wallet] size-4 flex-shrink-0 text-brand"></i>
+                                <img
+                                    src="/overview/expense.svg"
+                                    alt=""
+                                    draggable={false}
+                                    className="size-5 flex-shrink-0 select-none"
+                                />
                                 <span className="truncate">
                                     {t("this-month")}
                                     {t("expense")}
@@ -502,7 +486,12 @@ export default function Page() {
                                     showScheduled();
                                 }}
                             >
-                                <i className="icon-[lucide--calendar-check] size-4 flex-shrink-0 text-brand"></i>
+                                <img
+                                    src="/overview/todo.svg"
+                                    alt=""
+                                    draggable={false}
+                                    className="size-5 flex-shrink-0 select-none"
+                                />
                                 <span className="truncate">
                                     {t("today-todo")}
                                 </span>

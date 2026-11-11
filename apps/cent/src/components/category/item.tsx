@@ -92,8 +92,8 @@ export function CategoryGroupBlock({
             style={style}
             className="overflow-hidden rounded-[18px] bg-panel"
         >
-            <div className="flex h-8 items-center gap-1 border-b border-rule bg-[#ececee] px-3 dark:bg-ground-muted">
-                <span className="mr-auto text-[12px] font-semibold tracking-wide text-ink-secondary">
+            <div className="flex h-8 items-center gap-1 border-b border-rule bg-panel px-3">
+                <span className="mr-auto text-[14px] font-semibold text-ink-warm">
                     {group.name}
                 </span>
                 <DragHandle
@@ -156,7 +156,10 @@ function CategoryRow({
                 <i className="icon-[lucide--minus] size-3" />
             </button>
             <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ground-muted">
-                <CategoryIcon icon={category.icon} className="size-7" />
+                {/* 只有二级分类有插画图标，一级分组不渲染 */}
+                {category.icon && (
+                    <CategoryIcon icon={category.icon} className="size-7" />
+                )}
             </span>
             <button
                 type="button"

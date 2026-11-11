@@ -76,8 +76,11 @@ export default function MainLayout() {
     useInitPreset();
 
     const { pathname } = useLocation();
-    // 家小满四个一级页签页：顶栏暖米底色向下柔和淡出到页面底（APK 实测约 150dp）
-    const showTopFade = ["/", "/ledger", "/medical", "/inventory"].includes(
+    // 记账/归医/知物：顶栏暖米向下柔和淡出到页面底（APK 实测约 150dp）。
+    // 首页是常驻折叠态，APK 实拍在问候带波浪线下方就是恒定的浅奶白
+    // #fbf7ef（与 --dp-color-ground 相同），没有这段暖米渐变；若沿用会让
+    // 曲线下方明显发黄，故首页直接继承父容器的 bg-ground。
+    const showTopFade = ["/ledger", "/medical", "/inventory"].includes(
         pathname,
     );
 

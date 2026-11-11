@@ -59,7 +59,7 @@ for (const src of Object.values(DOCK_MASCOTS)) {
 }
 
 type PlusMode = "home" | "ledger" | "medical" | "inventory";
-type HomeAction = "manual" | "scheduled" | "inventory-item" | "profile";
+type HomeAction = "manual" | "scheduled" | "asset" | "inventory-item" | "visit";
 type LedgerAction = "import" | "manual";
 
 function AssistantDock() {
@@ -67,6 +67,7 @@ function AssistantDock() {
     const isLogin = useIsLogin();
     const currentBookId = useBookStore((state) => state.currentBookId);
     const location = useLocation();
+    const navigate = useNavigate();
     const [menuOpen, setMenuOpen] = useState(false);
     // 菜单归属页签：换页签的渲染期就视为关闭（effect 在绘制后才跑，
     // 残留 open 态会让新页签的抽屉带着 open=true 挂载，Radix Presence
@@ -125,9 +126,16 @@ function AssistantDock() {
                 .catch((e) => {
                     if (!isCancelError(e)) throw e;
                 });
-        } else {
-            showMedicalProfile()
-                .then((v) => v && addMedicalProfile(v))
+        } else if (action === "asset") {
+            // 项目没有独立资产表单：资产总览即知物页，落到该页由加号新建
+            navigate("/inventory");
+        } else if (action === "visit") {
+            if (medicalProfiles.length === 0) {
+                toast(t("medical-need-profile-first"));
+                return;
+            }
+            showMedicalVisit({ profiles: medicalProfiles })
+                .then((v) => v && addMedicalVisit(v))
                 .catch((e) => {
                     if (!isCancelError(e)) throw e;
                 });
@@ -175,11 +183,13 @@ function AssistantDock() {
             });
     };
 
+    // APK 折叠态快捷新建：5 项 2 列，末行只有左侧一个，纯文字无图标
     const homeActions: [HomeAction, string][] = [
         ["manual", "add-bill"],
-        ["scheduled", "add-a-scheduled"],
-        ["inventory-item", "inventory-add"],
-        ["profile", "medical-add-profile"],
+        ["scheduled", "quick-new-scheduled"],
+        ["asset", "quick-add-asset"],
+        ["inventory-item", "quick-add-item"],
+        ["visit", "quick-add-visit"],
     ];
 
     const ledgerActions: [LedgerAction, string, string][] = [
@@ -200,7 +210,7 @@ function AssistantDock() {
                         <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
                             <DialogContent
                                 from="bottom"
-                                className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-ground pb-[max(20px,var(--safe-area-inset-bottom))] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                                className="dp-sheet-surface pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-ground pb-[max(20px,var(--safe-area-inset-bottom))] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
                             >
                                 <DialogTitle className="sr-only">
                                     {t("quick-create")}
@@ -219,7 +229,7 @@ function AssistantDock() {
                                         <button
                                             key={action}
                                             type="button"
-                                            className="flex h-12 items-center justify-center rounded-2xl bg-panel text-[15px] font-medium text-ink shadow-[0_1px_8px_rgba(92,62,30,0.08)] transition-colors hover:bg-ground-muted"
+                                            className="flex h-12 items-center justify-center rounded-2xl border border-rule bg-panel text-[15px] font-medium text-ink transition-colors hover:border-ink-secondary/40"
                                             onClick={() => toHomeAction(action)}
                                         >
                                             {t(labelKey)}
@@ -381,7 +391,7 @@ export default function AppChrome() {
                         <button
                             key={tab.path}
                             type="button"
-                            className="relative cursor-pointer px-1 pb-3 pt-2 text-center text-[15px] transition-colors"
+                            className="relative cursor-pointer px-1 pb-3 pt-2 text-center text-[16px] transition-colors"
                             onClick={() => {
                                 navigate(tab.path);
                             }}

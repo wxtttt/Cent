@@ -105,7 +105,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
                             swipe={swipe}
                             from={from}
                             className={cn(
-                                "pointer-events-auto bg-panel border border-rule shadow-panel",
+                                "dp-sheet-surface pointer-events-auto bg-panel border border-rule shadow-panel",
                                 from === "left"
                                     ? "rounded-none"
                                     : from === "bottom"
