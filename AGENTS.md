@@ -4,8 +4,8 @@
 
 ## 1. 项目速览
 
-- 名称：Cent（中文名「日计」），纯前端 PWA 记账应用，数据存在用户自己的 GitHub / Gitee / WebDAV / S3 仓库或本地离线库中，没有业务后端。
-- 本仓库：`E:\code\_cent_analysis`，是开源项目 `glink25/Cent` 的二次开发 fork，当前在做两件事：移动端暖色 UI 对齐参考应用「家小满」（规格见 `docs/homefull-style-spec.md`），以及新增随账本多人同步的生活模块（物品清单 /medical 医疗 /vehicle 车辆）。
+- 名称：**胖记**（用户明确：没有英文名，界面与 PWA 清单里不出现 Cent / 日计；仓库名、包名、上游链接仍是 Cent，不要改）。纯前端 PWA 记账应用，数据存在用户自己的 GitHub / Gitee / WebDAV / S3 仓库或本地离线库中，没有业务后端。
+- 本仓库：`E:\code\_cent_analysis`，是开源项目 `glink25/Cent` 的二次开发 fork（仓库目录、包名、上游链接保留 Cent 原名，只有**界面上的应用名**是胖记）。当前在做三件事：移动端暖色 UI 对齐参考应用「家小满」（规格见 `docs/homefull-style-spec.md`），新增随账本多人同步的生活模块（物品清单 /medical 医疗 /vehicle 车辆），以及品牌替换（橘猫图标 + 应用名胖记）。
 - 技术栈：React 19、TypeScript 5.8、Vite 8、Tailwind CSS 4、React Router 7、Zustand 5、Radix UI、IndexedDB（idb / zustand-indexeddb）、Workbox。
 - 包管理：pnpm 10.15.1（monorepo），Biome 2.2.2 负责格式化和 lint。
 - 上游线上版本：https://cent.linkai.work
@@ -20,12 +20,12 @@
 | upstream（上游） | https://github.com/glink25/Cent.git |
 | 上游默认分支 | `main`（本地 `main` 跟踪 `upstream/main`） |
 | fork 集成分支 | `release/next`（跟踪 `origin/release/next`） |
-| 当前工作分支 | `feat-ui-261106` |
+| 当前工作分支 | `feat-ui-261106`（本地领先 `origin/feat-ui-261106` 约 20 个提交，用户未要求 push） |
 | 已合并修复分支 | `fix-unknown-user-261106`（WebDAV 署名回落到 unknown-user） |
 
 - 分支命名沿用 `feat-<描述>-<yymmdd>` / `fix-<描述>-<yymmdd>`，不使用多级命名。
 - 拉取上游：`git fetch upstream`，需要同步时把 `upstream/main` 合入当前分支。
-- 截至 2026-11-10，暖色 UI 对齐与生活模块已分多批提交（最近一条 `02e9357` `style(ui): 家小满视觉对齐收尾`），工作区通常只剩少量 UI 微调。动手前先 `git status` / `git diff` 了解上下文；不要清理、回滚或覆盖别人的未提交改动，也不要把 `.playwright-cli/` 等自动化日志目录提交进仓库。
+- 截至 2026-11-12，暖色 UI 对齐、生活模块、品牌替换（图标 / 应用名）与 WebDAV 修复已分多批提交（最近三条 `d57325c` 图标、`8a65e8d` 图标居中、`9f818f8` 改名 `胖记`、`412b025` WebDAV）。动手前先 `git status` / `git diff` 了解上下文；不要清理、回滚或覆盖别人的未提交改动，也不要把 `.playwright-cli/` 等自动化日志目录提交进仓库。
 - 不要主动 commit、push、提 MR 或部署，除非用户明确要求。
 
 ## 3. 目录结构
@@ -56,13 +56,16 @@ _cent_analysis/
 │  │  ├─ inventory/ medical/ vehicle/  生活模块类型定义（随账本同步的 entry 数据）
 │  │  ├─ assets/mascots/     家小满吉祥物立绘（webp，来自 APK 提取）
 │  │  └─ index.css           设计令牌与全局样式（Tailwind v4 单一来源）
-├─ docs/homefull-style-spec.md  家小满视觉规格（UI 对齐唯一依据，改 UI 前必读）
+│  ├─ public/                静态资源：icon.png(512) / icon-192.png / apple-touch-icon.png / favicon.ico、
+│  │                          category/ 分类插画、overview/ 首页概览图标
+│  ├─ icons/apk/             APK 原始 SVG 图标集（本地 @iconify-json/apk 包，见第 8 节）
 │  ├─ vite.config.ts         构建、PWA、dev 代理配置
 │  └─ package.json           应用脚本
 ├─ packages/
 │  ├─ chaty/                 AI 聊天组件（workspace 源码包）
 │  ├─ toast/                 Toast 组件
 │  └─ tailwind-config/       共享 Tailwind 预设
+├─ docs/homefull-style-spec.md  家小满视觉规格（UI 对齐唯一依据，改 UI 前必读）
 ├─ docs/contributing/        上游贡献规范
 ├─ dist/                     构建产物（仓库根目录，gitignored）
 └─ biome.json / package.json / pnpm-workspace.yaml
@@ -84,7 +87,7 @@ pnpm preview          # 本地预览 dist（vite preview --host --port 5173）
 pnpm analyze          # 构建并生成 bundle 分析
 ```
 
-**每轮改动后必须部署到本地 5173**（用户明确要求「每次改动后都要部署到 5173」；仍不提交、不发布线上）。固定流程：① `pnpm lint` + `pnpm build`；② 旧 `dist` 先移走（`mv dist apps/cent/node_modules/dist-stale-$(date +%s)`，直接删会被安全策略拦），再 `pnpm build` 保证产物全新；③ 保证 `pnpm preview` 在跑，5173 返回非 200 就用后台任务重新启动，**不能把服务留成停掉的状态**；④ `curl` 核对 html / js 都是 200，且 5173 返回的 `index-*.js` 与 `dist/index.html` 一致；⑤ 浏览器实测关键交互并截图，PWA 旧缓存需 `Ctrl+Shift+R` 或注销 SW + 清 caches。
+**每轮改动后必须部署到本地 5173**（用户明确要求「每次改动后都要部署到 5173」；仍不提交、不发布线上）。固定流程：① `pnpm lint` + `pnpm build`；② **先停掉在跑的 5173 预览进程**，再移走旧 `dist`（`mv dist apps/cent/node_modules/dist-stale-$(date +%s)`，直接删会被安全策略拦）后重新 `pnpm build` —— Windows 下 `dist/` 里的文件被预览进程占用时，`mv` 会失败、`vite build` 的 emptyOutDir 也会中途报错，现象是「构建失败但错误信息看不出原因」，别去改代码；③ 构建完再 `pnpm preview`（用后台任务），5173 返回非 200 就重启，**不能把服务留成停掉的状态**；④ `curl` 核对 html / js 都是 200，且 5173 返回的 `index-*.js` 与 `dist/index.html` 一致；⑤ 浏览器实测关键交互并截图，PWA 旧缓存需 `Ctrl+Shift+R` 或注销 SW + 清 caches。`pnpm preview` 起在 5173，`pnpm dev` 同样占 5173，两个不要同时开。
 
 仅在 `apps/cent` 目录执行时可用的命令：
 
@@ -105,6 +108,22 @@ pnpm build            # 等价于 pnpm lint && vite build
   - `VITE_RELAYR_URL`：快捷入口中转
   - `VITE_GTAG_SCRIPT`：统计脚本
 - 开发服务器把 `/google-api` 代理到 `https://generativelanguage.googleapis.com`（见 `apps/cent/vite.config.ts`）。
+
+**本地验证脚本**（`.playwright-cli/`，gitignored，属于工作资产不进仓库）。`open` 与 `run-code` 必须写在同一条命令里，且先清代理：
+
+```bash
+export HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= ALL_PROXY= all_proxy= NO_PROXY=localhost,127.0.0.1
+playwright-cli open "http://localhost:5173/" --browser webkit >/dev/null 2>&1
+playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
+```
+
+| 脚本 | 用途 |
+| --- | --- |
+| `webkit-verify2.js` | 记一笔主表单：分类圆 `w===h`、16/16/12 间距、金额框不被键盘裁切（402×874） |
+| `verify-icon.js` | 首页头像 / 个人抽屉头像 / 关于页 80px logo |
+| `verify-rename.js` | `document.title` 与顶部标题、AI 占位文案 |
+| `mock-webdav.cjs` / `mock-webdav-401.cjs` | 本地假 WebDAV（8099 正常目录 / 8098 全 401），配合 `webdav-books.js`、`webdav-fix-verify.js`、`webdav-prefill-verify.js` 复现账本列举、失败提示与登录回填 |
+| `measure*.js` / `probe-dock.js` | 卡片圆角、间距、dock 尺寸实测 |
 
 ## 5. 构建与部署
 
@@ -130,6 +149,8 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 ```
 
 - `npx wrangler@3.114.17 whoami` 可确认登录态（本机已通过 OAuth 登录）。发布前务必先 `pnpm build` 刷新根目录 `dist/`，部署后访问 https://cent-test.pages.dev 验证。前面的代理前缀只作用于该条命令，不写盘、不改全局环境变量。
+- **必须带 `--branch main`**：不带时 wrangler 会按当前 git 分支发布，只生成 `<hash>.cent-test.pages.dev` / `feat-ui-261106.cent-test.pages.dev` 这类预览域名，`cent-test.pages.dev` 主域名仍是旧版（踩过：以为已发布，线上页面没变）。工作区有未提交改动时加 `--commit-dirty=true`，否则 wrangler 会拦。
+- **部署后核对线上内容**：`curl` 取 `<title>` 与 `manifest.webmanifest` 的 `name` / `short_name` / `description`；**文案在语言分片里**（`assets/zh-*.js` / `assets/en-*.js`），不在 `index-*.js` 主 bundle，新加的中文文案要去对应语言分片里 grep，否则会误判「没发上去」；图片资源用 `md5sum` 与本地文件比对。
 - 部署会覆盖线上测试环境，只能在用户明确要求时执行。
 
 ## 6. 运行时架构
@@ -225,7 +246,7 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 - **添加物品表单**（`inventory/item-form.tsx`）：APK 折叠态是居中加粗标题、**无返回 / 无右上确认**，底部一个全宽橙色「确定添加」按钮（名称为空时 disabled）；`PopupLayout` 用 `hideBack`、不传 `right`，提交逻辑抽成 `submit()`。抽屉 `dialogModalClose: true`，点遮罩即可取消。其它表单的标题栏不受影响。
 - **中文字重**：Windows 中文字体只有 400/700 两档（400≡500、600≡700），`dp-text-medium` 只保留 `font-weight:500`；**禁用 `-webkit-text-stroke` 补中黑**（笔画边缘会叠出灰边/双线重影）。iOS PWA 命中 `PingFang SC` Medium，天然更接近 APK 的中黑；金额数字保持 `font-bold`。
 - **DPR=1 的亚像素坑**：日历圆环必须整数环宽 31/27/23px（橙环、白环各 2px）；1.5px 环宽会被取整成「1px 实色 + 1px 半透明」，左上半圈发淡、白环断开。任何 <2px 的边框/环宽都要在实景截图里按圆周角度取色验证，不能只看 DOM 尺寸。
-- **品牌图标 / 默认头像（用户明确：只换 App 图标和默认头像，首页吉祥物一律不动）**：`public/icon.png`（512，同时是「关于Cent」页 80px logo 与 `api/endpoints/{offline,s3,web-dav}` 里 `avatar_url` 的默认头像）、`public/icon-192.png`（manifest 192）、`public/apple-touch-icon.png`（180，iOS 主屏）、`public/favicon.ico`（16/32/48，单独收紧到猫头，否则 16px 下糊成一块）。素材为 AI 生成的橘猫图（1024），右下角「豆包AI生成」水印用「同一行左侧背景横向搬移 + 逐列色差线性校正 + 12px 羽化」消除（不要用高斯涂抹，会在平整奶油渐变上留下暗斑），母版在 `.playwright-cli/watermark/icon-no-watermark.png`（gitignored）。三张 png 统一 256 色量化（icon.png 512≈104KB、192≈20KB、180≈18KB），避免全量预缓存把体积顶上去。`index.html` 的 `apple-touch-icon(-precomposed)` 原本指向 `s3.bmp.ovh` 远端占位图，已改为本地 `/apple-touch-icon.png`；manifest `icons` 指向 `icon-192.png` / `icon.png`（512），声明尺寸与文件实际像素必须一致。**`src/assets/mascots/*`（家小满小暖/小吉/小雨/小智）与首页插画不要替换成猫头图标**。原图猫头**偏上**（上留白 121px / 下留白 196px，内容中心 y=474 而非 511.5），必须按**内容包围盒重新居中**后再出图：内容下移 38px、顶部空出的 38 行用「上邻 38 行垂直镜像」补齐（背景是近似纯色竖向渐变，镜接缝不可见），改完实测上留白 159 / 下留白 158、左右 98/97、内容中心 (512,512)；居中母版 `.playwright-cli/watermark/icon-centered.png`。**以后换图先跑一遍包围盒居中，不要直接沿用 AI 原图构图。**
+- **品牌图标 / 默认头像（用户明确：只换 App 图标和默认头像，首页吉祥物一律不动）**：`public/icon.png`（512，同时是「关于胖记」页 80px logo 与 `api/endpoints/{offline,s3,web-dav}` 里 `avatar_url` 的默认头像）、`public/icon-192.png`（manifest 192）、`public/apple-touch-icon.png`（180，iOS 主屏）、`public/favicon.ico`（16/32/48，单独收紧到猫头，否则 16px 下糊成一块）。素材为 AI 生成的橘猫图（1024），右下角「豆包AI生成」水印用「同一行左侧背景横向搬移 + 逐列色差线性校正 + 12px 羽化」消除（不要用高斯涂抹，会在平整奶油渐变上留下暗斑），母版在 `.playwright-cli/watermark/icon-no-watermark.png`（gitignored）。三张 png 统一 256 色量化（icon.png 512≈104KB、192≈20KB、180≈18KB），避免全量预缓存把体积顶上去。`index.html` 的 `apple-touch-icon(-precomposed)` 原本指向 `s3.bmp.ovh` 远端占位图，已改为本地 `/apple-touch-icon.png`；manifest `icons` 指向 `icon-192.png` / `icon.png`（512），声明尺寸与文件实际像素必须一致。**`src/assets/mascots/*`（家小满小暖/小吉/小雨/小智）与首页插画不要替换成猫头图标**。原图猫头**偏上**（上留白 121px / 下留白 196px，内容中心 y=474 而非 511.5），必须按**内容包围盒重新居中**后再出图：内容下移 38px、顶部空出的 38 行用「上邻 38 行垂直镜像」补齐（背景是近似纯色竖向渐变，镜接缝不可见），改完实测上留白 159 / 下留白 158、左右 98/97、内容中心 (512,512)；居中母版 `.playwright-cli/watermark/icon-centered.png`。**以后换图先跑一遍包围盒居中，不要直接沿用 AI 原图构图。**
 - 注意语义色是反直觉的：支出为绿色、收入为红色，与现有账单卡片一致。
 - 深色模式通过 `.dark` 下的同名令牌覆盖实现，新增颜色必须同时考虑两套值。
 - 安全区统一用 `var(--safe-area-inset-*)` 或项目封装变量，不要在业务组件里直接写 `env(safe-area-inset-*)`。
@@ -248,7 +269,7 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 - 全局壳层：顶部头像 + 「胖记」标题 + AI 入口 + 首页/记账/归医/知物 Tab + 底部 dock（吉祥物随页签、加号按页签与子页签分派）（`components/app-chrome`）。
 - 首页：hero 大字问候（滚动折叠吸顶）、票券式今日总结、近期提醒、概览卡（`pages/home`）。
 - 记账页与分析页：票券式月度收支卡、筛选/分析胶囊、统计视图（`pages/ledger`、`pages/stat`、`components/stat`）。
-- 个人中心抽屉（`components/profile`，含物品/医疗/车辆/贷款/自动规则入口，关于胖记位于抽屉最底部；首页高级功能推广与 buy me coffee 已移除）。APK 现场实测规格：`w-[80%] max-w-[340px]`；用户行 42px 头像 + 16px 昵称 + 20px 箭头、净高 74px；日历 31px 日格 / 31-27-23px 圆环，橙内圈仅在当天有账单时出现、连续记录徽章仅在 `streak>0` 时出现；宫格 67px 行高 / 91px 列间距 / 20px 图标 / 12px 标签，卡片间距 16px。Cent 保留 11 个功能项（APK 仅 7 项），第 7 位固定「贷款计算」以对齐前 3 行 3+3+1 结构。完整逐项实测与 22 条修订记录见 `docs/homefull-style-spec.md`。
+- 个人中心抽屉（`components/profile`，含物品/医疗/车辆/贷款/自动规则入口，关于胖记位于抽屉最底部；首页高级功能推广与 buy me coffee 已移除）。APK 现场实测规格：`w-[80%] max-w-[340px]`；用户行 42px 头像 + 16px 昵称 + 20px 箭头、净高 74px；日历 31px 日格 / 31-27-23px 圆环，橙内圈仅在当天有账单时出现、连续记录徽章仅在 `streak>0` 时出现；宫格 67px 行高 / 91px 列间距 / 20px 图标 / 12px 标签，卡片间距 16px。胖记保留 11 个功能项（APK 仅 7 项），第 7 位固定「贷款计算」以对齐前 3 行 3+3+1 结构。完整逐项实测与 22 条修订记录见 `docs/homefull-style-spec.md`。
 - 四个一级页签页的列表缺省态统一为**纯文字**（不配插画、引导按钮或「共 N 笔」栏）；空态文案有专用 i18n key，勿复用其它页面的键。
 - 暖色设计令牌与深色模式（`index.css`）。
 - 记账底部抽屉：日期/币种/标签胶囊、内联备注（含自动规则建议胶囊）、滚轮日期选择器、4×4 键盘、下拉关闭（`components/bill-editor`、`wheel-date-picker`、`components/keyboard.tsx`、`components/ui/dialog/index.tsx`）。一级分类为无图标的纯文字分组块，二级分类用彩色插画。
@@ -273,12 +294,13 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 2. 搜索范围限定在 `E:\code\_cent_analysis` 内，不要递归扫描其他磁盘或无关目录。
 3. 修改 `src/api`、`src/database`、`src/tidal` 前先评估同步兼容性与多端并发，避免破坏性变更。
 4. 改 UI 时优先复用现有组件与设计令牌；不要为单个页面引入新的颜色体系或组件库。
-5. 完成后必须运行 `pnpm lint`；涉及 UI 的改动必须在浏览器里实际操作验证（打开抽屉、输入金额、保存、关闭），不能只看类型检查通过。
+5. 完成后必须运行 `pnpm lint`；涉及 UI 的改动必须在浏览器里实际操作验证（打开抽屉、输入金额、保存、关闭），不能只看类型检查通过。UI 改动的验证口径是 **真 WebKit（iPhone 16 Pro，402×874）+ Chromium** 双引擎，见第 8 节最后一条；只测 Chromium 会漏掉 iOS 的 `aspect-ratio` 与安全区问题。
 6. 交付只给最终状态：代码、注释、提交信息中不写「已修改/改为」等过程说明；注释用中文解释「为什么」而不是「做了什么」。
-7. 不主动 commit、push、创建 MR 或部署；这些操作只在用户明确要求时执行，commit 信息遵循 Conventional Commits（仓库有 commitlint 与 husky pre-commit）。
+7. 本地 5173 预览是**每轮必做**（第 4 节），不需要额外确认；线上部署（Cloudflare Pages）、commit、push、MR 只在用户明确要求时执行，commit 信息遵循 Conventional Commits（仓库有 commitlint 与 husky pre-commit）。
 8. 不把任何密钥、Token、账号密码写入代码或文档；必要的凭据只放在本地 `.env.local` 或应用设置里。
 9. 做 APK 对齐时两侧都要**现场操作截图 + 像素测量**（见第 11 节），不能只凭存档截图或肉眼判断；不要修改或临时清空 `PYTHONHOME` / `PYTHONPATH` 等全局环境变量。
-10. 提交用 `git add -u` 之类只暂存已跟踪改动，避免把 `.playwright-cli/` 日志、临时对比图带进仓库。
+10. 提交前先 `git status --short` 看清范围：默认只暂存已跟踪文件，新增的静态资源（如 `public/icon-192.png`）要按路径单独 `git add`；不要 `git add -A` 把 `.playwright-cli/` 日志、`dist-stale-*`、临时对比图带进仓库。
+11. 本文件是约定来源：本轮确立的新规则（用户明确要求、踩过的坑、参数口径）要同步写回对应章节，而不是只留在对话里。
 
 ## 11. 家小满参考资产与逆向环境
 
