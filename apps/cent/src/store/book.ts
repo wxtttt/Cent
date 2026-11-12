@@ -12,6 +12,8 @@ type BookStoreState = {
     books: Book[];
     visible: boolean;
     loading: boolean;
+    /** 拉取远端账本失败的原因；WebDAV/S3 网络或鉴权异常时用于界面提示 */
+    error?: string;
 };
 
 type BookStoreActions = {
@@ -47,9 +49,21 @@ export const useBookStore = create<BookStore>()(
                     set(
                         produce((state: BookStore) => {
                             state.books = allBooks;
+                            state.error = undefined;
                         }),
                     );
                     return allBooks;
+                } catch (error) {
+                    // 以前这里是静默失败：books 保持空数组，界面会显示「还没有账本」，
+                    // 用户会误以为远端账本丢了（WebDAV 改密码 / token 过期 / 目录不可读都会走到这里）
+                    set(
+                        produce((state: BookStore) => {
+                            state.error =
+                                (error as Error)?.message ??
+                                JSON.stringify(error);
+                        }),
+                    );
+                    return [] as Book[];
                 } finally {
                     set(
                         produce((state) => {

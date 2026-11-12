@@ -14,7 +14,7 @@ import { Label } from "../ui/label";
 export function BookForm() {
     const t = useIntl();
     const isLogin = useIsLogin();
-    const { books, currentBookId, loading } = useBookStore();
+    const { books, currentBookId, loading, error } = useBookStore();
     // const bookNum = books.length;
 
     const [creating, setCreating] = useState(false);
@@ -127,6 +127,25 @@ export function BookForm() {
                 ) : loading ? (
                     <div className="flex-1">
                         <Loading>{t("loading-books")}</Loading>
+                    </div>
+                ) : error ? (
+                    /* 远端账本读不出来时不能再显示「还没有账本」：
+                       WebDAV 改密码 / token 过期 / 目录无权限都会走到这里，用户会以为账本丢了 */
+                    <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6 text-center">
+                        <div className="text-sm">{t("books-load-failed")}</div>
+                        <div className="text-xs opacity-60 break-all line-clamp-3">
+                            {error}
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                                useBookStore.getState().updateBookList();
+                            }}
+                        >
+                            <i className="icon-[lucide--rotate-ccw] size-4"></i>
+                            {t("retry")}
+                        </Button>
                     </div>
                 ) : (
                     <div className="flex-1">{t("no-books-go-create-one")}</div>

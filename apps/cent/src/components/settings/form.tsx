@@ -20,6 +20,7 @@ function UserInfo() {
     const toLogOut = async () => {
         await modal.prompt({ title: t("logout-warning") });
 
+        StorageAPI.beforeLogout?.();
         await Promise.all([
             StorageAPI.logout(),
             new Promise<void>((res) => {
@@ -30,6 +31,7 @@ function UserInfo() {
         ]);
         localStorage.clear();
         sessionStorage.clear();
+        StorageAPI.afterLogout?.();
         location.reload();
     };
     return (
