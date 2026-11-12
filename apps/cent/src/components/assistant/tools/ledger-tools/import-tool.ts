@@ -80,7 +80,7 @@ const billSchema = z
             .optional()
             .describe("多币种信息（可选）。"),
     })
-    .describe("单笔账单，字段含义对应 Cent 的 Bill 类型。");
+    .describe("单笔账单，字段含义对应胖记的 Bill 类型。");
 
 const categorySchema = z
     .object({
@@ -132,7 +132,7 @@ const argSchema = z
         meta: metaSchema,
     })
     .describe(
-        "符合 Cent ExportedJSON 结构的导入数据。生成前请先调用 getAccountMeta 获取" +
+        "符合胖记 ExportedJSON 结构的导入数据。生成前请先调用 getAccountMeta 获取" +
             "现有分类与标签，复用已有的 id；只有在没有合适项时才在 meta 中新增。",
     );
 
@@ -152,7 +152,7 @@ const returnSchema = z.object({
         .describe("失败原因，例如 'user_cancelled'（ok=false 时存在）。"),
 });
 
-// —— 静态类型校验：确保 Zod schema 推断出的形状与 Cent 真实类型保持一致。
+// —— 静态类型校验：确保 Zod schema 推断出的形状与胖记真实类型保持一致。
 // 任意 schema 与对应类型偏离时，下方的 const 赋值会立刻产生 ts 错误。
 // 注意：ExportedJSON.items 是 Full<Bill>[]（带 __create_at 等仓储字段），
 // 而 AI 生成的是裸 Bill，仓储元数据由导入流程补齐，因此这里只校验到 Bill。
@@ -176,7 +176,7 @@ void _assertArgItems;
 export const ImportBillsTool = createTool({
     name: "importBills",
     describe:
-        "导入一批 AI 生成的账单到 Cent。调用前应先通过 getAccountMeta 获取已有的分类和标签，" +
+        "导入一批 AI 生成的账单到胖记。调用前应先通过 getAccountMeta 获取已有的分类和标签，" +
         "以便为每条账单选择合理的 categoryId / tagIds。金额字段 amount 必须为整数 ×10000；" +
         "时间字段 time 为毫秒 epoch；图片可用 data: URI 内联。" +
         "调用后会弹出导入预览对话框，由用户最终确认是否写入账本。",

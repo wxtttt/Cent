@@ -245,10 +245,10 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 
 相对上游，本 fork 已重做：
 
-- 全局壳层：顶部头像 + 「日计」标题 + AI 入口 + 首页/记账/归医/知物 Tab + 底部 dock（吉祥物随页签、加号按页签与子页签分派）（`components/app-chrome`）。
+- 全局壳层：顶部头像 + 「胖记」标题 + AI 入口 + 首页/记账/归医/知物 Tab + 底部 dock（吉祥物随页签、加号按页签与子页签分派）（`components/app-chrome`）。
 - 首页：hero 大字问候（滚动折叠吸顶）、票券式今日总结、近期提醒、概览卡（`pages/home`）。
 - 记账页与分析页：票券式月度收支卡、筛选/分析胶囊、统计视图（`pages/ledger`、`pages/stat`、`components/stat`）。
-- 个人中心抽屉（`components/profile`，含物品/医疗/车辆/贷款/自动规则入口，关于 Cent 位于抽屉最底部；首页高级功能推广与 buy me coffee 已移除）。APK 现场实测规格：`w-[80%] max-w-[340px]`；用户行 42px 头像 + 16px 昵称 + 20px 箭头、净高 74px；日历 31px 日格 / 31-27-23px 圆环，橙内圈仅在当天有账单时出现、连续记录徽章仅在 `streak>0` 时出现；宫格 67px 行高 / 91px 列间距 / 20px 图标 / 12px 标签，卡片间距 16px。Cent 保留 11 个功能项（APK 仅 7 项），第 7 位固定「贷款计算」以对齐前 3 行 3+3+1 结构。完整逐项实测与 22 条修订记录见 `docs/homefull-style-spec.md`。
+- 个人中心抽屉（`components/profile`，含物品/医疗/车辆/贷款/自动规则入口，关于胖记位于抽屉最底部；首页高级功能推广与 buy me coffee 已移除）。APK 现场实测规格：`w-[80%] max-w-[340px]`；用户行 42px 头像 + 16px 昵称 + 20px 箭头、净高 74px；日历 31px 日格 / 31-27-23px 圆环，橙内圈仅在当天有账单时出现、连续记录徽章仅在 `streak>0` 时出现；宫格 67px 行高 / 91px 列间距 / 20px 图标 / 12px 标签，卡片间距 16px。Cent 保留 11 个功能项（APK 仅 7 项），第 7 位固定「贷款计算」以对齐前 3 行 3+3+1 结构。完整逐项实测与 22 条修订记录见 `docs/homefull-style-spec.md`。
 - 四个一级页签页的列表缺省态统一为**纯文字**（不配插画、引导按钮或「共 N 笔」栏）；空态文案有专用 i18n key，勿复用其它页面的键。
 - 暖色设计令牌与深色模式（`index.css`）。
 - 记账底部抽屉：日期/币种/标签胶囊、内联备注（含自动规则建议胶囊）、滚轮日期选择器、4×4 键盘、下拉关闭（`components/bill-editor`、`wheel-date-picker`、`components/keyboard.tsx`、`components/ui/dialog/index.tsx`）。一级分类为无图标的纯文字分组块，二级分类用彩色插画。
@@ -261,6 +261,8 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 - 贷款计算器（`components/loan-calculator` + `src/ledger/loan.ts`，方案存 `PersonalMeta.loanPlans`）。
 - 生活模块：物品清单 `/inventory`、医疗 `/medical`（档案/药箱/就诊）、车辆 `/vehicle`（行车能耗），均随账本云同步；五个表单（成员/就诊/药品/物品/车辆×2）全部为行卡片式并支持头像/图片/备注计数（`components/form-rows`）。
 - PWA 检查更新与前台自动更新（`utils/pwa.ts`、`components/settings/about.tsx`）。
+- **应用名统一为「胖记」**（用户明确：没有英文名，就叫胖记）：`zh.json` / `en.json` 的 `APP_NAME`、`cent-app-name`、`about-cent`、登录协议前缀、赞助文案、What's New 文案、`agent-api-webmcp-hint` 一律用「胖记」，中英两套都不保留 Cent / 日计；`index.html` 的 `<title>` 与 `apple-mobile-web-app-title`、`vite.config.ts` 的 manifest `name` / `short_name` / `description` 同步；顶部标题栏、登录页、关于页、底部 AI 占位「问问{name}」都读 `APP_NAME`，改 key 就够了，**不要再写死 Cent**。**外链一律不动**（`github.com/glink25/Cent`、`glink25.github.io/post/...Cent...`、`linkai.work/cent/terms`），域名与路径改了会 404；代码标识符 `CentAIConfig` / `CentAIProvider` / `CentMeasurementCollector`、`cent-accounting` 协议、包名同样保持原样。中文文案里「胖记」前后不留空格（模板 `问问 {name}` 已改为 `问问{name}`），英文文案保留空格。
+
 
 「关于」页的版本对比查询的是上游 `glink25/cent` 的 `main` 分支 commit，fork 构建显示「落后于上游」属于正常现象，不代表本地构建失败。
 

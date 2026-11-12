@@ -55,9 +55,9 @@ export default defineConfig(({ mode }) => {
                 ],
             },
             manifest: {
-                name: "Cent - 日计",
-                short_name: "Cent",
-                description: "Accounting your life - 记录每一天",
+                name: "胖记",
+                short_name: "胖记",
+                description: "胖记 - 记录每一天",
                 theme_color: "#f3e6d3",
                 background_color: "#f3e6d3",
                 icons: [

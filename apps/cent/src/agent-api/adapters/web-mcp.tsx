@@ -143,7 +143,7 @@ function unregister(): void {
 export function buildWebMcpPrompt(): string {
     const { tools } = getToolList();
     const lines = [
-        "我在浏览器中打开了一款叫 Cent 的记账应用，它已通过 WebMCP（`document.modelContext`）在当前网页注册了一组工具，你可以直接调用它们来帮我查询和分析账单。",
+        "我在浏览器中打开了一款叫胖记的记账应用，它已通过 WebMCP（`document.modelContext`）在当前网页注册了一组工具，你可以直接调用它们来帮我查询和分析账单。",
         "",
         "请使用你的浏览器 / WebMCP 工具调用能力直接调用这些工具，无需任何服务地址或 Token。",
         "",
@@ -151,7 +151,7 @@ export function buildWebMcpPrompt(): string {
         "",
         ...tools.map((t) => `- \`${t.name}\`：${t.describe || "（无描述）"}`),
         "",
-        "> ⚠️ 这些工具仅在 Cent 网页处于打开状态时可用。若调用失败，请提示我先打开 Cent 页面，并确认已在「设置 → Agent API」中启用该功能。",
+        "> ⚠️ 这些工具仅在胖记网页处于打开状态时可用。若调用失败，请提示我先打开胖记页面，并确认已在「设置 → Agent API」中启用该功能。",
     ];
     return lines.join("\n");
 }
