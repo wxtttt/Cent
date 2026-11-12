@@ -61,8 +61,16 @@ export default defineConfig(({ mode }) => {
                 theme_color: "#f3e6d3",
                 background_color: "#f3e6d3",
                 icons: [
-                    { src: "icon.png", sizes: "192x192", type: "image/png" },
-                    { src: "icon.png", sizes: "512x512", type: "image/png" },
+                    {
+                        src: "icon-192.png",
+                        sizes: "192x192",
+                        type: "image/png",
+                    },
+                    {
+                        src: "icon.png",
+                        sizes: "512x512",
+                        type: "image/png",
+                    },
                 ],
                 protocol_handlers: [
                     {
