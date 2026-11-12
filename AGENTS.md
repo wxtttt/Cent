@@ -152,8 +152,9 @@ HTTP_PROXY= HTTPS_PROXY= http_proxy= https_proxy= npx --yes wrangler@3.114.17 pa
 - **必须带 `--branch main`**：不带时 wrangler 会按当前 git 分支发布，只生成 `<hash>.cent-test.pages.dev` / `feat-ui-261106.cent-test.pages.dev` 这类预览域名，`cent-test.pages.dev` 主域名仍是旧版（踩过：以为已发布，线上页面没变）。工作区有未提交改动时加 `--commit-dirty=true`，否则 wrangler 会拦。
 - **部署后核对线上内容**：`curl` 取 `<title>` 与 `manifest.webmanifest` 的 `name` / `short_name` / `description`；**文案在语言分片里**（`assets/zh-*.js` / `assets/en-*.js`），不在 `index-*.js` 主 bundle，新加的中文文案要去对应语言分片里 grep，否则会误判「没发上去」；图片资源用 `md5sum` 与本地文件比对。
 - 部署会覆盖线上测试环境，只能在用户明确要求时执行。
-- **push 必须走本机代理**：`github.com:443` 直连不通（bash 里 `git push` 表现为 `Connection was reset` 或 connect 超时，而同环境下 `api.github.com` 能通，不要被误导下结论）。本机代理在 `127.0.0.1:7890`（系统设置 `ProxyEnable=0`，但端口在监听），且 **Bash 工具内访问 localhost 代理会被拦**（`curl -x` 返回 000），所以推送要在 PowerShell 工具里带代理执行：`git -c http.proxy=http://127.0.0.1:7890 -c https.proxy=http://127.0.0.1:7890 push origin <branch>`。
-- SSH 通道不可用：`git@github.com` 未注册公钥（`Permission denied (publickey)`）。`~/.ssh/known_hosts` 里原有的 github.com RSA-2048（`nThbg6k…`）是投毒指纹，真实指纹以 `https://api.github.com/meta` 的 `ssh_key_fingerprints` 为准，已清理并备份为 `known_hosts.bak.*`；再遇到 host key 变更警告先比对官方指纹，不要盲目 `-R` 删除。
+- **push 走 SSH，不需要代理**：`origin` 已切到 `git@github.com:wxtttt/Cent.git`，`ssh -T git@github.com` 应返回 `Hi wxtttt! You've successfully authenticated`。账号已加入本机公钥（`~/.ssh/id_rsa.pub`），`~/.ssh/config` 固定 `IdentityFile ~/.ssh/id_rsa` + `IdentitiesOnly yes` + `ServerAliveInterval 30`，避免遍历不存在的 key。**公钥内容与指纹只留在本地，不要写进仓库或任何文档**。实测 `github.com:22` 与 `ssh.github.com:443` 都直连可达，只有 `github.com:443`（HTTPS）不通——所以 SSH 不需要 7890 代理，**别给 SSH 命令加代理前缀**。
+- **HTTPS 是备用通道**（远端名 `origin-https`）：直连 `github.com:443` 不通（报 `Connection was reset` 或 connect 超时，同环境下 `api.github.com` 反而能通，别被误导）。推 HTTPS 得走本机 `127.0.0.1:7890`（系统设置 `ProxyEnable=0`，但端口在监听），且 **Bash 工具内访问 localhost 代理会被拦**（`curl -x` 返回 000），必须在 PowerShell 工具里带 `-c http.proxy=http://127.0.0.1:7890`。SSH 偶尔走不通时先切 `ssh.github.com:443`（config 里有注释好的备用段），再考虑代理。
+- **SSH 主机指纹**：`~/.ssh/known_hosts` 里原来的 github.com RSA-2048（`nThbg6k…`）是投毒假指纹，会先触发「REMOTE HOST IDENTIFICATION HAS CHANGED」直接拒连（比认证失败更早出现）。真实指纹以 `https://api.github.com/meta` 的 `ssh_key_fingerprints` 为准，已清理并备份为 `known_hosts.bak.*`；再遇到该警告先比对官方指纹，不要盲目 `-R` 删除。
 
 ## 6. 运行时架构
 
