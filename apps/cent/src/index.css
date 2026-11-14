@@ -29,6 +29,18 @@
 	/* APK 折叠态波浪下缘压着 1px 高光描边；概览卡外框是 1px 暖灰细线 */
 	--dp-color-greet-edge: #fcf8f0;
 	--dp-color-home-frame: #ede8dc;
+	/* APK 1080×2340 逐点取色：今日总结标题棕橙、正文/条目/圆点各一档暖灰；
+	   头像右下角切换徽章是白底 + 中性灰环 + 品牌橙箭头 */
+	--dp-color-summary-title: #b7794c;
+	--dp-color-summary-body: #99856e;
+	--dp-color-summary-item: #766556;
+	--dp-color-summary-dot: #d9bc87;
+	--dp-color-switch-badge: #ffffff;
+	--dp-color-switch-badge-ring: #e4e4e7;
+	/* APK 1080×2340 逐点取色：账单分类插画底是中性浅灰圆（非品牌橙），
+	   票券卡四角星是单颗四角芒星、暖金 #ebc979 */
+	--dp-color-icon-well: #f4f4f5;
+	--dp-color-ticket-star: #ebc979;
 	/* APK 实测渐变（1080×2340 逐点取色）：页头暖米纵向淡出、票券卡奶白对角底、
 	   扇形柔边与胶带斜纹、首页 hero 奶油/黄圆/青绿弧 */
 	--dp-gradient-page-top: linear-gradient(
@@ -168,10 +180,26 @@ html:not(.dark) .dp-sheet-surface {
 	--dp-color-track: #f1f0ef;
 }
 
-/* 首页卡片的 APK 实测底色是奶白 #fffdf6，只在这个页面作用域内局部覆盖；
+/* dock 输入栏在 APK 里是中性白底 + 浅灰圆钮（1080×2340 逐点取色：
+   栏 #ffffff、钮 #f6f6f6、环 #e9e9eb、glyph #09090b、占位字 #9f9fa5），
+   不随页面暖米；暗色没有 APK 参照，圆钮比栏亮一档、环用暗色描边。 */
+html:not(.dark) .dp-dock-surface {
+	--dp-color-panel: #ffffff;
+	--dp-color-ground-muted: #f6f6f6;
+	--dp-color-rule: #e9e9eb;
+	--dp-color-ink: #09090b;
+	--dp-color-ink-secondary: #9f9fa5;
+}
+.dark .dp-dock-surface {
+	--dp-color-ground-muted: #2a231c;
+	--dp-color-rule: #3b3128;
+}
+
+/* 首页与记账页卡片的 APK 实测底色是奶白 #fffdf6，只在这两个页面作用域内局部覆盖；
    全局默认面板色保持纯白，个人抽屉与分类管理各有自己的中性纯白作用域。
-   @theme inline 编译出的 bg-panel 直接引用变量，首页容器内的卡片自动继承。
-   暗色主题不加此规则，沿用暗色 panel。 */
+   @theme inline 编译出的 bg-panel 直接引用变量，容器内的卡片自动继承。
+   记账页也挂这个作用域：APK 的账单卡与筛选/分析胶囊实测同为 #fffdf6，
+   票券卡自身走渐变、不受此变量影响。暗色主题不加此规则，沿用暗色 panel。 */
 html:not(.dark) .dp-home-surface {
 	--dp-color-panel: #fffdf6;
 }
@@ -304,8 +332,17 @@ button {
 	--color-on-field-secondary: var(--dp-color-on-field-secondary);
 	--color-brand: var(--dp-color-accent);
 	--color-on-brand: var(--dp-color-on-accent);
+	--color-summary-title: var(--dp-color-summary-title);
+	--color-summary-body: var(--dp-color-summary-body);
+	--color-summary-item: var(--dp-color-summary-item);
+	--color-summary-dot: var(--dp-color-summary-dot);
+	--color-switch-badge: var(--dp-color-switch-badge);
+	--color-switch-badge-ring: var(--dp-color-switch-badge-ring);
+	--color-icon-well: var(--dp-color-icon-well);
+	--color-ticket-star: var(--dp-color-ticket-star);
 	--shadow-panel: var(--dp-shadow-panel);
 	--shadow-card: var(--dp-shadow-card);
+	--animate-caret-blink: caret-blink 1s step-end infinite;
 }
 
 :root {
@@ -360,6 +397,17 @@ button {
 	--dp-color-greet-right: #2c241c;
 	--dp-color-greet-edge: #2f271f;
 	--dp-color-home-frame: #3b3128;
+	/* APK 没有暗色模式，以下按项目暗色暖灰体系推导：标题提亮保对比、
+	   正文/条目沿用暗色次级字色、圆点压暗、徽章融入暗色面板 */
+	--dp-color-summary-title: #d9a06b;
+	--dp-color-summary-body: #b5a89a;
+	--dp-color-summary-item: #cbbba9;
+	--dp-color-summary-dot: #8a744d;
+	--dp-color-switch-badge: #2a231c;
+	--dp-color-switch-badge-ring: #3b3128;
+	/* 暗色无 APK 参考：分类底用暗色暖灰、星形压暗融入暗面板 */
+	--dp-color-icon-well: #2a231c;
+	--dp-color-ticket-star: #8a744d;
 	--dp-gradient-page-top: linear-gradient(
 		to bottom,
 		#201a14 0%,
@@ -458,8 +506,8 @@ button {
 	 "income" related colors used across the app. Change here or in `.dark` to theme.
 */
 :root {
-	/* 语义色跟随参考图：支出为绿色、收入为红色 */
-	--color-expense: #1f9d63; /* primary expense color */
+	/* 语义色跟随参考图：支出为绿色、收入为红色；支出绿取 APK 实测 #25c454 */
+	--color-expense: #25c454; /* primary expense color */
 	--color-expense-medium-legacy: #4fc08d; /* medium (legacy) */
 
 	--color-income: #e2544a; /* primary income color */
@@ -468,7 +516,7 @@ button {
 
 /* Dark mode overrides for semantic colors (optional) */
 .dark {
-	--color-expense: #34d399;
+	--color-expense: #4ade80;
 	--color-expense-medium-legacy: #6ee7b7;
 
 	--color-income: #f87171;
@@ -550,6 +598,18 @@ button {
 	to {
 		opacity: 1;
 		scale: 1;
+	}
+}
+
+/* 金额输入的光标：焦点环被去掉后由它承担焦点指示 */
+@keyframes caret-blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0;
 	}
 }
 
@@ -639,4 +699,21 @@ button {
 	background-image: var(--dp-gradient-page-top);
 	background-repeat: no-repeat;
 	background-size: 100% 150px;
+}
+
+/* 详细分配：点击 ± 时，金额上方飘出的 +N / -N 微反馈。
+   用 -50% 保持水平居中，向上位移后淡出，纯装饰不拦事件。 */
+@keyframes budget-step-float {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, 4px) scale(0.9);
+	}
+	22% {
+		opacity: 1;
+		transform: translate(-50%, 0) scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, -12px) scale(0.96);
+	}
 }

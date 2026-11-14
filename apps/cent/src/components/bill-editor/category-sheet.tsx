@@ -116,6 +116,9 @@ function CategorySheetForm({
     const [activeId, setActiveId] = useState(() => sections[0]?.id ?? "");
     const [query, setQuery] = useState("");
     const keyword = query.trim().toLowerCase();
+    const activeIndex = keyword
+        ? -1
+        : sections.findIndex((section) => section.id === activeId);
 
     const searchResults = useMemo(() => {
         if (!keyword) return [];
@@ -241,14 +244,15 @@ function CategorySheetForm({
                 </div>
             </div>
 
-            {/* 左右分区靠底色区分：灰带顶到屏幕最左边、一直铺到抽屉底边，
-                选中块与右栏同色连成一整片；底部留白放在各栏内部，不能截断灰带 */}
+            {/* 左右分区：容器与右栏同色，未选中项是灰块；选中项邻接的灰块朝选中侧
+                收 12px 圆角（上邻圆右下、下邻圆右上），圆角随选中移动平滑过渡；
+                底部灰色由 flex-1 filler 铺到抽屉底边 */}
             <div className="flex min-h-0 flex-1">
                 <div
                     data-category-rail
-                    className="flex w-16 shrink-0 flex-col overflow-y-auto bg-ground-muted pb-6 scrollbar-hidden"
+                    className="flex w-16 shrink-0 flex-col overflow-y-auto bg-ground scrollbar-hidden"
                 >
-                    {sections.map((section) => {
+                    {sections.map((section, index) => {
                         const active = !keyword && section.id === activeId;
                         return (
                             <button
@@ -257,10 +261,16 @@ function CategorySheetForm({
                                 data-rail-item={section.id}
                                 onClick={() => chooseGroup(section.id)}
                                 className={cn(
-                                    "relative flex h-[52px] w-full shrink-0 items-center justify-center text-[12px] transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                                    "relative flex h-[52px] w-full shrink-0 items-center justify-center text-[12px] transition-[color,background-color,border-radius] duration-200 ease-[var(--dp-motion-easing)]",
                                     active
                                         ? "bg-ground font-medium text-brand"
-                                        : "text-ink-secondary/80 hover:text-ink-secondary",
+                                        : "bg-ground-muted text-ink-secondary/80 hover:text-ink-secondary",
+                                    !keyword &&
+                                        index === activeIndex - 1 &&
+                                        "rounded-br-[12px]",
+                                    !keyword &&
+                                        index === activeIndex + 1 &&
+                                        "rounded-tr-[12px]",
                                 )}
                             >
                                 {active && (
@@ -273,6 +283,14 @@ function CategorySheetForm({
                             </button>
                         );
                     })}
+                    <div
+                        aria-hidden
+                        className={cn(
+                            "min-h-6 flex-1 bg-ground-muted transition-[border-radius] duration-200 ease-[var(--dp-motion-easing)]",
+                            activeIndex === sections.length - 1 &&
+                                "rounded-tr-[12px]",
+                        )}
+                    />
                 </div>
                 <div
                     ref={gridRef}

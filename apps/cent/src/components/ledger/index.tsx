@@ -15,7 +15,6 @@ import { amountToNumber } from "@/ledger/bill";
 import type { Bill } from "@/ledger/type";
 import { useIntl, useLocale } from "@/locale";
 import { cn } from "@/utils";
-import { denseDate } from "@/utils/time";
 import { showBillInfo } from "../bill-info";
 import { Checkbox } from "../ui/checkbox";
 import BillItem from "./item";
@@ -37,6 +36,17 @@ function DayHeader({
     const weekday = new Intl.DateTimeFormat(locale, {
         weekday: "short",
     }).format(date.toDate());
+    // 家小满记账页日头：当天显示「今天」，其余统一显示「M月D日」，非同年才带年份
+    const now = dayjs();
+    const dateText = date.isSame(now, "days")
+        ? t("Today")
+        : locale === "zh"
+          ? date.isSame(now, "year")
+              ? `${date.format("M")}月${date.format("D")}日`
+              : date.format("YYYY年M月D日")
+          : date.isSame(now, "year")
+            ? date.format("MM/DD")
+            : date.format("YYYY/MM/DD");
     return (
         <div
             className={cn(
@@ -46,7 +56,7 @@ function DayHeader({
             onClick={onClick}
         >
             <div className="flex items-baseline gap-2">
-                <span className="text-base font-bold">{denseDate(date)}</span>
+                <span className="text-[15px] font-bold">{dateText}</span>
                 <span className="text-xs text-ink-secondary">{weekday}</span>
             </div>
             <div className="flex items-center gap-3 text-xs text-ink-secondary tabular-nums">
@@ -71,6 +81,7 @@ type LedgerProps = {
     enableDivideAsOrdered?: boolean;
     className?: string;
     showTime?: boolean;
+    timeOnly?: boolean;
     selectedIds?: string[];
     /** 是否显示列表首次出场动画 */
     presence?: boolean;
@@ -89,6 +100,7 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
             enableDivideAsOrdered,
             className,
             showTime,
+            timeOnly,
             selectedIds,
             presence,
             onSelectChange,
@@ -257,6 +269,7 @@ const Ledger = forwardRef<LedgerRef, LedgerProps>(
                                                   }
                                         }
                                         showTime={showTime}
+                                        timeOnly={timeOnly}
                                         showAssets={showAssets}
                                     />
                                 </div>

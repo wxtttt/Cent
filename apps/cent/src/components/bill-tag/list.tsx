@@ -1,155 +1,154 @@
-import { AnimatePresence, motion, type Transition } from "motion/react";
 import { useState } from "react";
 import { v4 } from "uuid";
 import { useTag } from "@/hooks/use-tag";
 import PopupLayout from "@/layouts/popup-layout";
-import type { BillTagGroup } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import Tag from "../tag";
-import { Button } from "../ui/button";
 import type { EditTag } from "./tag";
 import { EditTagProvider, showEditTag } from "./tag-form";
-import { EditTagGroupProvider, showEditTagGroup } from "./tag-group-form";
 
-const ListTransition: Transition = {
-    layout: {
-        duration: 0.2,
-        ease: "easeInOut",
-    },
-};
+const DOT_COLORS = [
+    "#FF7A2F",
+    "#3B82F6",
+    "#9B7BF0",
+    "#6FCF97",
+    "#F2C94C",
+    "#EB5757",
+    "#56CCF2",
+    "#BB6BD9",
+];
 
+/** 固定两段 + 连卡列表，编辑走底部抽屉；不再有自定义标签分组 */
 export default function TagList({
     onCancel,
 }: {
-    edit?: any;
+    edit?: unknown;
     onCancel?: () => void;
-    onConfirm?: (v: any) => void;
+    onConfirm?: (v: unknown) => void;
 }) {
     const t = useIntl();
-    const { updateTag, grouped, updateGroup, topUpGroup } = useTag();
-
-    const toUpdateTagGroup = async (group?: BillTagGroup) => {
-        const newGroup = await showEditTagGroup(group);
-        if (newGroup === "delete") {
-            if (group?.id) {
-                updateGroup(group?.id, undefined);
-            }
-            return;
-        }
-        await updateGroup(group?.id ?? v4(), newGroup);
-    };
+    const { tags, updateTag } = useTag();
+    const [tab, setTab] = useState<"special" | "normal">("special");
 
     const toUpdateTag = async (tag?: EditTag) => {
-        const newTag = await showEditTag(tag);
+        const defaultKind = tag?.kind ?? tab;
+        const newTag = await showEditTag(
+            tag ?? ({ name: "", kind: defaultKind } as EditTag),
+        ).catch(() => undefined);
         if (newTag === "delete") {
             if (tag?.id) {
-                updateTag(tag?.id, undefined);
+                await updateTag(tag.id, undefined);
             }
             return;
         }
-        await updateTag(tag?.id ?? v4(), newTag);
+        if (!newTag?.name) {
+            return;
+        }
+        await updateTag(tag?.id ?? v4(), {
+            name: newTag.name,
+            kind: newTag.kind,
+        });
     };
 
-    const [animate, setAnimate] = useState(false);
+    const section = (kind: "special" | "normal") => {
+        const list = tags.filter((v) =>
+            kind === "special" ? v.kind === "special" : v.kind !== "special",
+        );
+        const active = tab === kind;
+        return (
+            <div className="mt-3">
+                <div className="mb-1.5 flex items-center justify-between px-1 text-[12px] text-ink-secondary">
+                    <span className={cn(active && "text-brand")}>
+                        {kind === "special"
+                            ? t("special-tags")
+                            : t("normal-tags")}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setTab(kind);
+                            void toUpdateTag({
+                                name: "",
+                                kind,
+                            } as EditTag);
+                        }}
+                        className="text-[12px] text-brand"
+                    >
+                        ⊕ {t("add")}
+                    </button>
+                </div>
+                <div className="divide-y divide-rule/70 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+                    {list.length === 0 && (
+                        <div className="px-4 py-3 text-[12px] text-ink-secondary">
+                            {t("none")}
+                        </div>
+                    )}
+                    {list.map((tag, index) => (
+                        <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() =>
+                                void toUpdateTag({
+                                    id: tag.id,
+                                    name: tag.name,
+                                    kind: tag.kind ?? "normal",
+                                })
+                            }
+                            className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left"
+                        >
+                            <span
+                                className="h-5 w-5 flex-shrink-0 rounded-md"
+                                style={{
+                                    backgroundColor:
+                                        DOT_COLORS[index % DOT_COLORS.length],
+                                }}
+                            />
+                            <span className="min-w-0 flex-1 truncate text-[15px] text-ink">
+                                #{tag.name}
+                            </span>
+                            <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0 text-ink-secondary/60" />
+                        </button>
+                    ))}
+                </div>
+                <div className="mt-1.5 px-1 text-[11px] leading-relaxed text-ink-secondary">
+                    {kind === "special"
+                        ? t("special-tag-hint")
+                        : t("normal-tag-hint")}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <PopupLayout
             onBack={onCancel}
-            className="overflow-hidden h-full"
+            className="dp-drawer-surface h-full overflow-hidden bg-ground"
             title={t("edit-tags")}
-            right={
-                <div className="flex items-center gap-2">
-                    <Button onClick={() => toUpdateTag()} variant="secondary">
-                        <i className="icon-[lucide--tags]"></i>
-                    </Button>
-
-                    <Button onClick={() => toUpdateTagGroup()}>
-                        {t("add-new-tag-group")}
-                    </Button>
-                </div>
-            }
         >
-            <div className="flex items-center justify-between px-2">
-                <div className="px-2 text-xs text-foreground/80">
-                    {t("click-tag-to-edit")}
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-6">
+                <div className="mx-8 mt-1 flex rounded-full bg-ground-muted p-1">
+                    {(["special", "normal"] as const).map((kind) => (
+                        <button
+                            key={kind}
+                            type="button"
+                            onClick={() => setTab(kind)}
+                            className={cn(
+                                "h-9 flex-1 rounded-full text-[14px] transition-colors",
+                                tab === kind
+                                    ? "bg-panel text-ink shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
+                                    : "text-ink-secondary",
+                            )}
+                        >
+                            {kind === "special"
+                                ? t("special-short")
+                                : t("normal-short")}
+                        </button>
+                    ))}
                 </div>
-            </div>
-            <div className="flex-1 overflow-y-auto flex flex-col p-2 gap-2">
-                <AnimatePresence initial={false}>
-                    {grouped.map((group, index) => {
-                        return (
-                            <motion.div
-                                key={group.id}
-                                className="border rounded-md w-full text-sm bg-background"
-                                layout="position"
-                                initial={false}
-                                transition={
-                                    animate ? ListTransition : { duration: 0 }
-                                }
-                            >
-                                <div
-                                    className={cn(
-                                        "flex justify-between items-center with-tag-color px-2 py-1 rounded-t-md bg-[var(--current-tag-color)]",
-                                        `tag-${group.color}`,
-                                    )}
-                                >
-                                    <div className="text-white">
-                                        {group.id === "un-group"
-                                            ? t("un-grouped")
-                                            : group.name}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-white">
-                                        {group.id !== "un-group" && (
-                                            <>
-                                                {index !== 0 && (
-                                                    <Button
-                                                        size={"sm"}
-                                                        variant="ghost"
-                                                        onClick={async () => {
-                                                            setAnimate(true);
-                                                            await Promise.resolve();
-                                                            topUpGroup(
-                                                                group.id,
-                                                            );
-                                                        }}
-                                                    >
-                                                        <i className="icon-[lucide--chevrons-up]"></i>
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size={"sm"}
-                                                    onClick={() =>
-                                                        toUpdateTagGroup(group)
-                                                    }
-                                                >
-                                                    <i className="icon-[lucide--settings]"></i>
-                                                </Button>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap items-center p-2 gap-2">
-                                    {group.tags.map((tag) => (
-                                        <Tag
-                                            key={tag.id}
-                                            className="gap-1 cursor-grab active:cursor-grabbing"
-                                            onClick={() => toUpdateTag(tag)}
-                                        >
-                                            <span>#{tag.name}</span>
-                                        </Tag>
-                                    ))}
-                                    {group.tags.length === 0 && (
-                                        <div>{t("none")}</div>
-                                    )}
-                                </div>
-                            </motion.div>
-                        );
-                    })}
-                </AnimatePresence>
+                {section("special")}
+                {section("normal")}
             </div>
             <EditTagProvider />
-            <EditTagGroupProvider />
         </PopupLayout>
     );
 }

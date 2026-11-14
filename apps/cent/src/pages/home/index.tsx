@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { useShallow } from "zustand/shallow";
 import xiaonuan from "@/assets/mascots/01-home-xiaonuan.webp";
 import { showBookGuide } from "@/components/book/util";
+import { clampStartDay, periodContaining } from "@/components/budget/period";
 import {
     budgetEncountered,
     budgetRange,
@@ -57,14 +58,30 @@ export default function Page() {
     );
     const { categories } = useCategory();
     const creators = useCreators();
-    const { budgets } = useBudget();
+    const { budgets, startDay } = useBudget();
     const { scheduleds } = useScheduled();
     const { homeWidgets } = useWidget();
     const { baseCurrency } = useCurrency();
 
     const now = useMemo(() => dayjs(), []);
-    const monthStart = now.startOf("month").valueOf();
-    const monthEnd = now.endOf("month").valueOf();
+    // 首页、预算页与记账页共用同一周期口径。优先读当前普通预算记录的冻结边界：
+    // 起始日变更后过渡期与下一期的边界由记录链决定，现算会把过渡期算错。
+    const [budgetPeriodStart, budgetPeriodEnd] = useMemo(() => {
+        const ts = now.valueOf();
+        const current = budgets.find(
+            (b) =>
+                b.kind === "normal" && ts >= b.periodStart && ts <= b.periodEnd,
+        );
+        if (current) {
+            return [
+                dayjs(current.periodStart).startOf("day"),
+                dayjs(current.periodEnd).endOf("day"),
+            ];
+        }
+        return periodContaining(now, clampStartDay(startDay));
+    }, [now, startDay, budgets]);
+    const monthStart = budgetPeriodStart.valueOf();
+    const monthEnd = budgetPeriodEnd.valueOf();
     const todayStart = now.startOf("day").valueOf();
     const todayEnd = now.endOf("day").valueOf();
     const yesterdayStart = now.subtract(1, "day").startOf("day").valueOf();
@@ -110,7 +127,8 @@ export default function Page() {
         () =>
             budgets.filter(
                 (budget) =>
-                    budget.joiners.includes(userId) &&
+                    (budget.joiners.length === 0 ||
+                        budget.joiners.includes(userId)) &&
                     Boolean(budgetRange(budget, now)[1]),
             ),
         [budgets, userId, now],
@@ -186,7 +204,10 @@ export default function Page() {
         return top;
     }, [yesterdayBills, categories]);
 
-    const daysLeft = Math.max(1, now.endOf("month").diff(now, "day") + 1);
+    const daysLeft = Math.max(
+        1,
+        budgetPeriodEnd.endOf("day").diff(now, "day") + 1,
+    );
     const summaryBullets = useMemo(() => {
         const bullets: { key: string; text: string; to: string }[] = [];
         if (budgetTotalValue > 0) {
@@ -197,7 +218,7 @@ export default function Page() {
                     amount: `${baseCurrency.symbol}${money(remaining)}`,
                     days: daysLeft,
                     daily: `${baseCurrency.symbol}${money(
-                        remaining / daysLeft,
+                        Math.floor(remaining / daysLeft),
                     )}`,
                 }),
                 to: "/stat",
@@ -417,16 +438,25 @@ export default function Page() {
                                         )}
                                     </div>
                                 )}
-                                {/* 换账本入口：家小满放在头像右下角的橙色徽章 */}
+                                {/* 换账本入口：APK 实测外径 18px 含环（ring-inset）、白底灰环，
+                                    实心三角双向箭头（Material swap_horiz）；apk--transfer 是半箭头字形，不符 */}
                                 <button
                                     type="button"
                                     aria-label={t("books")}
-                                    className="absolute -bottom-1 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-brand text-on-brand ring-2 ring-ground"
+                                    className="absolute -bottom-2 -right-2 flex size-[18px] cursor-pointer items-center justify-center rounded-full bg-switch-badge ring-1 ring-inset ring-switch-badge-ring"
                                     onClick={() => {
                                         showBookGuide();
                                     }}
                                 >
-                                    <i className="icon-[lucide--arrow-left-right] size-3"></i>
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        aria-hidden
+                                        role="presentation"
+                                        className="size-[14px] text-brand"
+                                    >
+                                        <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -456,8 +486,7 @@ export default function Page() {
                                     className="size-5 flex-shrink-0 select-none"
                                 />
                                 <span className="truncate">
-                                    {t("this-month")}
-                                    {t("expense")}
+                                    {t("month-expense")}
                                 </span>
                                 <i className="icon-[lucide--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
@@ -520,6 +549,9 @@ export default function Page() {
                     className="mt-7"
                     variant="home"
                     decorations={false}
+                    divider={false}
+                    topClassName="px-[19px]"
+                    bottomClassName="px-[19px] pb-[6px]"
                     mascot={
                         <img
                             src={xiaonuan}
@@ -530,13 +562,13 @@ export default function Page() {
                     }
                     top={
                         <>
-                            <div className="flex items-center gap-2">
-                                <i className="icon-[lucide--sparkles] size-[18px] text-brand"></i>
-                                <h2 className="dp-text-medium text-[15px] text-brand">
+                            <div className="flex items-center gap-1.5">
+                                <i className="icon-[apk--ai-summary-icon] size-5"></i>
+                                <h2 className="text-[15px] font-bold leading-5 text-summary-title">
                                     {t("daily-summary")}
                                 </h2>
                             </div>
-                            <p className="mt-2.5 text-[13px] leading-5 text-ink-secondary">
+                            <p className="mt-3.5 text-[13px] leading-[26px] text-summary-body">
                                 {summaryBullets
                                     .map((item) => item.text)
                                     .join(" ")}
@@ -544,21 +576,22 @@ export default function Page() {
                         </>
                     }
                     bottom={
-                        <div className="flex flex-col empty:hidden">
+                        <div className="mt-3 flex flex-col empty:hidden">
                             {summaryBullets.length > 1 &&
                                 summaryBullets.map((item) => (
                                     <button
                                         key={item.key}
                                         type="button"
-                                        className="flex cursor-pointer items-center justify-between gap-3 py-1 text-left text-xs text-ink-secondary"
+                                        className="flex cursor-pointer items-start gap-2 py-[9px] text-left text-xs leading-5 text-summary-item"
                                         onClick={() => {
                                             navigate(item.to);
                                         }}
                                     >
-                                        <span className="line-clamp-2">
+                                        <span className="mr-1 mt-[8px] size-[3px] flex-shrink-0 rounded-full bg-summary-dot" />
+                                        <span className="line-clamp-2 flex-1">
                                             {item.text}
                                         </span>
-                                        <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0"></i>
+                                        <i className="icon-[lucide--chevron-right] mt-0.5 size-4 flex-shrink-0 text-summary-item/60"></i>
                                     </button>
                                 ))}
                         </div>

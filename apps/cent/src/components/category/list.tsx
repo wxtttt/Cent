@@ -108,7 +108,8 @@ export default function CategoryList({
             return;
         }
         void showCategoryDelete({
-            name: cate.name,
+            title: t("category-delete-title"),
+            description: t("category-delete-confirm", { name: cate.name }),
             onDelete: () => void update(cate.id, undefined),
         }).catch(() => {});
     };

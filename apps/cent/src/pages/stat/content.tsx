@@ -215,7 +215,10 @@ export default function StatContent({
     const userId = useUserStore((state) => state.id);
     const budget = useMemo(() => {
         if (focusType !== "expense") return undefined;
-        const joined = budgets.filter((item) => item.joiners.includes(userId));
+        const joined = budgets.filter(
+            (item) =>
+                item.joiners.length === 0 || item.joiners.includes(userId),
+        );
         const active = joined.filter(
             (item) => budgetRange(item, realRange[1])[1] !== null,
         );
@@ -224,7 +227,11 @@ export default function StatContent({
         if (total <= 0) return undefined;
         const used = filtered.reduce((sum, bill) => {
             if (bill.type !== "expense") return sum;
-            return active.some((item) => item.joiners.includes(bill.creatorId))
+            return active.some(
+                (item) =>
+                    item.joiners.length === 0 ||
+                    item.joiners.includes(bill.creatorId),
+            )
                 ? sum + amountToNumber(bill.amount)
                 : sum;
         }, 0);

@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { prepareExportFile, processImportFile } from "./exportable";
 import { showOncentImport } from "./oncent";
 import { importFromPreviewResult, showImportPreview } from "./preview-form";
+import { createSampleData } from "./sample-data";
 import { SmartImport } from "./smart-import";
 
 const [SmartImportProvider, showSmartImport] = createConfirmProvider(
@@ -104,14 +105,55 @@ function Form({ onCancel }: { onCancel?: () => void }) {
             strategy: "overlap",
         });
     };
+
+    /** 一键把当前账本覆盖成一整套可测数据（危险操作，先二次确认） */
+    const toLoadSampleData = async () => {
+        try {
+            await modal.prompt({
+                title: (
+                    <div className="flex flex-col gap-2">
+                        <span className="text-[15px] text-ink">
+                            {t("load-sample-data")}
+                        </span>
+                        <span className="text-[13px] leading-relaxed text-ink-secondary">
+                            {t("sample-data-confirm")}
+                        </span>
+                    </div>
+                ),
+            });
+        } catch {
+            return;
+        }
+        const [stopLoading] = modal.loading({
+            label: (
+                <span className="text-[12px] text-ink-secondary">
+                    {t("sample-data-loading")}
+                </span>
+            ),
+        });
+        try {
+            const data = createSampleData();
+            await importFromPreviewResult({
+                bills: data.items,
+                meta: data.meta,
+                strategy: "overlap",
+            });
+            toast.success(t("sample-data-done"));
+            stopLoading();
+            setTimeout(() => window.location.reload(), 700);
+        } catch {
+            toast.error(t("sample-data-fail"));
+            stopLoading();
+        }
+    };
     return (
         <PopupLayout
             title={<div className="">{t("data-manager")}</div>}
             onBack={onCancel}
             className="h-full overflow-hidden"
         >
-            <div className="w-full h-[450px] flex flex-col justify-center items-center rounded">
-                <div className="flex-1 flex flex-col w-full gap-2 h-full overflow-hidden">
+            <div className="flex min-h-0 w-full flex-1 flex-col rounded">
+                <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-6">
                     <div className="px-4 opacity-60 text-sm">{t("backup")}</div>
                     <div className="flex flex-col px-4 gap-2">
                         <Button
@@ -162,6 +204,21 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                         >
                             {t("bill-compression")}
                         </Button>
+                    </div>
+                    <div className="px-4 opacity-60 text-sm mt-2">
+                        {t("sample-data")}
+                    </div>
+                    <div className="flex flex-col px-4 gap-2">
+                        <Button
+                            variant="outline"
+                            className="py-4 border-brand/60 text-brand"
+                            onClick={toLoadSampleData}
+                        >
+                            {t("load-sample-data")}
+                        </Button>
+                        <span className="text-[11px] leading-relaxed text-ink-secondary">
+                            {t("sample-data-hint")}
+                        </span>
                     </div>
                 </div>
             </div>

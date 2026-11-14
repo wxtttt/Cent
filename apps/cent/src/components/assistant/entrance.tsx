@@ -203,7 +203,7 @@ export default function AssistantButton({
                     toShowAssistant();
                 }}
             >
-                <i className="icon-[apk--ai] size-5 text-brand"></i>
+                <i className="icon-[apk--ai] size-4 text-ink"></i>
             </button>
             <AssistantFormProvider />
             {isDesktopAssistantShows &&

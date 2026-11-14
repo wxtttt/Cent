@@ -423,6 +423,7 @@ export const CalculatorValue = ({
                 valueRef.current = node;
             }}
             data-calculator-value
+            data-no-focus-ring
             role="textbox"
             aria-label={label}
             tabIndex={0}

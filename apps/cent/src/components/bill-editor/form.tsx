@@ -1,5 +1,12 @@
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { toast } from "sonner";
 import { useAutoRules } from "@/hooks/use-auto-rules";
 import useCategory from "@/hooks/use-category";
@@ -274,6 +281,18 @@ export default function EditorForm({
             });
         }
     }, [activeGroupId, syncGroupRowScroll]);
+
+    // 下划线是单个指示器：放在滚动内容里随横滑移动，切换大类时 translateX 滑到目标项中心
+    const [groupIndicatorX, setGroupIndicatorX] = useState<number | null>(null);
+    useLayoutEffect(() => {
+        const chip = groupRowRef.current?.querySelector<HTMLElement>(
+            `[data-group="${activeGroupId}"]`,
+        );
+        if (!chip) {
+            return;
+        }
+        setGroupIndicatorX(chip.offsetLeft + chip.offsetWidth / 2 - 12);
+    }, [activeGroupId]);
 
     // 二级分类整行左右划：切大类或从抽屉选中靠后的二级，都自动滚到可见位置
     const subRowRef = useRef<HTMLDivElement>(null);
@@ -586,53 +605,62 @@ export default function EditorForm({
                             data-sheet-drag
                             className="mx-3 flex-shrink-0 overflow-hidden rounded-[22px] bg-panel"
                         >
-                            {/* 一级行顶到卡片上沿与左右边缘：灰带无圆角无内边距，选中块整块铺满、
-                                与下方白色内容区连成一片；右缘渐变 + 半露的下一项提示可以横滑 */}
+                            {/* 一级行白底顶到卡片上沿与左右边缘：选中只靠橙字 + 下划线；
+                                下划线单个指示器在滚动内容里滑动，右缘渐变暗示可以横滑 */}
                             <div className="relative">
                                 <div
                                     ref={groupRowRef}
                                     onScroll={(event) =>
                                         syncGroupRowScroll(event.currentTarget)
                                     }
-                                    className="flex h-10 items-center overflow-x-auto bg-ground-muted scrollbar-hidden"
+                                    className="h-10 overflow-x-auto bg-panel scrollbar-hidden"
                                 >
-                                    {[
-                                        {
-                                            id: FREQUENT_GROUP_ID,
-                                            name: t("bill-frequent"),
-                                        },
-                                        ...categoryGroups.map((group) => ({
-                                            id: group.id,
-                                            name: group.name,
-                                        })),
-                                    ].map((group) => {
-                                        const active =
-                                            group.id === activeGroupId;
-                                        return (
-                                            <button
-                                                key={group.id}
-                                                type="button"
-                                                data-group={group.id}
-                                                onClick={() =>
-                                                    chooseGroupById(group.id)
-                                                }
-                                                className={cn(
-                                                    "relative flex h-10 min-w-[50px] shrink-0 items-center justify-center px-1.5 text-[12px] transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
-                                                    active
-                                                        ? "bg-panel font-medium text-brand"
-                                                        : "text-ink-secondary/80 hover:text-ink-secondary",
-                                                )}
-                                            >
-                                                {active && (
-                                                    <span
-                                                        className="absolute bottom-0 left-1/2 h-[3px] w-6 -translate-x-1/2 rounded-t-full bg-brand"
-                                                        aria-hidden
-                                                    />
-                                                )}
-                                                {group.name}
-                                            </button>
-                                        );
-                                    })}
+                                    <div className="relative flex h-10 w-max min-w-full items-center">
+                                        {[
+                                            {
+                                                id: FREQUENT_GROUP_ID,
+                                                name: t("bill-frequent"),
+                                            },
+                                            ...categoryGroups.map((group) => ({
+                                                id: group.id,
+                                                name: group.name,
+                                            })),
+                                        ].map((group) => {
+                                            const active =
+                                                group.id === activeGroupId;
+                                            return (
+                                                <button
+                                                    key={group.id}
+                                                    type="button"
+                                                    data-group={group.id}
+                                                    onClick={() =>
+                                                        chooseGroupById(
+                                                            group.id,
+                                                        )
+                                                    }
+                                                    className={cn(
+                                                        "flex h-10 min-w-[50px] shrink-0 items-center justify-center px-1.5 text-[12px] transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                                                        active
+                                                            ? "font-medium text-brand"
+                                                            : "text-ink-secondary/80 hover:text-ink-secondary",
+                                                    )}
+                                                >
+                                                    {group.name}
+                                                </button>
+                                            );
+                                        })}
+                                        <span
+                                            aria-hidden
+                                            className="absolute bottom-0 left-0 h-[3px] w-6 rounded-t-full bg-brand transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                                            style={{
+                                                transform: `translateX(${groupIndicatorX ?? 0}px)`,
+                                                opacity:
+                                                    groupIndicatorX === null
+                                                        ? 0
+                                                        : 1,
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                                 {/* 右缘只用渐变淡出暗示还能横滑，不再放箭头；滑到底自动隐藏 */}
                                 {!groupRowAtEnd && (
@@ -640,14 +668,15 @@ export default function EditorForm({
                                         className="pointer-events-none absolute inset-y-0 right-0 w-20"
                                         style={{
                                             background:
-                                                "linear-gradient(to right, transparent 0%, var(--dp-color-ground-muted) 100%)",
+                                                "linear-gradient(to right, transparent 0%, var(--dp-color-panel) 100%)",
                                         }}
                                     />
                                 )}
                             </div>
 
-                            {/* 白色区域上下留白对称，让二级图标行垂直居中于白色区，而不是贴着上方灰带 */}
-                            <div className="flex items-center gap-1.5 px-3 py-3.5">
+                            {/* 白色区域上下留白对称，让二级图标行垂直居中于白色区；
+                                留白收至 10px：一级行与二级图标之间原本 14px 显得空 */}
+                            <div className="flex items-center gap-1.5 px-3 py-2.5">
                                 <div className="relative min-w-0 flex-1">
                                     {groupSubCategories.length === 0 ? (
                                         <div className="flex h-[72px] items-center justify-center text-[12px] text-ink-secondary">

@@ -296,11 +296,7 @@ function BudgetDetail({
                     className="flex-shrink-0 text-sm"
                     disabled
                 >
-                    {budget.end ? (
-                        "END"
-                    ) : (
-                        <i className="icon-[lucide--infinity] size-5"></i>
-                    )}
+                    <i className="icon-[lucide--infinity] size-5"></i>
                 </Button>
             </div>
             {encountered && (

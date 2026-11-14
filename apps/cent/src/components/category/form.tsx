@@ -391,9 +391,11 @@ export default function CategoryEditForm({
 
     // 名称不常驻输入框：点文字或铅笔，从底部再弹一层抽屉修改
     const editName = async () => {
-        const next = await showCategoryName({ value: nameValue }).catch(
-            () => undefined,
-        );
+        const next = await showCategoryName({
+            value: nameValue,
+            title: t("category-name"),
+            placeholder: namePlaceholder,
+        }).catch(() => undefined);
         if (next === undefined) {
             return;
         }

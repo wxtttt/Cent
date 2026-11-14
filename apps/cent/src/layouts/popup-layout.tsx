@@ -10,6 +10,7 @@ export default function PopupLayout({
     hideBack,
     handle,
     right,
+    backStyle = "text",
 }: {
     title?: string | ReactNode;
     children?: ReactNode;
@@ -18,6 +19,8 @@ export default function PopupLayout({
     hideBack?: boolean;
     handle?: boolean;
     right?: ReactNode;
+    /** 圆形白底纯图标返回（APK 预算设置页同款），默认仍是「‹ 返回」文字按钮 */
+    backStyle?: "text" | "circle";
 }) {
     const t = useIntl();
     return (
@@ -46,16 +49,22 @@ export default function PopupLayout({
                 {!hideBack && (
                     <button
                         type="button"
-                        className="absolute left-0 flex buttoned rounded-full py-1 pl-1 pr-3 cursor-pointer"
+                        aria-label={
+                            backStyle === "circle" ? t("back") : undefined
+                        }
+                        className={cn(
+                            "absolute cursor-pointer",
+                            backStyle === "circle"
+                                ? "left-4 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)]"
+                                : "left-0 flex buttoned rounded-full py-1 pl-1 pr-3",
+                        )}
                         onClick={(e) => {
                             onBack?.();
                             e.stopPropagation();
                         }}
                     >
-                        <div className="flex items-center justify-center">
-                            <i className="icon-[lucide--chevron-left] size-5"></i>
-                        </div>
-                        {t("back")}
+                        <i className="icon-[lucide--chevron-left] size-5" />
+                        {backStyle !== "circle" && t("back")}
                     </button>
                 )}
                 {right && <div className="absolute right-0 pr-1">{right}</div>}

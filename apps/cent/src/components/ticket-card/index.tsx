@@ -77,12 +77,32 @@ const VARIANTS: Record<
     },
 };
 
+/** 单颗四角芒星（APK 1080×2340 逐点取样）：凹边四角星而非 lucide 的多星簇。
+    尺寸与相对卡片位置实测：右上约 9.5px、中心距卡右 17px / 卡顶 10px；
+    左下约 7px、中心距卡左 16px / 卡底 9px。 */
+function CornerStar({ className }: { className?: string }) {
+    return (
+        <svg
+            aria-hidden
+            role="presentation"
+            viewBox="0 0 24 24"
+            className={cn("pointer-events-none text-ticket-star", className)}
+        >
+            <path
+                d="M12 0 C12.9 6.5 17.5 11.1 24 12 C17.5 12.9 12.9 17.5 12 24 C11.1 17.5 6.5 12.9 0 12 C6.5 11.1 11.1 6.5 12 0 Z"
+                fill="currentColor"
+            />
+        </svg>
+    );
+}
+
 export default function TicketCard({
     top,
     bottom,
     mascot,
     tape = true,
     decorations = true,
+    divider = true,
     variant = "ledger",
     className,
     topClassName,
@@ -98,6 +118,8 @@ export default function TicketCard({
     tape?: boolean;
     /** 是否显示扇形装饰角与星形；首页今日总结卡为 false */
     decorations?: boolean;
+    /** 是否显示中部打孔虚线；APK 首页今日总结卡没有这条带 */
+    divider?: boolean;
     /** 按 tab 选择卡底渐变与装饰角布局 */
     variant?: TicketVariant;
     className?: string;
@@ -136,32 +158,24 @@ export default function TicketCard({
                                 background: "var(--dp-ticket-green-corner)",
                             }}
                         />
-                        <div
-                            aria-hidden
-                            className="pointer-events-none absolute right-4 top-3 text-[#e8c66a]"
-                        >
-                            <i className="icon-[lucide--sparkles] size-3.5" />
-                        </div>
-                        <div
-                            aria-hidden
-                            className="pointer-events-none absolute bottom-4 left-4 text-[#e8c66a]"
-                        >
-                            <i className="icon-[lucide--sparkles] size-3" />
-                        </div>
+                        <CornerStar className="absolute right-3 top-[5px] size-2.5" />
+                        <CornerStar className="absolute bottom-1.5 left-3 size-[7px]" />
                     </>
                 )}
                 <div className={cn("relative px-4 pt-6", topClassName)}>
                     {top}
                 </div>
 
-                <div
-                    aria-hidden
-                    className="relative my-2.5 flex items-center px-4"
-                >
-                    <span className="absolute -left-[9px] size-[18px] rounded-full bg-ground" />
-                    <span className="flex-1 border-t border-dashed border-rule" />
-                    <span className="absolute -right-[9px] size-[18px] rounded-full bg-ground" />
-                </div>
+                {divider && (
+                    <div
+                        aria-hidden
+                        className="relative my-2.5 flex items-center px-4"
+                    >
+                        <span className="absolute -left-[9px] size-[18px] rounded-full bg-ground" />
+                        <span className="flex-1 border-t border-dashed border-rule" />
+                        <span className="absolute -right-[9px] size-[18px] rounded-full bg-ground" />
+                    </div>
+                )}
 
                 <div className={cn("relative px-4 pb-4", bottomClassName)}>
                     {bottom}

@@ -1,9 +1,10 @@
 import dayjs from "dayjs";
 import { useState } from "react";
+import { periodForMonth, periodMonthKey } from "@/components/budget/period";
 import createConfirmProvider from "@/components/confirm";
 import { DatePicker } from "@/components/date-picker";
 import { useCreators } from "@/hooks/use-creator";
-import type { BillType } from "@/ledger/type";
+import type { BillType, Budget } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
 
@@ -22,8 +23,25 @@ export type LedgerQuickFilter = {
     maxAmountNumber?: number;
 };
 
-/** 解析筛选实际生效的时间范围与统计卡月份 */
-export function resolveQuickTimeRange(filter?: LedgerQuickFilter) {
+export type ResolvedTimeRange = {
+    start?: number;
+    end?: number;
+    /** 统计卡标题使用的归属月 */
+    month: ReturnType<typeof dayjs>;
+    /** 是否是一个完整的预算周期；自定义起止日为 false */
+    fullPeriod: boolean;
+    isTransition?: boolean;
+};
+
+/**
+ * 解析筛选实际生效的时间范围。月份档位按「该月对应的预算周期」取边界，
+ * 优先用已有预算记录的冻结边界（过渡期被裁剪过），自定义日期则按天原样生效。
+ */
+export function resolveQuickTimeRange(
+    filter?: LedgerQuickFilter,
+    startDay = 1,
+    budgets: Budget[] = [],
+): ResolvedTimeRange | undefined {
     if (!filter?.timeMode) return undefined;
     if (filter.timeMode === "month") {
         const month =
@@ -35,10 +53,22 @@ export function resolveQuickTimeRange(filter?: LedgerQuickFilter) {
                     ? dayjs(filter.monthPreset)
                     : undefined;
         if (!month) return undefined;
+        const key = month.format("YYYY-MM");
+        const record = budgets.find(
+            (b) => b.kind === "normal" && periodMonthKey(b.periodStart) === key,
+        );
+        const [start, end] = record
+            ? [
+                  dayjs(record.periodStart).startOf("day"),
+                  dayjs(record.periodEnd).endOf("day"),
+              ]
+            : periodForMonth(month, startDay);
         return {
-            start: month.startOf("month").valueOf(),
-            end: month.endOf("month").valueOf(),
-            month,
+            start: start.valueOf(),
+            end: end.valueOf(),
+            month: start,
+            fullPeriod: true,
+            isTransition: record?.isTransition,
         };
     }
     const { customStart, customEnd } = filter;
@@ -48,6 +78,7 @@ export function resolveQuickTimeRange(filter?: LedgerQuickFilter) {
         end: customEnd,
         // 统计卡标题取区间结束月份（家小满实测：跨月区间显示末月）
         month: dayjs(customEnd ?? customStart),
+        fullPeriod: false,
     };
 }
 

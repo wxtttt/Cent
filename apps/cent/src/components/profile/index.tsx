@@ -18,6 +18,7 @@ import createConfirmProvider from "../confirm";
 import { showCurrencyList } from "../currency";
 import { showDataManager } from "../data-manager";
 import { showLoanCalculator } from "../loan-calculator";
+import { showMemberList } from "../member";
 import { showPreset } from "../preset";
 import { showScheduled } from "../scheduled";
 import { showSettings } from "../settings";
@@ -210,6 +211,14 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             },
         },
         {
+            key: "members",
+            label: t("member-management"),
+            icon: "icon-[lucide--users]",
+            onClick: () => {
+                showMemberList();
+            },
+        },
+        {
             // APK 的「贷款计算」独占第三行首位，把当前产品多出的功能排在其后，
             // 前 3 行（3+3+1）与 APK 宫格结构一致
             key: "loan",
@@ -337,8 +346,8 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                         >
                             {monthLabel}
                         </button>
-                        {/* 连续记录 1 天及以上才显示徽章，0 天时整块隐藏 */}
-                        {stats.streak > 0 && (
+                        {/* 连续记录 2 天及以上才显示徽章，仅 1 天不算「连续」 */}
+                        {stats.streak >= 2 && (
                             <span className="flex items-center gap-1 rounded-full bg-[#fff1e7] px-2 py-0.5 text-[11px] font-medium text-[#d9631e] dark:bg-brand/10 dark:text-brand">
                                 <i className="icon-[lucide--flame] size-3"></i>
                                 {t("streak-pill", { n: stats.streak })}

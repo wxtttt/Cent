@@ -1,7 +1,13 @@
 import dayjs from "dayjs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/shallow";
-import { budgetRange, budgetTotal } from "@/components/budget/util";
+import {
+    clampStartDay,
+    periodContaining,
+    periodLabel,
+    periodMonthKey,
+} from "@/components/budget/period";
+import { budgetTotal } from "@/components/budget/util";
 import { isCancelError } from "@/components/confirm/state";
 import { MascotPeek } from "@/components/empty-state";
 import Ledger from "@/components/ledger";
@@ -41,7 +47,7 @@ function RatioBar({
                     {label}
                 </span>
                 <span
-                    className={`text-[13px] tabular-nums ${unset ? "font-normal text-ink-secondary" : "font-medium"}`}
+                    className={`tabular-nums ${unset ? "text-[11px] font-normal leading-none text-ink-secondary" : "text-[13px] font-medium"}`}
                 >
                     {text ?? `${percent}%`}
                 </span>
@@ -68,7 +74,9 @@ export default function Page() {
     const loading = useLedgerStore((state) => state.loading);
     const userId = useUserStore((state) => state.id);
     const { baseCurrency } = useCurrency();
-    const { budgets } = useBudget();
+    const { budgets, startDay } = useBudget();
+    const now = useMemo(() => dayjs(), []);
+    const day = clampStartDay(startDay);
 
     // 快捷筛选（家小满筛选面板）：确认后在本页就地过滤列表与统计卡
     const [quickFilter, setQuickFilter] = useState<LedgerQuickFilter>();
@@ -77,39 +85,63 @@ export default function Page() {
         scrollToIndex: (index: number) => void;
     }>(null);
 
-    const month = useMemo(() => dayjs().startOf("month"), []);
-    const monthStart = month.valueOf();
-    const monthEnd = month.endOf("month").valueOf();
-
-    const monthBills = useMemo(
-        () =>
-            bills.filter(
-                (bill) => bill.time >= monthStart && bill.time <= monthEnd,
-            ),
-        [bills, monthStart, monthEnd],
-    );
+    // 无筛选时统计「当前日所在记账周期」：优先读当前普通预算记录的冻结边界，
+    // 与首页口径一致；没有记录才按起始日现算
+    const defaultRange = useMemo(() => {
+        const ts = now.valueOf();
+        const current = budgets.find(
+            (b) =>
+                b.kind === "normal" && ts >= b.periodStart && ts <= b.periodEnd,
+        );
+        if (current) {
+            const start = dayjs(current.periodStart).startOf("day");
+            return {
+                start: start.valueOf(),
+                end: dayjs(current.periodEnd).endOf("day").valueOf(),
+                month: start,
+                fullPeriod: true,
+                isTransition: current.isTransition,
+            };
+        }
+        const [start, end] = periodContaining(now, day);
+        return {
+            start: start.valueOf(),
+            end: end.valueOf(),
+            month: start,
+            fullPeriod: true,
+            isTransition: undefined,
+        };
+    }, [now, budgets, day]);
 
     const timeRange = useMemo(
-        () => resolveQuickTimeRange(quickFilter),
-        [quickFilter],
+        () => resolveQuickTimeRange(quickFilter, day, budgets),
+        [quickFilter, day, budgets],
     );
-    const cardMonth = timeRange?.month ?? month;
+    const activeRange = timeRange ?? defaultRange;
+    const cardMonth = activeRange.month;
 
-    // 统计卡跟随筛选的时间范围；没有时间筛选时回落到本月
-    const cardBills = useMemo(() => {
-        if (!timeRange) return monthBills;
-        return bills.filter(
-            (bill) =>
-                (timeRange.start === undefined ||
-                    bill.time >= timeRange.start) &&
-                (timeRange.end === undefined || bill.time <= timeRange.end),
-        );
-    }, [bills, monthBills, timeRange]);
+    const cardBills = useMemo(
+        () =>
+            bills.filter(
+                (bill) =>
+                    (activeRange.start === undefined ||
+                        bill.time >= activeRange.start) &&
+                    (activeRange.end === undefined ||
+                        bill.time <= activeRange.end),
+            ),
+        [bills, activeRange],
+    );
 
-    // 卡片标题始终按月份展示（家小满实测：自定义日期也显示所在月份）
+    // 卡片标题按周期的归属月展示；自定义日期沿用区间结束月
     const cardTitle = t("month-income-expense", {
         month: cardMonth.format("M"),
     });
+    const periodText =
+        activeRange.fullPeriod &&
+        activeRange.start !== undefined &&
+        activeRange.end !== undefined
+            ? periodLabel(dayjs(activeRange.start), dayjs(activeRange.end))
+            : undefined;
 
     const { income, expense } = useMemo(() => {
         let incomeTotal = 0;
@@ -129,20 +161,25 @@ export default function Page() {
     const savingRate = income > 0 ? balance / income : 0;
     const incomeRatio = income + expense > 0 ? income / (income + expense) : 0;
 
-    // 预算按月生效，跟随统计卡当前月份
-    const activeBudgetTotal = useMemo(
-        () =>
-            budgets.reduce((total, budget) => {
-                if (
-                    !budget.joiners.includes(userId) ||
-                    !budgetRange(budget, cardMonth)[1]
-                ) {
-                    return total;
-                }
-                return total + budgetTotal(budget);
-            }, 0),
-        [budgets, userId, cardMonth],
-    );
+    // 预算按周期归属月匹配；自定义时间不是完整周期，不计算预算率
+    const activeBudgetTotal = useMemo(() => {
+        if (!activeRange.fullPeriod || activeRange.start === undefined) {
+            return 0;
+        }
+        const key = periodMonthKey(activeRange.start);
+        return budgets.reduce((total, budget) => {
+            if (
+                !(
+                    budget.joiners.length === 0 ||
+                    budget.joiners.includes(userId)
+                ) ||
+                periodMonthKey(budget.periodStart) !== key
+            ) {
+                return total;
+            }
+            return total + budgetTotal(budget);
+        }, 0);
+    }, [budgets, userId, activeRange]);
     const budgetRate = activeBudgetTotal > 0 ? expense / activeBudgetTotal : 0;
 
     const money = (value: number) =>
@@ -194,13 +231,13 @@ export default function Page() {
     }, [bills, quickFilter, timeRange]);
 
     return (
-        <div className="flex h-full flex-col overflow-hidden page-show">
+        <div className="dp-home-surface flex h-full flex-col overflow-hidden page-show">
             <div className="flex-shrink-0">
                 <div className="mx-auto w-full max-w-[720px] px-[18px] pt-2">
                     <div className="flex items-center justify-between">
                         <button
                             type="button"
-                            className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1 text-[13px] text-ink shadow-panel transition-colors hover:bg-ground-muted"
+                            className="flex cursor-pointer items-center gap-1 rounded-full bg-panel px-3 py-1 text-[13px] text-ink transition-colors hover:bg-ground-muted"
                             onClick={() => {
                                 showLedgerFilter(quickFilter)
                                     .then((v) => setQuickFilter(v))
@@ -214,12 +251,12 @@ export default function Page() {
                         </button>
                         <button
                             type="button"
-                            className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1 text-[13px] text-ink shadow-panel transition-colors hover:bg-ground-muted"
+                            className="flex cursor-pointer items-center gap-1 rounded-full bg-panel px-3 py-1 text-[13px] text-ink transition-colors hover:bg-ground-muted"
                             onClick={() => {
                                 showStat();
                             }}
                         >
-                            <i className="icon-[lucide--chart-column] size-4 text-brand"></i>
+                            <i className="icon-[lucide--chart-column] size-4 text-ink-secondary"></i>
                             {t("analysis")}
                         </button>
                     </div>
@@ -236,9 +273,23 @@ export default function Page() {
                         top={
                             <>
                                 <div className="flex items-start justify-between gap-3">
-                                    <h1 className="dp-text-medium font-display text-xl tracking-tight">
-                                        {cardTitle}
-                                    </h1>
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                                            <h1 className="dp-text-medium font-display text-xl tracking-tight">
+                                                {cardTitle}
+                                            </h1>
+                                            {periodText && (
+                                                <span className="whitespace-nowrap text-[11px] text-ink-secondary">
+                                                    {periodText}
+                                                </span>
+                                            )}
+                                            {activeRange.isTransition && (
+                                                <span className="whitespace-nowrap rounded bg-brand/10 px-1.5 py-0.5 text-[10px] text-brand">
+                                                    {t("transition-tag")}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                     <div className="flex-shrink-0 text-right">
                                         <div className="text-xs text-ink-secondary">
                                             {t("balance")}
@@ -284,9 +335,11 @@ export default function Page() {
                                     label={t("budget-rate")}
                                     value={budgetRate}
                                     text={
-                                        activeBudgetTotal === 0
-                                            ? t("not-set")
-                                            : undefined
+                                        !activeRange.fullPeriod
+                                            ? t("partial-period")
+                                            : activeBudgetTotal === 0
+                                              ? t("not-set")
+                                              : undefined
                                     }
                                 />
                                 <RatioBar
@@ -297,7 +350,12 @@ export default function Page() {
                         }
                     />
 
-                    {/* 家小满：票券卡下方直接是流水/空态文字，没有「记录」标题栏 */}
+                    {/* 家小满：有记录时票券卡下方显示「明细记录」小标题；空态不显示 */}
+                    {visibleBills.length > 0 && (
+                        <h2 className="mt-4 text-base font-bold text-ink">
+                            {t("records")}
+                        </h2>
+                    )}
                 </div>
             </div>
 
@@ -309,6 +367,7 @@ export default function Page() {
                             bills={visibleBills}
                             enableDivideAsOrdered
                             showTime
+                            timeOnly
                             showAssets
                         />
                     ) : (

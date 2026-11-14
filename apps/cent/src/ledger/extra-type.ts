@@ -14,25 +14,35 @@ export type BillTagGroup = {
 };
 
 /**
- * 预算，不需要转换预算，可以略过
+ * 月度预算记录：普通预算与特殊预算同构，每月各一条或若干条。
+ * 周期边界在生成时冻结在记录上，账本级的 budgetStartDay 只用于生成未来记录。
+ * 见 docs/adr/0005 与 docs/adr/0006。
  */
 export type Budget = {
     id: string;
+    kind: "normal" | "special";
     title: string;
-    start: number;
-    end?: number;
-    repeat: {
-        unit: "week" | "day" | "month" | "year";
-        value: number;
-    };
+    periodStart: number;
+    periodEnd: number;
     joiners: (string | number)[];
     totalBudget: number;
     categoriesBudget?: {
         id: string;
         budget: number;
     }[];
-    onlyTags?: string[];
-    excludeTags?: string[];
+    /** 仅特殊预算：关联的特殊标签 */
+    tagIds?: string[];
+    /** 仅特殊预算：是否参与启动补齐的逐月复制 */
+    repeatMonthly?: boolean;
+    /** 起始日变更时被动延长／缩短的周期，界面需标注 */
+    isTransition?: boolean;
+};
+
+/** 账本成员：软停用，不删除，历史账单仍能显示名字 */
+export type Member = {
+    id: string;
+    name: string;
+    active: boolean;
 };
 
 /**
