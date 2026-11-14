@@ -7,8 +7,20 @@ import { showInventoryItem } from "@/components/inventory";
 import type { InventoryItemValue } from "@/components/inventory/item-form";
 import SegmentedTabs from "@/components/segmented-tabs";
 import TicketCard from "@/components/ticket-card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogOverlay,
+    DialogPortal,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { useInventory } from "@/hooks/use-inventory";
-import type { InventoryItem } from "@/inventory/types";
+import {
+    INVENTORY_CATEGORY_GROUPS,
+    INVENTORY_DEFAULT_CATEGORIES,
+    type InventoryItem,
+} from "@/inventory/types";
 import { useIntl } from "@/locale";
 import { useLedgerStore } from "@/store/ledger";
 import { cn } from "@/utils";
@@ -75,8 +87,10 @@ export default function InventoryPage() {
         };
     }, [items]);
 
+    // 筛选保留家小满内置分类，再补上自定义分类与物品里出现的分类
     const categories = useMemo(() => {
-        const set = new Set(categorySuggestions);
+        const set = new Set<string>(INVENTORY_DEFAULT_CATEGORIES);
+        for (const category of categorySuggestions) set.add(category);
         for (const { item } of withMeta) {
             if (item.category) set.add(item.category);
         }
@@ -132,14 +146,16 @@ export default function InventoryPage() {
 
     return (
         <div className="h-full overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 px-4 pb-32 pt-3">
-                <div className="flex items-center justify-between gap-3">
+            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-2.5 px-[18px] pb-32 pt-3">
+                <div className="flex items-center gap-3">
                     <CategoryFilterButton
                         categories={categories}
                         value={filterCategory}
                         onChange={setFilterCategory}
                     />
                     <SegmentedTabs
+                        className="flex-shrink-0"
+                        size="sm"
                         items={KIND_TABS.map(({ value, label }) => ({
                             value,
                             label: t(label),
@@ -149,27 +165,30 @@ export default function InventoryPage() {
                     />
                 </div>
 
+                {/* 猫靠卡片右侧，需给「分段控件 → 卡顶」留出猫可见高度，
+                    否则猫头会顶进上方「虚拟」胶囊（APK 实测两者垂直错开） */}
                 <TicketCard
-                    className="mt-8"
+                    className="mt-9"
+                    variant="inventory"
                     mascot={
                         <img
                             src={xiaozhiPeek}
                             alt=""
                             draggable={false}
-                            className="pointer-events-none h-16 w-auto select-none"
+                            className="pointer-events-none h-full w-auto select-none"
                         />
                     }
                     top={
                         <>
-                            <h1 className="font-display text-2xl font-bold tracking-tight">
+                            <h1 className="dp-text-medium font-display text-xl tracking-tight">
                                 {t("inventory-overview")}
                             </h1>
-                            <div className="mt-3 grid grid-cols-2">
+                            <div className="mt-2 grid grid-cols-2">
                                 <div className="pr-4">
                                     <div className="text-xs text-ink-secondary">
                                         {t("inventory-total-assets")}
                                     </div>
-                                    <div className="mt-1 font-display text-3xl font-bold text-brand tabular-nums">
+                                    <div className="mt-1 font-display text-2xl font-bold text-brand tabular-nums">
                                         {money(overview.total)}
                                     </div>
                                 </div>
@@ -177,7 +196,7 @@ export default function InventoryPage() {
                                     <div className="text-xs text-ink-secondary">
                                         {t("inventory-daily-cost")}
                                     </div>
-                                    <div className="mt-1 font-display text-3xl font-bold text-ink/80 tabular-nums">
+                                    <div className="mt-1 font-display text-2xl font-bold text-ink/80 tabular-nums">
                                         {money(overview.daily)}
                                     </div>
                                 </div>
@@ -204,7 +223,8 @@ export default function InventoryPage() {
                 />
 
                 {visible.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-ink-secondary">
+                    // 家小满缺省态：纯文字居中，无插画与引导按钮
+                    <p className="py-12 text-center text-[13px] text-ink-secondary">
                         {items.length === 0
                             ? t("inventory-empty")
                             : t("inventory-empty-filtered")}
@@ -259,51 +279,118 @@ function CategoryFilterButton({
 }) {
     const t = useIntl();
     const [open, setOpen] = useState(false);
-    const current =
-        value === "__all"
-            ? t("inventory-all")
-            : (categories.find((c) => c === value) ?? t("inventory-all"));
-    if (categories.length === 0) {
-        return <span />;
-    }
+    const active = value !== "__all";
+    // 家小满知物页样式：胶囊只写「筛选」，激活的分类名以橙色文字展示在胶囊右侧
+    const current = active
+        ? (categories.find((c) => c === value) ?? value)
+        : undefined;
+    // 家小满内置分类之外的自定义分类单独成组
+    const customCategories = categories.filter(
+        (category) => !INVENTORY_DEFAULT_CATEGORIES.includes(category),
+    );
+    const renderCategory = (id: string, label?: string) => {
+        const selected = value === id;
+        return (
+            <button
+                key={id}
+                type="button"
+                data-no-focus-ring
+                className={cn(
+                    "flex h-10 w-full min-w-0 cursor-pointer items-center justify-center rounded-xl border-[1.5px] px-2.5 text-[15px] transition-colors",
+                    selected
+                        ? "border-brand bg-[#ffefe6] font-medium text-brand"
+                        : "border-transparent bg-white text-ink",
+                )}
+                onClick={() => {
+                    onChange(id);
+                    setOpen(false);
+                }}
+            >
+                <span className="truncate">{label ?? id}</span>
+            </button>
+        );
+    };
     return (
-        <div className="relative">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <button
                 type="button"
-                className="flex cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm text-ink shadow-panel"
-                onClick={() => setOpen((v) => !v)}
+                className={cn(
+                    "flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-1.5 text-sm shadow-panel transition-colors hover:bg-ground-muted",
+                    active ? "font-medium text-brand" : "text-ink",
+                )}
+                onClick={() => setOpen(true)}
             >
-                {current}
-                <i className="icon-[mdi--chevron-down] size-4 text-ink-secondary" />
+                {t("filter")}
+                <i
+                    className={cn(
+                        "icon-[lucide--chevron-down] size-4",
+                        active ? "text-brand" : "text-ink-secondary",
+                    )}
+                />
             </button>
-            {open && (
-                <div className="absolute left-0 top-full z-20 mt-1 flex min-w-32 flex-col rounded-2xl border border-rule bg-panel p-1 shadow-card">
-                    {[t("inventory-all"), ...categories].map((category) => {
-                        const id =
-                            category === t("inventory-all")
-                                ? "__all"
-                                : category;
-                        return (
-                            <button
-                                key={id}
-                                type="button"
-                                className={cn(
-                                    "cursor-pointer rounded-xl px-3 py-2 text-left text-sm",
-                                    value === id
-                                        ? "bg-brand/10 font-medium text-brand"
-                                        : "text-ink",
-                                )}
-                                onClick={() => {
-                                    onChange(id);
-                                    setOpen(false);
-                                }}
-                            >
-                                {category}
-                            </button>
-                        );
-                    })}
-                </div>
+            {active && current && (
+                <span className="min-w-0 truncate text-sm font-medium text-brand">
+                    {current}
+                </span>
             )}
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogPortal>
+                    <DialogOverlay className="fixed inset-0 z-40 bg-black/50" />
+                    <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
+                        <DialogContent
+                            from="bottom"
+                            className="pointer-events-auto flex max-h-[80dvh] w-full flex-col rounded-t-[28px] border-0 bg-[#f4f4f4] sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]"
+                        >
+                            <div
+                                data-sheet-drag
+                                className="flex flex-shrink-0 flex-col items-center pt-3"
+                            >
+                                <div className="h-1 w-8 rounded-full bg-[#bdbbb7]" />
+                                <DialogTitle className="mt-3.5 text-[17px] font-bold text-ink">
+                                    {t("filter")}
+                                </DialogTitle>
+                                <DialogDescription className="sr-only">
+                                    {t("filter")}
+                                </DialogDescription>
+                            </div>
+                            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-[max(20px,var(--safe-area-inset-bottom))] pt-5">
+                                <div className="grid flex-shrink-0 grid-cols-3 gap-2.5">
+                                    {renderCategory(
+                                        "__all",
+                                        t("inventory-all"),
+                                    )}
+                                </div>
+                                {INVENTORY_CATEGORY_GROUPS.map((group) => (
+                                    <section key={group.key}>
+                                        <div className="px-1 text-[13px] text-ink-secondary">
+                                            {group.key === "physical"
+                                                ? t("inventory-kind-physical")
+                                                : t("inventory-kind-virtual")}
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-3 gap-2.5">
+                                            {group.categories.map((id) =>
+                                                renderCategory(id),
+                                            )}
+                                        </div>
+                                    </section>
+                                ))}
+                                {customCategories.length > 0 && (
+                                    <section>
+                                        <div className="px-1 text-[13px] text-ink-secondary">
+                                            {t("inventory-custom-categories")}
+                                        </div>
+                                        <div className="mt-2 grid grid-cols-3 gap-2.5">
+                                            {customCategories.map((id) =>
+                                                renderCategory(id),
+                                            )}
+                                        </div>
+                                    </section>
+                                )}
+                            </div>
+                        </DialogContent>
+                    </div>
+                </DialogPortal>
+            </Dialog>
         </div>
     );
 }
@@ -322,7 +409,7 @@ function StatusStat({
             <div className="text-xs text-ink-secondary">{label}</div>
             <div
                 className={cn(
-                    "mt-0.5 font-display text-xl font-bold tabular-nums",
+                    "mt-0.5 font-display text-lg font-bold tabular-nums",
                     tone ?? "text-ink",
                 )}
             >
@@ -398,7 +485,7 @@ function ItemCard({
                             className="size-full object-cover"
                         />
                     ) : (
-                        <i className="icon-[mdi--package-variant-closed] size-6 text-ink-secondary" />
+                        <i className="icon-[lucide--package] size-6 text-ink-secondary" />
                     )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -441,7 +528,7 @@ function ItemCard({
                     className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                     onClick={onCycleStatus}
                 >
-                    <i className="icon-[mdi--cycle] size-4" />
+                    <i className="icon-[lucide--bike] size-4" />
                 </button>
                 <button
                     type="button"
@@ -449,7 +536,7 @@ function ItemCard({
                     className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                     onClick={onDelete}
                 >
-                    <i className="icon-[mdi--delete-outline] size-4" />
+                    <i className="icon-[apk--trash] size-4" />
                 </button>
             </div>
         </div>

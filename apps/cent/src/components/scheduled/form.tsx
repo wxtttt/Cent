@@ -463,7 +463,7 @@ function BillTemplate({
                     onClick={() => toUpdate()}
                     variant={"ghost"}
                 >
-                    <i className="icon-[mdi--plus] size-5"></i>
+                    <i className="icon-[lucide--plus] size-5"></i>
                 </Button>
             ) : (
                 <BillItem

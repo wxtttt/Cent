@@ -9,6 +9,7 @@ import type {
     BillTagGroup,
     Budget,
     CustomCurrency,
+    Member,
     PersonalMeta,
     Scheduled,
 } from "./extra-type";
@@ -20,6 +21,7 @@ export type {
     BillFilter,
     Budget,
     BillTagGroup,
+    Member,
     Scheduled,
 };
 
@@ -93,8 +95,6 @@ export type BillCategory = {
     customName?: boolean;
     // 父类的id，如果为空，则该分类视为父类
     parent?: string;
-    // 默认选中，仅对子类生效，如果为true，则该子类的父类在首次选中时，首先会选中该子类，再次点击父类可以选中父类
-    defaultSelect?: boolean;
 };
 
 /** 每笔账单可以设置多个BillTag，一般用于标记这些支出或者收入项与某些事件相关联
@@ -105,16 +105,20 @@ export type BillTag = {
     id: string;
     // tag的名称
     name: string;
-    /** 在编辑账单页选中该标签时，将自动切换金额为对应的币种 */
-    preferCurrency?: string;
+    /** 普通标签计入普通预算；特殊标签把账单从普通预算中排除，只计入对应特殊预算 */
+    kind?: "normal" | "special";
 };
 
 // 全局文件配置
 export type GlobalMeta = {
     // 自定义过滤器，可以略过
     customFilters?: BillFilterView[];
-    // 自定义预算，可以略过
+    // 月度预算记录（见 docs/adr/0005、0006）
     budgets?: Budget[];
+    // 账本成员：预算参与者的唯一候选来源
+    members?: Member[];
+    // 预算起始日 1–31，默认 1（自然月）
+    budgetStartDay?: number;
     // 自动记账规则，按数组顺序作为优先级
     autoRules?: AutoRule[];
     // 物品清单的分类建议列表

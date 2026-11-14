@@ -9,6 +9,23 @@ import { measure } from "@/measurement";
 import { useBookStore } from "@/store/book";
 import { useLedgerStore } from "@/store/ledger";
 
+const UUID_ID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DEFAULT_IDS = new Set(BillCategories.map((c) => c.id));
+
+/** 默认分类以当前定义为准，只保留用户自行新增的分类 */
+const withDefaults = (saved?: BillCategory[]) => {
+    if (!saved) {
+        return [...BillCategories];
+    }
+    // 已包含当前默认项时说明用户改过这份列表，保留其增删改与排序
+    if (saved.some((c) => DEFAULT_IDS.has(c.id))) {
+        return [...saved];
+    }
+    const custom = saved.filter((c) => UUID_ID.test(c.id));
+    return [...BillCategories, ...custom];
+};
+
 /** 确保收入和支持的分类至少有一个 */
 const validateCategories = (categories: BillCategory[]) => {
     const isValid = categories.reduce(
@@ -35,8 +52,7 @@ export default function useCategory() {
     );
 
     const categories = useMemo(
-        () =>
-            (savedCategories ?? BillCategories).map((v) => intlCategory(v, t)),
+        () => withDefaults(savedCategories).map((v) => intlCategory(v, t)),
         [savedCategories, t],
     );
 
@@ -56,9 +72,7 @@ export default function useCategory() {
         }
         const { promise, resolve, reject } = Promise.withResolvers<string>();
         await useLedgerStore.getState().updateGlobalMeta((prev) => {
-            if (prev.categories === undefined) {
-                prev.categories = BillCategories;
-            }
+            prev.categories = withDefaults(prev.categories);
             const id = v4();
             prev.categories.push({ ...newData, customName: true, id });
             resolve(id);
@@ -78,9 +92,7 @@ export default function useCategory() {
                 return;
             }
             await useLedgerStore.getState().updateGlobalMeta((prev) => {
-                if (prev.categories === undefined) {
-                    prev.categories = BillCategories;
-                }
+                prev.categories = withDefaults(prev.categories);
                 if (value === undefined) {
                     prev.categories = prev.categories.filter(
                         (v) => v.id !== id,
@@ -127,40 +139,56 @@ export default function useCategory() {
     );
 
     const reorder = useCallback(async (ordered: Pick<BillCategory, "id">[]) => {
-        await useLedgerStore.getState().updateGlobalMeta((prev) => {
-            if (prev.categories === undefined) {
-                prev.categories = BillCategories;
-            }
-            const newCategories = ordered.map((t) =>
-                prev.categories?.find((v) => v.id === t.id),
-            );
-            if (newCategories.some((v) => v === undefined)) {
-                console.error("category order mismatch", newCategories);
-                return prev;
-            }
-            prev.categories = prev.categories.filter((v) =>
-                ordered.every((o) => o.id !== v.id),
-            );
-            const index = newCategories[0]?.parent
-                ? prev.categories.findIndex(
-                      (c) => c.id === newCategories[0]?.parent,
-                  )
-                : 0;
-
-            prev.categories.splice(
-                index + 1,
-                0,
-                ...newCategories.filter((v) => v !== undefined),
-            );
+        const book = useBookStore.getState().currentBookId;
+        if (!book) {
+            return;
+        }
+        const store = useLedgerStore.getState();
+        const current = withDefaults(store.infos?.meta.categories);
+        const byId = new Map(current.map((c) => [c.id, c]));
+        const next = ordered.map((o) => byId.get(o.id));
+        if (next.some((v) => v === undefined)) {
+            return;
+        }
+        // 只替换参与排序的槽位，其余分类（含其它分组的子项）位置不变，
+        // 避免把分组整体挪到数组头部打乱层级归属
+        const ids = new Set(ordered.map((o) => o.id));
+        let cursor = 0;
+        const result = current.map((c) =>
+            ids.has(c.id) ? next[cursor++]! : c,
+        );
+        const align = () =>
+            useLedgerStore.setState((state) => {
+                const meta = state.infos?.meta;
+                if (!meta) {
+                    return {};
+                }
+                return {
+                    infos: {
+                        ...state.infos,
+                        meta: { ...meta, categories: result },
+                    },
+                };
+            });
+        // 拖拽松手时同步换序，dnd-kit 才能在同一帧按新位置收尾，
+        // 否则会先弹回旧位置、等异步落盘后才跳到新位置
+        align();
+        await store.updateGlobalMeta((prev) => {
+            prev.categories = result;
             return prev;
         });
+        // 落盘完成后再对齐一次，覆盖存储层可能带回的旧快照
+        await store.refreshBillList();
+        align();
     }, []);
 
     const reset = useCallback(async () => {
         const allBills = await useLedgerStore.getState().refreshBillList();
-        const safeToReset = allBills.every((b) =>
-            BillCategories.some((c) => c.id === b.categoryId),
+        const saved = useLedgerStore.getState().infos?.meta.categories;
+        const customIds = new Set(
+            (saved ?? []).filter((c) => UUID_ID.test(c.id)).map((c) => c.id),
         );
+        const safeToReset = allBills.every((b) => !customIds.has(b.categoryId));
         if (!safeToReset) {
             throw new Error("still has transactions with custom category");
         }

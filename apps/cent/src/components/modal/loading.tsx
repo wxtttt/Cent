@@ -31,7 +31,7 @@ const LoadingForm = ({
     return (
         <div className="w-full h-full flex flex-col items-center justify-center">
             <div className="flex-1 flex flex-col items-center justify-center gap-2">
-                <i className="icon-[mdi--loading] animate-spin size-10"></i>
+                <i className="icon-[lucide--loader-circle] animate-spin size-10"></i>
                 {edit?.label}
             </div>
             {edit?.onCancel && (

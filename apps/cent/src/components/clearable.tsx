@@ -25,7 +25,7 @@ const Clearable: FC<ClearableProps> = ({
                     )}
                     onClick={onClear}
                 >
-                    <i className="icon-[mdi--close] opacity-80 size-4"></i>
+                    <i className="icon-[apk--close] opacity-80 size-4"></i>
                 </button>
             )}
         </div>

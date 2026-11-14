@@ -148,13 +148,13 @@ export default function BillFilterView({
                         setName(e.currentTarget.value);
                     }}
                 ></input>
-                <i className="icon-[mdi--edit-outline]"></i>
+                <i className="icon-[apk--edit]"></i>
             </label>
             <div className="flex-1 px-2 pb-4 overflow-y-auto">
                 <Collapsible.Root defaultOpen className="group">
                     <Collapsible.Trigger className="w-full flex items-center justify-between text-xs opacity-60 pb-2">
                         <div>{t("stat-filter-settings")}</div>
-                        <i className="group-[[data-state=open]]:icon-[mdi--chevron-down] group-[[data-state=closed]]:icon-[mdi--chevron-up] !size-4" />
+                        <i className="group-[[data-state=open]]:icon-[lucide--chevron-down] group-[[data-state=closed]]:icon-[lucide--chevron-up] !size-4" />
                     </Collapsible.Trigger>
                     <Collapsible.Content className="data-[state=open]:animate-collapse-open data-[state=closed]:animate-collapse-close data-[state=closed]:overflow-hidden">
                         <BillFilterForm
@@ -168,7 +168,7 @@ export default function BillFilterView({
                 <Collapsible.Root defaultOpen className="group">
                     <Collapsible.Trigger className="w-full flex items-center justify-between text-xs opacity-60 pb-2 pt-2">
                         <div>{t("stat-view-settings")}</div>
-                        <i className="group-[[data-state=open]]:icon-[mdi--chevron-down] group-[[data-state=closed]]:icon-[mdi--chevron-up] !size-4" />
+                        <i className="group-[[data-state=open]]:icon-[lucide--chevron-down] group-[[data-state=closed]]:icon-[lucide--chevron-up] !size-4" />
                     </Collapsible.Trigger>
                     <Collapsible.Content className="data-[state=open]:animate-collapse-open data-[state=closed]:animate-collapse-close data-[state=closed]:overflow-hidden">
                         <div className="text-xs md:text-sm flex justify-between items-center">
@@ -177,7 +177,7 @@ export default function BillFilterView({
                                     <PopoverTrigger>
                                         <div className="flex gap-1 items-center">
                                             <div>{t("display-currency")}</div>
-                                            <i className="icon-[mdi--question-mark-circle-outline]" />
+                                            <i className="icon-[lucide--circle-help]" />
                                         </div>
                                     </PopoverTrigger>
                                     <PopoverContent
@@ -225,7 +225,7 @@ export default function BillFilterView({
                                 size="sm"
                                 onClick={handleModuleConfig}
                             >
-                                <i className="icon-[mdi--menu] mr-1" />
+                                <i className="icon-[lucide--menu] mr-1" />
                                 {t("configure")}
                             </Button>
                         </div>

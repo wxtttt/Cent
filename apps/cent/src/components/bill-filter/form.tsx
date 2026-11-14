@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { type Dispatch, type SetStateAction, useMemo } from "react";
 import useCategory from "@/hooks/use-category";
 import { useCreators } from "@/hooks/use-creator";
@@ -260,7 +261,7 @@ export default function BillFilterForm({
             {showComment && (
                 <div className="w-full flex justify-between items-center">
                     <div className="flex items-center gap-1">
-                        <i className="icon-[mdi--comment-processing-outline]"></i>
+                        <i className="icon-[lucide--message-square]"></i>
                         {t("comment")}:
                     </div>
                     <div>
@@ -278,7 +279,7 @@ export default function BillFilterForm({
             {/* type selector */}
             <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-1">
-                    <i className="icon-[mdi--arrow-collapse]"></i>
+                    <i className="icon-[lucide--chevrons-down-up]"></i>
                     {t("type")}:
                 </div>
                 <div className="flex items-center rounded-md shadow border border-input overflow-hidden divide-x">
@@ -326,7 +327,7 @@ export default function BillFilterForm({
             {/* amount range */}
             <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-1">
-                    <i className="icon-[mdi--scale-unbalanced]"></i>
+                    <i className="icon-[lucide--scale]"></i>
                     {t("amount")}:
                 </div>
                 <div className="flex items-center gap-4">
@@ -350,7 +351,7 @@ export default function BillFilterForm({
             {/* category selector */}
             <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-1">
-                    <i className="icon-[mdi--category-plus-outline]"></i>
+                    <i className="icon-[lucide--folder-plus]"></i>
                     {t("categories")}:
                 </div>
                 <CascadeMultipleSelect
@@ -380,7 +381,7 @@ export default function BillFilterForm({
             {/* currency selector */}
             <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-1">
-                    <i className="icon-[mdi--currency-eur]"></i>
+                    <i className="icon-[lucide--euro]"></i>
                     {t("currency")}:
                 </div>
 
@@ -431,7 +432,7 @@ export default function BillFilterForm({
             {/* user selector */}
             <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-1">
-                    <i className="icon-[mdi--user-details-outline]"></i>
+                    <i className="icon-[lucide--contact]"></i>
                     {t("users")}:
                 </div>
 
@@ -488,7 +489,7 @@ export default function BillFilterForm({
             {/* tags selector */}
             <div className="w-full flex justify-between items-center gap-2 overflow-hidden">
                 <div className="flex items-center gap-1 flex-shrink-0">
-                    <i className="icon-[mdi--tag-outline]"></i>
+                    <i className="icon-[lucide--tag]"></i>
                     {t("tags")}:
                 </div>
                 <div className="flex items-center gap-4 overflow-y-auto scrollbar-hidden">
@@ -554,7 +555,7 @@ export default function BillFilterForm({
             {/* other checkboxes */}
             <div className="w-full flex justify-between items-center">
                 <div className="flex items-center gap-1">
-                    <i className="icon-[mdi--archive-outline]"></i>
+                    <i className="icon-[lucide--archive]"></i>
                     {t("others")}:
                 </div>
                 <div className="flex-1 flex justify-end overflow-y-scroll gap-3 py-1">
@@ -649,6 +650,7 @@ export function DateInput({
             onClear={() => onChange?.(undefined)}
         >
             <DatePicker
+                type="date"
                 value={value}
                 displayFormatter={(v) =>
                     v === undefined
@@ -657,7 +659,12 @@ export function DateInput({
                             : t("to-newest")
                         : `${v.format("YY/MM/DD")}`
                 }
-                onChange={(e) => onChange?.(e)}
+                // 终止日滚轮只选日期，补到当天末尾保证按天过滤含当日
+                onChange={(e) =>
+                    onChange?.(
+                        type === "end" ? dayjs(e).endOf("day").valueOf() : e,
+                    )
+                }
                 onBlur={onBlur}
             />
         </Clearable>

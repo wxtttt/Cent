@@ -88,7 +88,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                                     toRecoverName(user);
                                                 }}
                                                 icon={
-                                                    <i className="icon-[mdi--reload] text-white size-3"></i>
+                                                    <i className="icon-[lucide--rotate-ccw] text-white size-3"></i>
                                                 }
                                             >
                                                 <div className="font-semibold">
@@ -113,14 +113,14 @@ function Form({ onCancel }: { onCancel?: () => void }) {
                                             toEditName(user);
                                         }}
                                     >
-                                        <i className="icon-[mdi--pencil]" />
+                                        <i className="icon-[apk--edit]" />
                                     </Button>
                                     <Button size={"sm"} asChild>
                                         <a
                                             href={`https://github.com/${currentBookId}/settings/access`}
                                             target="_blank"
                                         >
-                                            <i className="icon-[mdi--settings]" />
+                                            <i className="icon-[lucide--settings]" />
                                         </a>
                                     </Button>
                                 </div>
@@ -152,10 +152,10 @@ export default function UserSettingsItem() {
             >
                 <div className="w-full px-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <i className="icon-[mdi--account-supervisor-outline] size-5"></i>
+                        <i className="icon-[lucide--users] size-5"></i>
                         {t("user-management")}
                     </div>
-                    <i className="icon-[mdi--chevron-right] size-5"></i>
+                    <i className="icon-[lucide--chevron-right] size-5"></i>
                 </div>
             </Button>
             <UserSettingsProvider />

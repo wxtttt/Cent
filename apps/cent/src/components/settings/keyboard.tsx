@@ -57,7 +57,7 @@ export default function KeyboardHeightSettings() {
                         }));
                     }}
                 >
-                    <i className="icon-[mdi--reload]"></i>
+                    <i className="icon-[lucide--rotate-ccw]"></i>
                 </button>
             </div>
         </div>

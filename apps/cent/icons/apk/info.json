@@ -1,0 +1,17 @@
+{
+  "name": "家小满 APK 原图标",
+  "total": 64,
+  "version": "1.0.0",
+  "author": {
+    "name": "APK 反编译导出"
+  },
+  "license": {
+    "title": "extracted"
+  },
+  "samples": ["budget", "category", "home"],
+  "height": 24,
+  "width": 24,
+  "displayHeight": 24,
+  "palette": true,
+  "categories": {}
+}

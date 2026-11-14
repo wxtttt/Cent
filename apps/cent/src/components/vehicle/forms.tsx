@@ -55,7 +55,7 @@ export function VehicleForm({
                 </Button>
             }
         >
-            <div className="flex flex-col gap-4 px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 <FormCard>
                     <FormRow label={t("vehicle-name")}>
                         <RowInput
@@ -145,7 +145,7 @@ export function VehicleRecordForm({
                 </Button>
             }
         >
-            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 <FormCard>
                     <FormRow label={t("vehicle-label")}>
                         <div className="flex flex-wrap justify-end gap-1.5">

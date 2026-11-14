@@ -80,7 +80,7 @@ function SortableListItem({
             `}
         >
             <div>{label}</div>
-            <i className="icon-[mdi--reorder-horizontal] text-muted-foreground"></i>
+            <i className="icon-[lucide--grip] text-muted-foreground"></i>
         </div>
     );
 }
@@ -133,7 +133,7 @@ function SortableGroupContainer({ group, isGroupSortable }: GroupProps) {
                         {...listeners}
                         className="p-1 hover:bg-rule/70 rounded cursor-grab active:cursor-grabbing"
                     >
-                        <i className="icon-[mdi--reorder-horizontal] block"></i>
+                        <i className="icon-[lucide--grip] block"></i>
                     </button>
                 )}
             </div>

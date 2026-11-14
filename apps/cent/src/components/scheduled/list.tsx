@@ -49,7 +49,7 @@ export default function ScheduledListForm({
                         });
                     }}
                 >
-                    <i className="icon-[mdi--add]" />
+                    <i className="icon-[lucide--plus]" />
                     {t("add-a-scheduled")}
                 </Button>
 
@@ -177,7 +177,7 @@ export default function ScheduledListForm({
                                         });
                                     }}
                                 >
-                                    <i className="icon-[mdi--edit-outline]" />
+                                    <i className="icon-[apk--edit]" />
                                 </Button>
                                 <Button
                                     variant="destructive"
@@ -199,7 +199,7 @@ export default function ScheduledListForm({
                                         });
                                     }}
                                 >
-                                    <i className="icon-[mdi--delete]" />
+                                    <i className="icon-[apk--trash]" />
                                 </Button>
                             </div>
                         </div>

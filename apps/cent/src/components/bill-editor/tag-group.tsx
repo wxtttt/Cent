@@ -1,12 +1,6 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: <explanation> */
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: <explanation> */
-import {
-    type ReactNode,
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
-} from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { type BillTagGroupDetail, useTag } from "@/hooks/use-tag";
 import { cn } from "@/utils";
 import {
@@ -71,7 +65,6 @@ function TagGroup({
               : `#${groupSelected[0].name} +${groupSelected.length - 1}`;
 
     const [open, setOpen] = useState(false);
-    // 如果标签组只包含一个标签，那么无需展开弹窗，可以点击直接选中/取消选中该标签
     if (group.tagIds?.length === 1) {
         const singleTagId = group.tagIds[0];
         const isSingleSelected = groupSelected.some(
@@ -84,10 +77,20 @@ function TagGroup({
                 onClick={() => {
                     if (isSingleSelected) {
                         onSelectChange(
-                            selected?.filter((v) => v !== singleTagId) ?? [],
+                            selected.filter((v) => v !== singleTagId),
                         );
                     } else {
-                        onSelectChange([...(selected ?? []), singleTagId]);
+                        // 特殊段硬单选：先清掉同段其它标签
+                        onSelectChange(
+                            group.singleSelect
+                                ? [
+                                      ...selected.filter(
+                                          (v) => !group.tagIds?.includes(v),
+                                      ),
+                                      singleTagId,
+                                  ]
+                                : [...selected, singleTagId],
+                        );
                     }
                 }}
             >
@@ -107,65 +110,41 @@ function TagGroup({
                 </TagTrigger>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-                {group.tags.map((tag) => {
-                    return (
-                        <DropdownMenuCheckboxItem
-                            key={tag.id}
-                            checked={selected.includes(tag.id)}
-                            onCheckedChange={(checked) => {
-                                if (checked) {
-                                    if (group.singleSelect) {
-                                        onSelectChange(
-                                            [
-                                                ...selected.filter(
-                                                    (v) =>
-                                                        !group.tagIds?.includes(
-                                                            v,
-                                                        ),
-                                                ),
-                                                tag.id,
-                                            ],
-                                            tag.preferCurrency
-                                                ? {
-                                                      preferCurrency:
-                                                          tag.preferCurrency,
-                                                  }
-                                                : undefined,
-                                        );
-                                        return;
-                                    }
-                                    onSelectChange(
-                                        [...selected, tag.id],
-                                        tag.preferCurrency
-                                            ? {
-                                                  preferCurrency:
-                                                      tag.preferCurrency,
-                                              }
-                                            : undefined,
-                                    );
-                                    return;
-                                }
-                                // 如果标签组设置了必选，则至少选中一个标签
-                                if (
-                                    group.required &&
-                                    groupSelected.length === 1
-                                ) {
-                                    return;
-                                }
+                {group.tags.map((tag) => (
+                    <DropdownMenuCheckboxItem
+                        key={tag.id}
+                        checked={selected.includes(tag.id)}
+                        onCheckedChange={(checked) => {
+                            if (checked) {
                                 onSelectChange(
-                                    selected.filter((v) => v !== tag.id),
+                                    group.singleSelect
+                                        ? [
+                                              ...selected.filter(
+                                                  (v) =>
+                                                      !group.tagIds?.includes(
+                                                          v,
+                                                      ),
+                                              ),
+                                              tag.id,
+                                          ]
+                                        : [...selected, tag.id],
                                 );
-                            }}
-                        >
-                            #{tag.name}
-                        </DropdownMenuCheckboxItem>
-                    );
-                })}
+                                return;
+                            }
+                            onSelectChange(
+                                selected.filter((v) => v !== tag.id),
+                            );
+                        }}
+                    >
+                        #{tag.name}
+                    </DropdownMenuCheckboxItem>
+                ))}
             </DropdownMenuContent>
         </DropdownMenu>
     );
 }
 
+/** 固定「特殊 / 普通」两段；特殊段单选，避免一笔账单被两条特殊预算各计一次 */
 export default function TagGroupSelector({
     selectedTags,
     onSelectChange: onChange,
@@ -175,35 +154,12 @@ export default function TagGroupSelector({
     onSelectChange: (v: string[], extra?: { preferCurrency?: string }) => void;
     isCreate: boolean;
 }) {
+    void isCreate;
     const { grouped } = useTag();
-
-    // 统一去重
     const onSelectChange: typeof onChange = useCallback(
         (v: string[], ...args) => onChange(Array.from(new Set(v)), ...args),
         [onChange],
     );
-
-    // 进入记账页面后自动选中标签
-    const autoSelect = () => {
-        if (selectedTags === undefined && isCreate) {
-            const defaultTags = grouped
-                .filter((v) => v.required)
-                .map((v) => v.tags?.[0])
-                .filter((v) => v !== undefined);
-            const preferCurrency = defaultTags.findLast(
-                (v) => v.preferCurrency !== undefined,
-            )?.preferCurrency;
-            onSelectChange(
-                defaultTags.map((v) => v.id),
-                preferCurrency ? { preferCurrency } : undefined,
-            );
-        }
-    };
-    const autoSelectRef = useRef(autoSelect);
-    autoSelectRef.current = autoSelect;
-    useEffect(() => {
-        autoSelectRef.current();
-    }, []);
 
     return (
         <>
@@ -215,7 +171,7 @@ export default function TagGroupSelector({
                         group={group}
                         selected={selectedTags ?? []}
                         onSelectChange={onSelectChange}
-                    ></TagGroup>
+                    />
                 ))}
         </>
     );

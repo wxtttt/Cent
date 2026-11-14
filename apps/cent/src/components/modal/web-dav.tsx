@@ -48,10 +48,18 @@ const LoadingForm = ({
 }) => {
     const t = useIntl();
     const formSchema = useMemo(() => createFormSchema(t), [t]);
+    // 重新登录 / token 过期后再次打开时带出上次保存的配置：
+    // 之前 defaultValues 只给了 proxy，等于每次都要重新敲地址、账号、密码和昵称，
+    // 昵称（customUserName）还是账单署名的依据，重填容易变成另一个人
+    const restored = Boolean(edit?.remote || edit?.username);
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
-            proxy: "", //"https://oncent-backend.linkai.work/proxy?url=",
+            remote: edit?.remote ?? "",
+            username: edit?.username ?? "",
+            password: edit?.password ?? "",
+            customUserName: edit?.customUserName ?? "",
+            proxy: edit?.proxy ?? "", //"https://oncent-backend.linkai.work/proxy?url=",
         },
     });
     const [checking, setChecking] = useState(false);
@@ -75,10 +83,16 @@ const LoadingForm = ({
                 rel="noopener"
             >
                 {t("sync-with-web-dav")}
-                <i className="icon-[mdi--question-mark-circle-outline]"></i>
+                <i className="icon-[lucide--circle-help]"></i>
             </a>
+            {restored && (
+                <div className="mb-2 flex items-center gap-1 rounded-full bg-ground-muted px-3 py-1 text-xs text-ink-secondary">
+                    <i className="icon-[lucide--history] size-3.5"></i>
+                    {t("web-dav-restored-hint")}
+                </div>
+            )}
             <Form {...form}>
-                <div className="w-full flex-1 flex flex-col gap-4 px-4 overflow-y-auto">
+                <div className="w-full flex-1 min-h-0 flex flex-col gap-4 px-4 overflow-y-auto">
                     <FormField
                         control={form.control}
                         name="remote"
@@ -139,9 +153,9 @@ const LoadingForm = ({
                                             className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
                                         >
                                             {showPassword ? (
-                                                <i className="icon-[mdi--eye-off] size-4"></i>
+                                                <i className="icon-[lucide--eye-off] size-4"></i>
                                             ) : (
-                                                <i className="icon-[mdi--eye] size-4"></i>
+                                                <i className="icon-[lucide--eye] size-4"></i>
                                             )}
                                         </button>
                                     </div>
@@ -163,7 +177,7 @@ const LoadingForm = ({
                                         rel="noopener"
                                     >
                                         {t("proxy-url")}
-                                        <i className="icon-[mdi--question-mark-circle-outline]"></i>
+                                        <i className="icon-[lucide--circle-help]"></i>
                                     </a>
                                 </FormLabel>
                                 <FormControl>
@@ -182,7 +196,7 @@ const LoadingForm = ({
                             rel="noopener"
                         >
                             {t("custom-user")}
-                            <i className="icon-[mdi--question-mark-circle-outline]"></i>
+                            <i className="icon-[lucide--circle-help]"></i>
                         </a>
                         <FormField
                             control={form.control}
@@ -194,7 +208,7 @@ const LoadingForm = ({
                                             {t("custom-user-name")}
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <i className="icon-[mdi--help-circle-outline] cursor-pointer"></i>
+                                                    <i className="icon-[lucide--circle-help] cursor-pointer"></i>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="text-xs p-2">
                                                     <p>
@@ -245,7 +259,7 @@ export const [WebDAVAuthProvider, showWebDAVAuth] = createConfirmProvider(
     {
         dialogTitle: "loading",
         dialogModalClose: true,
-        contentClassName: "w-[350px] h-[480px] z-[2]",
+        contentClassName: "w-[350px] h-[520px] max-h-[calc(100vh-80px)] z-[2]",
         fade: true,
     },
 );

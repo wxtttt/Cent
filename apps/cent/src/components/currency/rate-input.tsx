@@ -103,7 +103,7 @@ const RateInput = ({
                     className="ml-auto flex gap-1 items-center"
                     title="切换基准货币"
                 >
-                    <i className="icon-[mdi--exchange] h-4 w-4" />
+                    <i className="icon-[lucide--arrow-left-right] h-4 w-4" />
                 </Button>
             </div>
 

@@ -1,22 +1,42 @@
 import { useCallback, useMemo } from "react";
 import { useShallow } from "zustand/shallow";
-import type { BillTag } from "@/components/bill-tag/type";
-import type { BillTagGroup } from "@/ledger/type";
+import type { BillTag, BillTagGroup } from "@/ledger/type";
 import { t } from "@/locale";
 import { measure } from "@/measurement";
 import { useLedgerStore } from "@/store/ledger";
-import { useUserStore } from "@/store/user";
 
+export type BillTagGroupDetail = BillTagGroup & { tags: BillTag[] };
+
+/**
+ * 自定义分组已移除（ADR-0002）。这里保留分组形状只是为了让筛选器与记账选择器
+ * 继续复用同一套渲染：固定「特殊 / 普通」两段，特殊段硬单选。
+ */
 export function useTag() {
-    const [tags = [], tagGroups = []] = useLedgerStore(
-        useShallow((state) => {
-            const userId = useUserStore.getState().id;
-            return [
-                state.infos?.meta.tags,
-                state.infos?.meta.personal?.[userId]?.tagGroups,
-            ];
-        }),
+    const tags = useLedgerStore(
+        useShallow((state) => state.infos?.meta.tags ?? []),
     );
+
+    const grouped = useMemo<BillTagGroupDetail[]>(() => {
+        const special = tags.filter((v) => v.kind === "special");
+        const normal = tags.filter((v) => v.kind !== "special");
+        return [
+            {
+                id: "special",
+                name: t("special-tags"),
+                color: "orange",
+                singleSelect: true,
+                tagIds: special.map((v) => v.id),
+                tags: special,
+            },
+            {
+                id: "normal",
+                name: t("normal-tags"),
+                color: "gray",
+                tagIds: normal.map((v) => v.id),
+                tags: normal,
+            },
+        ];
+    }, [tags]);
 
     const updateTag = useCallback(
         (
@@ -30,25 +50,22 @@ export function useTag() {
                 .getState()
                 .updateGlobalMeta((prev) => {
                     if (newTag === undefined) {
-                        prev.tags = prev.tags.filter((v) => v.id !== id);
-                        return prev;
+                        return {
+                            ...prev,
+                            tags: prev.tags.filter((v) => v.id !== id),
+                        };
                     }
                     const index =
                         prev.tags?.findIndex((v) => v.id === id) ?? -1;
                     if (index === -1) {
                         return {
                             ...prev,
-                            tags: [
-                                ...(prev.tags ?? []),
-                                {
-                                    ...newTag,
-                                    id,
-                                },
-                            ],
+                            tags: [...(prev.tags ?? []), { ...newTag, id }],
                         };
                     }
-                    prev.tags[index] = { ...newTag, id };
-                    return prev;
+                    const next = [...prev.tags];
+                    next[index] = { ...newTag, id };
+                    return { ...prev, tags: next };
                 });
             void result.then(
                 () =>
@@ -68,108 +85,5 @@ export function useTag() {
         [],
     );
 
-    const grouped = useMemo(() => {
-        const group = tagGroups.map((group) => {
-            return {
-                ...group,
-                tags: (
-                    group.tagIds?.map((tid) =>
-                        tags.find((v) => v.id === tid),
-                    ) ?? []
-                ).filter((v) => v !== undefined),
-            };
-        });
-        const unGroup = tags.filter((v) =>
-            tagGroups.every((g) => !g.tagIds?.includes(v.id)),
-        );
-        return [
-            ...group,
-            {
-                name: t("un-grouped"),
-                id: "un-group",
-                tags: unGroup,
-                color: "gray",
-                tagIds: unGroup.map((v) => v.id),
-            },
-        ];
-    }, [tagGroups, tags]);
-
-    const updateGroup = useCallback(
-        (
-            id: string,
-            newGroup: (Omit<BillTagGroup, "id"> & { id?: string }) | undefined,
-        ) => {
-            const userId = useUserStore.getState().id;
-            const exists = useLedgerStore
-                .getState()
-                .infos?.meta.personal?.[userId]?.tagGroups?.some(
-                    (group) => group.id === id,
-                );
-            const result = useLedgerStore
-                .getState()
-                .updatePersonalMeta((prev) => {
-                    if (newGroup === undefined) {
-                        prev.tagGroups = prev.tagGroups?.filter(
-                            (v) => v.id !== id,
-                        );
-                        return prev;
-                    }
-                    const index =
-                        prev.tagGroups?.findIndex((v) => v.id === id) ?? -1;
-                    if (index === -1) {
-                        return {
-                            ...prev,
-                            tagGroups: [
-                                ...(prev.tagGroups ?? []),
-                                {
-                                    ...newGroup,
-                                    id,
-                                },
-                            ],
-                        };
-                    }
-                    const newGroups = prev.tagGroups ?? [];
-                    newGroups[index] = { ...newGroup, id };
-                    return prev;
-                });
-            void result.then(
-                () =>
-                    measure("feature_config_changed", {
-                        feature: "tag_group",
-                        action:
-                            newGroup === undefined
-                                ? "delete"
-                                : exists
-                                  ? "update"
-                                  : "create",
-                    }),
-                () => undefined,
-            );
-            return result;
-        },
-        [],
-    );
-
-    const topUpGroup = useCallback((groupId: string) => {
-        return useLedgerStore.getState().updatePersonalMeta((prev) => {
-            const target = prev.tagGroups?.find((v) => v.id === groupId);
-            if (!target) {
-                return prev;
-            }
-            const newGroups = [
-                target,
-                ...(prev.tagGroups?.filter((v) => v.id !== groupId) ?? []),
-            ];
-            return { ...prev, tagGroups: newGroups };
-        });
-    }, []);
-
-    return {
-        tags,
-        updateTag,
-        grouped,
-        updateGroup,
-        topUpGroup,
-    };
+    return { tags, grouped, updateTag };
 }
-export type BillTagGroupDetail = BillTagGroup & { tags: BillTag[] };

@@ -99,8 +99,8 @@ export function VoiceAddButton({ onClick }: { onClick?: () => void }) {
     return (
         <VoiceFormContext.Provider value={formState}>
             <BaseButton {...presses?.()}>
-                {/* <i className="icon-[mdi--microphone-plus] text-[white] size-7"></i> */}
-                <i className="icon-[mdi--add] text-[white] size-7"></i>
+                {/* <i className="icon-[apk--microphone] text-[white] size-7"></i> */}
+                <i className="icon-[lucide--plus] text-[white] size-7"></i>
             </BaseButton>
             <VoiceFormProvider />
         </VoiceFormContext.Provider>

@@ -221,7 +221,7 @@ export function useChartPart({
                         >
                             <i
                                 className={cn(
-                                    "icon-[mdi--calendar-month-outline] cursor-pointer",
+                                    "icon-[lucide--calendar-days] cursor-pointer",
                                 )}
                             ></i>
                         </button>
@@ -265,7 +265,7 @@ export function useChartPart({
                             >
                                 <i
                                     className={cn(
-                                        "icon-[mdi--format-list-bulleted] cursor-pointer",
+                                        "icon-[lucide--list] cursor-pointer",
                                     )}
                                 ></i>
                             </button>
@@ -346,7 +346,7 @@ export function useChartPart({
                                     {focusType === "expense"
                                         ? t("see-expense-ledgers")
                                         : t("see-income-ledgers")}
-                                    <i className="icon-[mdi--arrow-up-right]"></i>
+                                    <i className="icon-[lucide--arrow-up-right]"></i>
                                 </Button>
                             </div>
                         </div>
@@ -374,7 +374,7 @@ export function useChartPart({
                             }}
                         >
                             {t("see-category-ledgers")}
-                            <i className="icon-[mdi--arrow-up-right]"></i>
+                            <i className="icon-[lucide--arrow-up-right]"></i>
                         </Button>
                     </div>
                 </div>

@@ -21,6 +21,11 @@ export type SyncEndpointConfig = {
 export type SyncEndpoint = {
     logout: () => Promise<any>;
 
+    /** 退出登录会 localStorage.clear()，需要在清空前把「下次登录要回填的信息」暂存到内存 */
+    beforeLogout?: () => void;
+    /** localStorage.clear() 之后再把暂存的信息写回，避免用户重新登录时全部重填 */
+    afterLogout?: () => void;
+
     fetchAllBooks: () => Promise<Book[]>;
     createBook: (name: string) => Promise<{
         id: string;

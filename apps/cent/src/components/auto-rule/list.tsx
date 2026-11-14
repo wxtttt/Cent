@@ -51,7 +51,7 @@ export default function AutoRuleList({ onCancel }: { onCancel?: () => void }) {
                             await reorder(ordered);
                         }}
                     >
-                        <i className="icon-[mdi--reorder-horizontal]" />
+                        <i className="icon-[lucide--grip]" />
                     </Button>
                 ) : undefined
             }
@@ -61,7 +61,7 @@ export default function AutoRuleList({ onCancel }: { onCancel?: () => void }) {
                     {t("auto-rule-description")}
                 </p>
                 <Button variant="outline" onClick={toAdd}>
-                    <i className="icon-[mdi--plus]" />
+                    <i className="icon-[lucide--plus]" />
                     {t("auto-rule-add")}
                 </Button>
                 {rules.length === 0 ? (
@@ -111,7 +111,7 @@ export default function AutoRuleList({ onCancel }: { onCancel?: () => void }) {
                                 className="h-8 w-8 p-0 text-destructive"
                                 onClick={() => update(rule.id, undefined)}
                             >
-                                <i className="icon-[mdi--delete-outline]" />
+                                <i className="icon-[apk--trash]" />
                             </Button>
                         </div>
                     ))

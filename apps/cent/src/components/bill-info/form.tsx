@@ -284,11 +284,11 @@ function MoreAction({
             <DropdownMenuContent align="start">
                 <DropdownMenuGroup>
                     <DropdownMenuItem onClick={onDuplicate}>
-                        <i className="icon-[mdi--content-copy]"></i>
+                        <i className="icon-[lucide--copy]"></i>
                         {t("duplicate")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={onSplit}>
-                        <i className="icon-[mdi--format-page-split]"></i>
+                        <i className="icon-[lucide--panels-top-left]"></i>
                         {t("split-action")}
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
@@ -298,7 +298,7 @@ function MoreAction({
                         className="text-red-600"
                         onClick={onDelete}
                     >
-                        <i className="icon-[mdi--trash-can-outline]"></i>
+                        <i className="icon-[apk--trash]"></i>
                         {t("delete")}
                     </DropdownMenuItem>
                 </DropdownMenuGroup>

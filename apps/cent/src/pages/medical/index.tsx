@@ -13,7 +13,6 @@ import SegmentedTabs from "@/components/segmented-tabs";
 import { Button } from "@/components/ui/button";
 import {
     addMedicalMedicine,
-    addMedicalProfile,
     addMedicalVisit,
     removeMedicalMedicine,
     removeMedicalProfile,
@@ -29,7 +28,6 @@ import type {
     MedicalProfile,
     MedicalVisit,
 } from "@/medical/types";
-import { cn } from "@/utils";
 
 type MedicalTab = "profile" | "medicine" | "visit";
 
@@ -117,7 +115,7 @@ export default function MedicalPage() {
 
     return (
         <div className="h-full overflow-y-auto">
-            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4 px-4 pb-32 pt-3">
+            <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 px-[18px] pb-32 pt-3">
                 <div className="flex items-center gap-2">
                     <div className="min-w-0 flex-1">
                         <SegmentedTabs
@@ -135,7 +133,7 @@ export default function MedicalPage() {
                         className="flex size-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-panel shadow-panel"
                         onClick={search}
                     >
-                        <i className="icon-[mdi--magnify] size-5 text-ink" />
+                        <i className="icon-[apk--search] size-5 text-ink" />
                     </button>
                 </div>
 
@@ -146,21 +144,21 @@ export default function MedicalPage() {
                         onClick={() => setKeyword("")}
                     >
                         「{keyword}」
-                        <i className="icon-[mdi--close] size-3" />
+                        <i className="icon-[apk--close] size-3" />
                     </button>
                 )}
 
                 {tab === "profile" && (
                     <div className="flex flex-col gap-3">
                         <div className="flex items-end justify-between">
-                            <h2 className="font-display text-xl font-bold">
+                            <h2 className="dp-text-medium font-display text-[17px]">
                                 {t("medical-family-profiles")}
                             </h2>
                             <img
                                 src={xiaoyuPeek}
                                 alt=""
                                 draggable={false}
-                                className="pointer-events-none h-14 w-auto select-none"
+                                className="pointer-events-none h-11 w-auto select-none"
                             />
                         </div>
                         {filteredProfiles.length === 0 ? (
@@ -187,14 +185,6 @@ export default function MedicalPage() {
                                 />
                             ))
                         )}
-                        <AddButton
-                            label={t("medical-add-profile")}
-                            onClick={() =>
-                                showMedicalProfile().then(
-                                    (v) => v && addMedicalProfile(v),
-                                )
-                            }
-                        />
                     </div>
                 )}
 
@@ -297,27 +287,21 @@ function SectionHeader({
 }) {
     return (
         <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold">{title}</h2>
+            <h2 className="dp-text-medium font-display text-[17px]">{title}</h2>
             <Button variant="ghost" size="sm" onClick={onAdd}>
-                <i className="icon-[mdi--plus]" />
+                <i className="icon-[lucide--plus]" />
                 {addLabel}
             </Button>
         </div>
     );
 }
 
-function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
-    return (
-        <Button variant="outline" className="mt-1" onClick={onClick}>
-            <i className="icon-[mdi--plus]" />
-            {label}
-        </Button>
-    );
-}
-
 function EmptyText({ text }: { text: string }) {
+    // 家小满缺省态：纯文字居中、无插画与引导按钮
     return (
-        <p className="py-12 text-center text-sm text-ink-secondary">{text}</p>
+        <p className="py-12 text-center text-[13px] text-ink-secondary">
+            {text}
+        </p>
     );
 }
 
@@ -347,7 +331,7 @@ function ProfileCard({
                     />
                 ) : (
                     <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                        <i className="icon-[mdi--account-outline] size-6" />
+                        <i className="icon-[lucide--user] size-6" />
                     </div>
                 )}
                 <div className="min-w-0 flex-1">
@@ -420,7 +404,7 @@ function MedicineCard({
                 onClick={onEdit}
             >
                 <div className="flex size-12 flex-shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                    <i className="icon-[mdi--pill-multiple] size-6" />
+                    <i className="icon-[lucide--pill] size-6" />
                 </div>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
@@ -504,7 +488,7 @@ function VisitCard({
             </div>
             {visit.images && visit.images.length > 0 && (
                 <div className="mt-2 flex gap-1.5 border-t border-dashed border-rule pt-2">
-                    <i className="icon-[mdi--image-multiple-outline] size-4 text-ink-secondary" />
+                    <i className="icon-[lucide--images] size-4 text-ink-secondary" />
                     <span className="text-xs text-ink-secondary">
                         {t("medical-visit-attachments", {
                             n: visit.images.length,
@@ -530,7 +514,7 @@ function DeleteButton({
             className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
             onClick={onClick}
         >
-            <i className="icon-[mdi--delete-outline] size-4" />
+            <i className="icon-[apk--trash] size-4" />
         </button>
     );
 }

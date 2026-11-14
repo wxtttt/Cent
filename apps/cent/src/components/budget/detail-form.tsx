@@ -251,7 +251,7 @@ function BudgetDetail({
                         reachedCount > 0 ? "text-green-700" : "opacity-60",
                     )}
                 >
-                    <i className="icon-[mdi--medal-outline]"></i>
+                    <i className="icon-[lucide--medal]"></i>
                     {reachedCount > 0
                         ? t("budget-reached-times", { n: reachedCount })
                         : t("budget-reached-not-yet")}
@@ -296,11 +296,7 @@ function BudgetDetail({
                     className="flex-shrink-0 text-sm"
                     disabled
                 >
-                    {budget.end ? (
-                        "END"
-                    ) : (
-                        <i className="icon-[mdi--infinity] size-5"></i>
-                    )}
+                    <i className="icon-[lucide--infinity] size-5"></i>
                 </Button>
             </div>
             {encountered && (

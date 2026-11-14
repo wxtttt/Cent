@@ -1,63 +1,100 @@
 /** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
 
-import { type ReactNode, useEffect, useState } from "react";
+import { useState } from "react";
 import { useIntl } from "@/locale";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import createConfirmProvider from "../confirm";
 
-export function RemarkHint({
-    recommends,
-    children,
-    onSelect,
-}: {
+type RemarkValue = {
+    value: string;
     recommends?: string[];
-    children?: ReactNode;
-    onSelect?: (v: string) => void;
-}) {
+};
+
+const RemarkForm = ({
+    edit,
+    onCancel,
+    onConfirm,
+}: {
+    edit?: RemarkValue;
+    onCancel?: () => void;
+    onConfirm?: (v: string) => void;
+}) => {
     const t = useIntl();
-    const [open, setOpen] = useState(false);
-    useEffect(() => {
-        if (recommends?.length) {
-            setTimeout(() => {
-                setOpen(true);
-            }, 400);
-        }
-    }, [recommends?.length]);
-    if (!recommends?.length) {
-        return children;
-    }
+    const [value, setValue] = useState(edit?.value ?? "");
+    const recommends = edit?.recommends ?? [];
+
+    const appendRecommend = (comment: string) => {
+        setValue((prev) => (prev ? `${prev} ${comment}` : comment));
+    };
+
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger>{children}</PopoverTrigger>
-            <PopoverContent
-                side="top"
-                align="end"
-                sideOffset={12}
-                className="p-2 px-3 w-fit flex gap-1 items-center text-sm"
-                onOpenAutoFocus={(e) => {
-                    e.preventDefault();
+        <div className="px-5 pb-6 pt-2.5">
+            <div className="flex justify-center pb-3">
+                <span className="h-1 w-10 rounded-full bg-ink-secondary/30" />
+            </div>
+            <div className="text-[17px] font-semibold text-ink">
+                {t("bill-remark")}
+            </div>
+            <input
+                type="text"
+                value={value}
+                maxLength={200}
+                placeholder={t("bill-remark-placeholder")}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                        onConfirm?.(value);
+                    }
                 }}
-            >
-                <div className="opacity-60">{t("recommend-comments")}</div>
-                <div className="flex gap-2">
-                    {recommends.map((comment, i) => (
-                        <button
-                            key={i}
-                            type="button"
-                            className="cursor-pointer border rounded-sm px-1 flex items-center active:bg-foreground/20"
-                            onClick={() => onSelect?.(comment)}
-                        >
-                            {comment}
-                        </button>
-                    ))}
+                className="mt-3 h-12 w-full rounded-xl border border-rule bg-panel px-3.5 text-[15px] text-ink outline-none placeholder:text-ink-tab focus-visible:border-brand"
+            />
+            {recommends.length > 0 && (
+                <div className="mt-4">
+                    <div className="text-[12px] text-ink-secondary">
+                        {t("recommend-comments")}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {recommends.map((comment, i) => (
+                            <button
+                                key={i}
+                                type="button"
+                                onClick={() => appendRecommend(comment)}
+                                className="rounded-full border border-rule bg-panel px-3 py-1.5 text-[13px] text-ink-secondary active:bg-ground-muted"
+                            >
+                                {comment}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-                {/* <button
+            )}
+            <div className="mt-5 flex gap-3">
+                <button
                     type="button"
-                    className="flex items-center cursor-pointer"
+                    onClick={onCancel}
+                    className="h-[48px] flex-1 rounded-xl bg-[#f0f0f2] text-[15px] text-ink"
                 >
-                    <i className="icon-[mdi--close-circle-outline]"></i>
-                </button> */}
-                {/* <PopoverArrow className="fill-popover" /> */}
-            </PopoverContent>
-        </Popover>
+                    {t("cancel")}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onConfirm?.(value)}
+                    className="h-[48px] flex-1 rounded-xl bg-brand text-[15px] font-medium text-on-brand"
+                >
+                    {t("confirm")}
+                </button>
+            </div>
+        </div>
     );
-}
+};
+
+/** 点金额右侧的备注区后，从底部上滑一层抽屉填写备注 */
+export const [RemarkSheetProvider, showRemarkSheet] = createConfirmProvider<
+    RemarkValue,
+    string
+>(RemarkForm, {
+    dialogTitle: "Note",
+    dialogModalClose: true,
+    from: "bottom",
+    initialFocus: "input",
+    contentClassName:
+        "w-full max-w-full rounded-t-[28px] border-0 bg-ground p-0 shadow-none sm:w-[90vw] sm:max-w-[500px] sm:rounded-md",
+});

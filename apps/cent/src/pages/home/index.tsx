@@ -1,10 +1,10 @@
 import dayjs from "dayjs";
-import { useCallback, useMemo } from "react";
+import { useCallback, useId, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useShallow } from "zustand/shallow";
 import xiaonuan from "@/assets/mascots/01-home-xiaonuan.webp";
-import xiaoji from "@/assets/mascots/02-bookkeeping-xiaoji.webp";
 import { showBookGuide } from "@/components/book/util";
+import { clampStartDay, periodContaining } from "@/components/budget/period";
 import {
     budgetEncountered,
     budgetRange,
@@ -26,6 +26,7 @@ import {
 import { useWidget } from "@/hooks/use-widget";
 import { amountToNumber } from "@/ledger/bill";
 import { useIntl, useLocale } from "@/locale";
+import { showStat } from "@/pages/stat";
 import { useLedgerStore } from "@/store/ledger";
 import { useUserStore } from "@/store/user";
 import { cn } from "@/utils";
@@ -36,6 +37,8 @@ const inRange = (time: number, start: number, end: number) =>
 // 首页底部不再放吉祥物（家小满同款：仅 hero 与 dock 出现）
 
 export default function Page() {
+    // SVG 的 clipPath / gradient id 必须每次挂载唯一，且去掉 useId 里的冒号
+    const svgId = useId().replace(/:/g, "");
     const t = useIntl();
     const { locale } = useLocale();
     const navigate = useNavigate();
@@ -55,14 +58,30 @@ export default function Page() {
     );
     const { categories } = useCategory();
     const creators = useCreators();
-    const { budgets } = useBudget();
+    const { budgets, startDay } = useBudget();
     const { scheduleds } = useScheduled();
     const { homeWidgets } = useWidget();
     const { baseCurrency } = useCurrency();
 
     const now = useMemo(() => dayjs(), []);
-    const monthStart = now.startOf("month").valueOf();
-    const monthEnd = now.endOf("month").valueOf();
+    // 首页、预算页与记账页共用同一周期口径。优先读当前普通预算记录的冻结边界：
+    // 起始日变更后过渡期与下一期的边界由记录链决定，现算会把过渡期算错。
+    const [budgetPeriodStart, budgetPeriodEnd] = useMemo(() => {
+        const ts = now.valueOf();
+        const current = budgets.find(
+            (b) =>
+                b.kind === "normal" && ts >= b.periodStart && ts <= b.periodEnd,
+        );
+        if (current) {
+            return [
+                dayjs(current.periodStart).startOf("day"),
+                dayjs(current.periodEnd).endOf("day"),
+            ];
+        }
+        return periodContaining(now, clampStartDay(startDay));
+    }, [now, startDay, budgets]);
+    const monthStart = budgetPeriodStart.valueOf();
+    const monthEnd = budgetPeriodEnd.valueOf();
     const todayStart = now.startOf("day").valueOf();
     const todayEnd = now.endOf("day").valueOf();
     const yesterdayStart = now.subtract(1, "day").startOf("day").valueOf();
@@ -108,7 +127,8 @@ export default function Page() {
         () =>
             budgets.filter(
                 (budget) =>
-                    budget.joiners.includes(userId) &&
+                    (budget.joiners.length === 0 ||
+                        budget.joiners.includes(userId)) &&
                     Boolean(budgetRange(budget, now)[1]),
             ),
         [budgets, userId, now],
@@ -126,10 +146,9 @@ export default function Page() {
                 0)
         );
     }, 0);
+    // 家小满缺省口径：没有设置预算时进度条保持空轨道，不按日期进度填橙色
     const budgetRatio =
-        budgetTotalValue > 0
-            ? Math.min(1, budgetUsed / budgetTotalValue)
-            : now.date() / now.daysInMonth();
+        budgetTotalValue > 0 ? Math.min(1, budgetUsed / budgetTotalValue) : 0;
 
     const dueToday = useMemo(
         () =>
@@ -185,7 +204,10 @@ export default function Page() {
         return top;
     }, [yesterdayBills, categories]);
 
-    const daysLeft = Math.max(1, now.endOf("month").diff(now, "day") + 1);
+    const daysLeft = Math.max(
+        1,
+        budgetPeriodEnd.endOf("day").diff(now, "day") + 1,
+    );
     const summaryBullets = useMemo(() => {
         const bullets: { key: string; text: string; to: string }[] = [];
         if (budgetTotalValue > 0) {
@@ -196,7 +218,7 @@ export default function Page() {
                     amount: `${baseCurrency.symbol}${money(remaining)}`,
                     days: daysLeft,
                     daily: `${baseCurrency.symbol}${money(
-                        remaining / daysLeft,
+                        Math.floor(remaining / daysLeft),
                     )}`,
                 }),
                 to: "/stat",
@@ -307,24 +329,74 @@ export default function Page() {
     const avatars = creators.slice(0, 2);
 
     return (
-        <div className="h-full overflow-y-auto page-show">
-            <div className="mx-auto w-full max-w-[720px] px-4 pb-32">
-                {/* 家小满同款问候带：奶油底 + 波浪下缘，常驻不折叠 */}
-                <div className="relative -mx-4 select-none">
+        <div className="h-full overflow-y-auto page-show dp-home-surface">
+            <div className="mx-auto w-full max-w-[720px] px-[18px] pb-32">
+                {/* 家小满折叠态问候带：灰米 / 浅黄双色斜切 + 中间上拱的浅弧下缘。
+                    1080×2340 实拍折到 393 宽后逐列量得：左端 37、中部 24、右端 40，
+                    高度 44；展开态 hero 才有的右上黄圆、左下青绿弧不出现在这里。 */}
+                <div className="relative -mx-[18px] select-none">
                     <svg
                         aria-hidden
                         role="presentation"
-                        className="block h-[72px] w-full"
+                        className="block h-[44px] w-full"
                         preserveAspectRatio="none"
-                        viewBox="0 0 393 72"
+                        viewBox="0 0 393 44"
                     >
+                        <defs>
+                            <clipPath id={`${svgId}-clip`}>
+                                <path d="M0 0 H393 V39 C330 43 265 33 196 24 C130 17 60 26 0 37 Z" />
+                            </clipPath>
+                            {/* APK 实测两端色：左 #e7e0cb、右 #f2e2c3，中部只有很窄的过渡，
+                                不是原先的「中奶油 + 右上黄圆 + 左下青绿弧」渐变 */}
+                            <linearGradient
+                                id={`${svgId}-greet`}
+                                x1="0"
+                                y1="0"
+                                x2="1"
+                                y2="0"
+                            >
+                                <stop
+                                    offset="0%"
+                                    stopColor="var(--dp-color-greet-left)"
+                                />
+                                <stop
+                                    offset="44%"
+                                    stopColor="var(--dp-color-greet-left)"
+                                />
+                                <stop
+                                    offset="56%"
+                                    stopColor="var(--dp-color-greet-right)"
+                                />
+                                <stop
+                                    offset="100%"
+                                    stopColor="var(--dp-color-greet-right)"
+                                />
+                            </linearGradient>
+                        </defs>
+                        <g clipPath={`url(#${svgId}-clip)`}>
+                            <rect
+                                width="393"
+                                height="44"
+                                fill={`url(#${svgId}-greet)`}
+                            />
+                            {/* 双色分界是从 (180,0) 向右下弯的斜楔，而非竖直硬边 */}
+                            <path
+                                d="M180 0 Q190 24 230 44 H393 V0 Z"
+                                fill="var(--dp-color-greet-right)"
+                            />
+                        </g>
+                        {/* APK 折叠态在浅弧下缘压了一条 1px #fcf8f0 高光描边，
+                            纯 clipPath 硬切会让问候带和下方的界线看起来像「没画上」 */}
                         <path
-                            d="M0 0 H393 V46 C358 58 322 68 240 65 C152 62 66 70 0 58 Z"
-                            fill="var(--dp-color-ground-muted)"
+                            d="M0 37 C60 26 130 17 196 24 C265 33 330 43 393 39"
+                            fill="none"
+                            stroke="var(--dp-color-greet-edge)"
+                            strokeWidth="1"
+                            vectorEffect="non-scaling-stroke"
                         />
                     </svg>
-                    <div className="absolute inset-0 flex items-center gap-2 px-4 pt-1">
-                        <h1 className="min-w-0 truncate text-[17px] font-bold text-ink-warm">
+                    <div className="absolute inset-0 flex items-center gap-2 px-[18px] pt-1">
+                        <h1 className="dp-text-medium min-w-0 truncate text-[15px] text-ink-warm">
                             {greeting}，{name || t("me")}
                         </h1>
                         <div className="ml-auto flex flex-shrink-0 items-center gap-2">
@@ -332,7 +404,7 @@ export default function Page() {
                                 src={xiaonuan}
                                 alt=""
                                 draggable={false}
-                                className="h-11 w-auto select-none"
+                                className="h-[46px] w-auto select-none"
                             />
                             <div className="relative flex items-center">
                                 {avatars.length > 0 ? (
@@ -362,20 +434,29 @@ export default function Page() {
                                                 className="size-full object-cover"
                                             />
                                         ) : (
-                                            <i className="icon-[mdi--account] m-auto size-4 text-ink-secondary"></i>
+                                            <i className="icon-[lucide--user] m-auto size-4 text-ink-secondary"></i>
                                         )}
                                     </div>
                                 )}
-                                {/* 换账本入口：家小满放在头像右下角的橙色徽章 */}
+                                {/* 换账本入口：APK 实测外径 18px 含环（ring-inset）、白底灰环，
+                                    实心三角双向箭头（Material swap_horiz）；apk--transfer 是半箭头字形，不符 */}
                                 <button
                                     type="button"
                                     aria-label={t("books")}
-                                    className="absolute -bottom-1 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-brand text-on-brand ring-2 ring-ground"
+                                    className="absolute -bottom-2 -right-2 flex size-[18px] cursor-pointer items-center justify-center rounded-full bg-switch-badge ring-1 ring-inset ring-switch-badge-ring"
                                     onClick={() => {
                                         showBookGuide();
                                     }}
                                 >
-                                    <i className="icon-[mdi--swap-horizontal] size-3"></i>
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        aria-hidden
+                                        role="presentation"
+                                        className="size-[14px] text-brand"
+                                    >
+                                        <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -383,34 +464,41 @@ export default function Page() {
                 </div>
 
                 {/* 高度 = APK 卡减去概览行；左右两列各自流式排列（家小满右列行距更紧、
-                    不与左列钉底对齐）：左列行距 16px 行盒、右列 10px，进度条 7px 高 */}
-                <section className="relative mt-3 overflow-hidden rounded-panel bg-panel px-4 pb-2 pt-3">
-                    <div className="absolute inset-y-3 left-1/2 w-px bg-rule" />
+                    不与左列钉底对齐）：左列行距 12px、右列 8px，进度条 5px 高 */}
+                {/* APK 概览卡：奶白底 + 1px #ede8dc 暖灰外框（逐点取色）。
+                    用 inset 阴影画框而非 border，避免挤掉内容区 2px 打乱下方比例；
+                    圆角与同页今日总结卡、其它页票券卡统一 24px（APK 实测约 24px） */}
+                <section className="relative mt-2 overflow-hidden rounded-[24px] bg-panel px-4 pb-4 pt-4 shadow-[inset_0_0_0_1px_var(--dp-color-home-frame)]">
+                    <div className="absolute inset-y-4 left-1/2 w-px bg-rule" />
                     <div className="grid grid-cols-2">
                         <div className="flex min-w-0 flex-col pr-4">
                             <button
                                 type="button"
-                                className="flex w-full cursor-pointer items-center gap-1.5 text-[13px] leading-none text-ink-secondary"
+                                className="flex w-full cursor-pointer items-center gap-1.5 text-xs leading-none text-ink-secondary"
                                 onClick={() => {
-                                    navigate("/stat");
+                                    showStat();
                                 }}
                             >
-                                <i className="icon-[mdi--wallet-outline] size-4 flex-shrink-0 text-brand"></i>
+                                <img
+                                    src="/overview/expense.svg"
+                                    alt=""
+                                    draggable={false}
+                                    className="size-5 flex-shrink-0 select-none"
+                                />
                                 <span className="truncate">
-                                    {t("this-month")}
-                                    {t("expense")}
+                                    {t("month-expense")}
                                 </span>
-                                <i className="icon-[mdi--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
+                                <i className="icon-[lucide--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
                             <div className="mt-4 flex items-baseline gap-1 overflow-hidden font-display font-bold tracking-tight text-ink-warm">
-                                <span className="flex-shrink-0 text-base">
+                                <span className="flex-shrink-0 text-sm">
                                     {baseCurrency.symbol}
                                 </span>
-                                <span className="truncate text-[30px] leading-none tabular-nums">
+                                <span className="truncate text-2xl leading-none tabular-nums">
                                     {money(monthExpense)}
                                 </span>
                             </div>
-                            <div className="mt-4 h-[7px] overflow-hidden rounded-full bg-rule">
+                            <div className="mt-4 h-[4px] overflow-hidden rounded-full bg-track">
                                 <div
                                     className="h-full rounded-full bg-brand transition-[width] duration-500"
                                     style={{
@@ -422,27 +510,32 @@ export default function Page() {
                         <div className="flex min-w-0 flex-col pl-4">
                             <button
                                 type="button"
-                                className="flex w-full cursor-pointer items-center gap-1.5 text-[13px] leading-none text-ink-secondary"
+                                className="flex w-full cursor-pointer items-center gap-1.5 text-xs leading-none text-ink-secondary"
                                 onClick={() => {
                                     showScheduled();
                                 }}
                             >
-                                <i className="icon-[mdi--calendar-check-outline] size-4 flex-shrink-0 text-brand"></i>
+                                <img
+                                    src="/overview/todo.svg"
+                                    alt=""
+                                    draggable={false}
+                                    className="size-5 flex-shrink-0 select-none"
+                                />
                                 <span className="truncate">
                                     {t("today-todo")}
                                 </span>
-                                <i className="icon-[mdi--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
+                                <i className="icon-[lucide--chevron-right] ml-auto size-4 flex-shrink-0 text-ink-secondary/60"></i>
                             </button>
-                            <div className="mt-[10px] font-display font-bold tracking-tight text-ink-warm">
-                                <span className="text-[30px] leading-none tabular-nums">
+                            <div className="mt-3 font-display font-bold tracking-tight text-ink-warm">
+                                <span className="text-2xl leading-none tabular-nums">
                                     {doneToday}
                                 </span>
-                                <span className="text-[15px] text-ink-secondary">
+                                <span className="text-[13px] text-ink-secondary">
                                     {" "}
                                     / {dueToday.length}
                                 </span>
                             </div>
-                            <div className="mt-[10px] flex items-center gap-2 text-xs leading-none text-ink-secondary">
+                            <div className="mt-3 flex items-center gap-2 text-xs leading-none text-ink-secondary">
                                 <span className="size-3.5 flex-shrink-0 rounded-full border-2 border-rule"></span>
                                 <span className="truncate">
                                     {t("today-done")} {todoPercent}%
@@ -453,25 +546,29 @@ export default function Page() {
                 </section>
 
                 <TicketCard
-                    className="mt-8"
-                    mascotPos="right"
+                    className="mt-7"
+                    variant="home"
+                    decorations={false}
+                    divider={false}
+                    topClassName="px-[19px]"
+                    bottomClassName="px-[19px] pb-[6px]"
                     mascot={
                         <img
-                            src={xiaoji}
+                            src={xiaonuan}
                             alt=""
                             draggable={false}
-                            className="pointer-events-none h-[58px] w-auto select-none"
+                            className="pointer-events-none h-full w-auto select-none"
                         />
                     }
                     top={
                         <>
-                            <div className="flex items-center gap-2">
-                                <i className="icon-[mdi--shimmer-outline] size-[18px] text-brand"></i>
-                                <h2 className="text-[17px] font-bold text-brand">
+                            <div className="flex items-center gap-1.5">
+                                <i className="icon-[apk--ai-summary-icon] size-5"></i>
+                                <h2 className="text-[15px] font-bold leading-5 text-summary-title">
                                     {t("daily-summary")}
                                 </h2>
                             </div>
-                            <p className="mt-3 text-sm leading-6 text-ink-secondary">
+                            <p className="mt-3.5 text-[13px] leading-[26px] text-summary-body">
                                 {summaryBullets
                                     .map((item) => item.text)
                                     .join(" ")}
@@ -479,32 +576,33 @@ export default function Page() {
                         </>
                     }
                     bottom={
-                        <div className="flex flex-col empty:hidden">
+                        <div className="mt-3 flex flex-col empty:hidden">
                             {summaryBullets.length > 1 &&
                                 summaryBullets.map((item) => (
                                     <button
                                         key={item.key}
                                         type="button"
-                                        className="flex cursor-pointer items-center justify-between gap-3 py-1.5 text-left text-[13px] text-ink-secondary"
+                                        className="flex cursor-pointer items-start gap-2 py-[9px] text-left text-xs leading-5 text-summary-item"
                                         onClick={() => {
                                             navigate(item.to);
                                         }}
                                     >
-                                        <span className="line-clamp-2">
+                                        <span className="mr-1 mt-[8px] size-[3px] flex-shrink-0 rounded-full bg-summary-dot" />
+                                        <span className="line-clamp-2 flex-1">
                                             {item.text}
                                         </span>
-                                        <i className="icon-[mdi--chevron-right] size-4 flex-shrink-0"></i>
+                                        <i className="icon-[lucide--chevron-right] mt-0.5 size-4 flex-shrink-0 text-summary-item/60"></i>
                                     </button>
                                 ))}
                         </div>
                     }
                 />
 
-                <section className="mt-6">
-                    <h2 className="text-base font-bold">
+                <section className="mt-5">
+                    <h2 className="dp-text-medium text-[15px]">
                         {t("recent-reminders")}
                     </h2>
-                    <div className="mt-3 flex flex-col gap-2">
+                    <div className="mt-2 flex flex-col gap-2">
                         {reminders.length > 0 ? (
                             reminders.map((reminder) => (
                                 <button
@@ -556,8 +654,10 @@ export default function Page() {
                 </section>
 
                 {homeWidgets.length > 0 && (
-                    <section className="mt-6">
-                        <h2 className="text-base font-bold">{t("widgets")}</h2>
+                    <section className="mt-5">
+                        <h2 className="dp-text-medium text-[15px]">
+                            {t("widgets")}
+                        </h2>
                         <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scrollbar-hidden">
                             {homeWidgets.map((widget) => (
                                 <div

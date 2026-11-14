@@ -92,7 +92,7 @@ export default function VehiclePage() {
                     className="flex size-11 cursor-pointer items-center justify-center rounded-full bg-ground-muted/60"
                     onClick={() => navigate(-1)}
                 >
-                    <i className="icon-[mdi--chevron-left] size-6 text-ink" />
+                    <i className="icon-[lucide--chevron-left] size-6 text-ink" />
                 </button>
                 <h1 className="min-w-0 flex-1 text-center font-display text-xl font-bold">
                     {t("vehicle-title")}
@@ -103,7 +103,7 @@ export default function VehiclePage() {
             <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-8">
                 {vehicles.length === 0 ? (
                     <div className="flex flex-1 flex-col items-center justify-center gap-3 py-24 text-center">
-                        <i className="icon-[mdi--car-outline] size-16 text-ink-secondary/40" />
+                        <i className="icon-[lucide--car] size-16 text-ink-secondary/40" />
                         <h2 className="font-display text-xl font-bold">
                             {t("vehicle-empty-title")}
                         </h2>
@@ -202,7 +202,7 @@ export default function VehiclePage() {
                                 )
                             }
                         >
-                            <i className="icon-[mdi--plus]" />
+                            <i className="icon-[lucide--plus]" />
                             {t("vehicle-add-record")}
                         </Button>
                     </>
@@ -271,12 +271,12 @@ function RecordCard({
                     <i
                         className={cn(
                             "size-5",
-                            record.type === "fuel" && "icon-[mdi--gas-station]",
+                            record.type === "fuel" && "icon-[lucide--fuel]",
                             record.type === "maintenance" &&
-                                "icon-[mdi--wrench-outline]",
-                            record.type === "repair" && "icon-[mdi--tools]",
+                                "icon-[lucide--wrench]",
+                            record.type === "repair" && "icon-[lucide--wrench]",
                             record.type === "other" &&
-                                "icon-[mdi--dots-horizontal]",
+                                "icon-[lucide--ellipsis]",
                         )}
                     />
                 </div>
@@ -319,7 +319,7 @@ function RecordCard({
                 className="flex size-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted"
                 onClick={onDelete}
             >
-                <i className="icon-[mdi--delete-outline] size-4" />
+                <i className="icon-[apk--trash] size-4" />
             </button>
         </div>
     );

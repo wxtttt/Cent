@@ -423,6 +423,7 @@ export const CalculatorValue = ({
                 valueRef.current = node;
             }}
             data-calculator-value
+            data-no-focus-ring
             role="textbox"
             aria-label={label}
             tabIndex={0}
@@ -506,10 +507,13 @@ export const CalculatorKeyboard = ({
     onAction?: () => void;
 }) => {
     const t = useIntl();
-    const { handleButtonClick, Layout, valueRef } =
+    const { handleButtonClick, Layout, valueRef, formula } =
         useContext(CalculatorContext)!;
 
     if (variant === "sheet") {
+        // 公式里带着运算符时，橙色主键从「完成」变成「=」：先结算，再完成
+        const activeOperator =
+            formula.length > 1 ? (formula[1] as Operator) : undefined;
         const press = (label: string) => {
             handleButtonClick(label);
             if (label !== "r") {
@@ -517,35 +521,51 @@ export const CalculatorKeyboard = ({
             }
             onKey?.(label);
         };
-        const renderKey = (label: string) => (
-            <Button
-                variant="ghost"
-                key={label}
-                data-label={label}
-                type="button"
-                onPointerDown={(event) => {
-                    if (event.button !== 0) return;
-                    event.preventDefault();
-                    press(label);
-                }}
-                onClick={(event) => {
-                    if (event.detail !== 0) return;
-                    press(label);
-                }}
-                className={cn(
-                    "h-full rounded-2xl bg-panel text-2xl font-medium transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] active:scale-[0.98] active:bg-ground-muted",
-                    label === "c" && "text-ink-secondary",
-                )}
-            >
-                {label === "c" ? (
-                    <i className="icon-[mdi--backspace-outline] size-6" />
-                ) : label === "-" ? (
-                    "−"
-                ) : (
-                    label
-                )}
-            </Button>
-        );
+        const triggerAction = () => {
+            if (activeOperator) {
+                press("=");
+            } else {
+                onAction?.();
+            }
+        };
+        const renderKey = (label: string) => {
+            // 加减键与数字键共用同一套基础样式；按下后用与二级分类一致的橙色描边框标记激活
+            const opActive =
+                (label === "+" || label === "-") &&
+                activeOperator === (label as Operator);
+            return (
+                <Button
+                    variant="ghost"
+                    key={label}
+                    data-label={label}
+                    type="button"
+                    onPointerDown={(event) => {
+                        if (event.button !== 0) return;
+                        event.preventDefault();
+                        press(label);
+                    }}
+                    onClick={(event) => {
+                        if (event.detail !== 0) return;
+                        press(label);
+                    }}
+                    className={cn(
+                        "h-full rounded-2xl border text-2xl font-medium transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] active:scale-[0.98]",
+                        opActive
+                            ? "border-brand bg-[#f6e0d2] text-brand hover:bg-[#f6e0d2] hover:text-brand"
+                            : "border-transparent bg-panel text-ink active:bg-ground-muted",
+                        label === "c" && "text-ink-secondary",
+                    )}
+                >
+                    {label === "c" ? (
+                        <i className="icon-[lucide--delete] size-6" />
+                    ) : label === "-" ? (
+                        "−"
+                    ) : (
+                        label
+                    )}
+                </Button>
+            );
+        };
         return (
             <div
                 className={cn(
@@ -559,18 +579,22 @@ export const CalculatorKeyboard = ({
                 <Button
                     variant="ghost"
                     type="button"
+                    data-label={activeOperator ? "=" : "done"}
                     onPointerDown={(event) => {
                         if (event.button !== 0) return;
                         event.preventDefault();
-                        onAction?.();
+                        triggerAction();
                     }}
                     onClick={(event) => {
                         if (event.detail !== 0) return;
-                        onAction?.();
+                        triggerAction();
                     }}
-                    className="col-start-4 row-span-2 row-start-3 h-full rounded-2xl bg-brand text-lg font-semibold text-on-brand transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] hover:bg-brand/90 active:scale-[0.98]"
+                    className={cn(
+                        "col-start-4 row-span-2 row-start-3 h-full rounded-2xl bg-brand font-semibold text-on-brand transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] hover:bg-brand/90 active:scale-[0.98]",
+                        activeOperator ? "text-3xl" : "text-lg",
+                    )}
                 >
-                    {actionLabel ?? t("done")}
+                    {activeOperator ? "=" : (actionLabel ?? t("done"))}
                 </Button>
                 {[".", "0", "c"].map(renderKey)}
             </div>
@@ -614,10 +638,10 @@ export const CalculatorKeyboard = ({
                     )}
                 >
                     {row.label === "c" ? (
-                        <i className="icon-[mdi--clear-outline]"></i>
+                        <i className="icon-[lucide--eraser]"></i>
                     ) : row.label === "r" ? (
                         <div className="flex flex-col gap-1 items-center">
-                            <i className="icon-[mdi--reload]"></i>
+                            <i className="icon-[lucide--rotate-ccw]"></i>
                             <div className="text-xs">{t("add-again")}</div>
                         </div>
                     ) : row.label === "x" ? (

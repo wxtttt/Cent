@@ -1,5 +1,12 @@
 import dayjs from "dayjs";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import { toast } from "sonner";
 import { useAutoRules } from "@/hooks/use-auto-rules";
 import useCategory from "@/hooks/use-category";
@@ -17,23 +24,28 @@ import { cn } from "@/utils";
 import { decodeApiKey } from "@/utils/api-key";
 import { getPredictNow } from "@/utils/predict";
 import { showTagList } from "../bill-tag";
-import { showCategoryList } from "../category";
-import CategoryIcon from "../category/icon";
+import { showCurrencyList } from "../currency";
 import Deletable from "../deletable";
 import { FORMAT_IMAGE_SUPPORTED, showFilePicker } from "../file-picker";
 import SmartImage from "../image";
-import IOSUnscrolledInput from "../input";
 import Calculator from "../keyboard";
 import {
     LocationPickerProvider,
     showLocationPicker,
 } from "../map/location-picker";
 import CurrentLocation from "../simple-location";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
 import { WheelDatePicker } from "../wheel-date-picker";
-import { goAddBill } from ".";
-import { RemarkHint } from "./remark";
+import {
+    BillCategoryCell,
+    type BillCategoryGroup,
+    BillCategorySheetProvider,
+    showBillCategorySheet,
+} from "./category-sheet";
+import {
+    BillCurrencySheetProvider,
+    showBillCurrencySheet,
+} from "./currency-sheet";
+import { RemarkSheetProvider, showRemarkSheet } from "./remark";
 import TagGroupSelector from "./tag-group";
 
 const defaultBill = {
@@ -43,47 +55,46 @@ const defaultBill = {
     categoryId: ExpenseBillCategories[0].id,
 };
 
-function CategoryTile({
-    category,
-    selected,
-    onClick,
-    className,
-}: {
-    category: BillCategory;
-    selected?: boolean;
-    onClick?: () => void;
-    className?: string;
-}) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={cn(
-                "flex min-w-0 flex-col items-center gap-1.5",
-                className,
-            )}
-        >
-            <div
-                className={cn(
-                    "flex size-11 items-center justify-center rounded-2xl transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
-                    selected
-                        ? "bg-brand/10 text-brand ring-1 ring-brand/30"
-                        : "bg-ground-muted text-ink",
-                )}
-            >
-                <CategoryIcon icon={category.icon} className="size-6" />
-            </div>
-            <span
-                className={cn(
-                    "w-full truncate text-center text-xs",
-                    selected ? "font-medium text-brand" : "text-ink-secondary",
-                )}
-            >
-                {category.name}
-            </span>
-        </button>
+type CategoryTree = BillCategory & { children?: BillCategory[] };
+
+/** 一级行里的虚拟分组：最近 10 天最常用的二级分类 */
+const FREQUENT_GROUP_ID = "frequent";
+const FREQUENT_WINDOW_MS = 10 * 24 * 60 * 60 * 1000;
+
+/** 二级分类的 id 要反查它所属的一级大类，一级 id 本身也要能命中 */
+const findGroupOfCategory = (groups: CategoryTree[], categoryId: string) =>
+    groups.find(
+        (group) =>
+            group.id === categoryId ||
+            group.children?.some((child) => child.id === categoryId),
     );
-}
+
+/** 最近 10 天、指定收支类型、按使用次数降序的常用二级分类。
+ *  抽成纯函数让「初始默认值」和「切换收支类型」都能同步取到同一种口径。 */
+const pickFrequentCategories = (
+    bills: readonly Pick<Bill, "time" | "type" | "categoryId">[],
+    groups: CategoryTree[],
+    type: BillType,
+): BillCategory[] => {
+    const cutoff = Date.now() - FREQUENT_WINDOW_MS;
+    const counts = new Map<string, number>();
+    for (const bill of bills) {
+        if (bill.time < cutoff || bill.type !== type) {
+            continue;
+        }
+        counts.set(bill.categoryId, (counts.get(bill.categoryId) ?? 0) + 1);
+    }
+    const subs = new Map(
+        groups
+            .flatMap((group) => group.children ?? [])
+            .map((child) => [child.id, child]),
+    );
+    return [...counts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([id]) => subs.get(id))
+        .filter((child): child is BillCategory => Boolean(child))
+        .slice(0, 10);
+};
 
 export default function EditorForm({
     edit,
@@ -94,10 +105,23 @@ export default function EditorForm({
 }) {
     const t = useIntl();
 
-    const { baseCurrency, convert, quickCurrencies, allCurrencies } =
-        useCurrency();
+    const { baseCurrency, convert, allCurrencies } = useCurrency();
 
     const { incomes, expenses, categories: allCategories } = useCategory();
+    const bills = useLedgerStore((state) => state.bills);
+
+    // 账本首屏只加载 200 条，最近 10 天的常用统计需要全量账单
+    const refreshedBillsRef = useRef(false);
+    useEffect(() => {
+        if (refreshedBillsRef.current) {
+            return;
+        }
+        refreshedBillsRef.current = true;
+        void useLedgerStore
+            .getState()
+            .refreshBillList()
+            .catch(() => undefined);
+    }, []);
 
     const isCreate = edit === undefined;
 
@@ -132,7 +156,8 @@ export default function EditorForm({
         if (!category) {
             return categoryId;
         }
-        const defaultSub = category.children.find((v) => v.defaultSelect);
+        // 选中一级分组时默认落到它的第一个二级分类
+        const defaultSub = category.children[0];
         if (!defaultSub) {
             return categoryId;
         }
@@ -155,61 +180,143 @@ export default function EditorForm({
         return init;
     });
 
-    const handleParentCategoryClick = (parentCategoryId: string) => {
-        // 点击父类时，如果此前选中的【是该父类的子类】，则直接选中该父类
-        // 否则选中该父类的 MatchDefault 类别
-        setBillState((prev) => {
-            const parentCategory = [...incomes, ...expenses].find(
-                (c) => c.id === parentCategoryId,
-            );
-            const isPrevParentsChild = parentCategory?.children.some(
-                (c) => c.id === prev.categoryId,
-            );
-            if (isPrevParentsChild) {
-                return {
-                    ...prev,
-                    categoryId: parentCategoryId,
-                };
-            }
-            return {
-                ...prev,
-                categoryId: getMatchDefaultCategory(parentCategoryId),
-            };
-        });
-    };
-
     const categories = billState.type === "expense" ? expenses : incomes;
 
-    const subCategories = useMemo(() => {
-        const selected = categories.find(
-            (c) =>
-                c.id === billState.categoryId ||
-                c.children.some((s) => s.id === billState.categoryId),
-        );
-        if (selected?.children) {
-            return selected.children;
-        }
-        return categories.find((c) => c.id === selected?.parent)?.children;
-    }, [billState.categoryId, categories]);
-
-    const selectedParent = categories.find(
-        (c) =>
-            c.id === billState.categoryId ||
-            c.children.some((s) => s.id === billState.categoryId),
+    // 一级分组只有文字，用来切换；二级分类才有插画图标
+    const categoryGroups = useMemo<BillCategoryGroup[]>(
+        () =>
+            categories.map((group) => ({
+                id: group.id,
+                name: group.name,
+                children: group.children ?? [],
+            })),
+        [categories],
     );
 
-    // 快速分类只保留 4 个位置，选中的分类若不在前四个则替换末位
-    const quickCategories = useMemo(() => {
-        const list = categories.slice(0, 4);
-        if (selectedParent && !list.some((c) => c.id === selectedParent.id)) {
-            if (list.length < 4) {
-                list.push(selectedParent);
-            } else {
-                list[list.length - 1] = selectedParent;
-            }
+    // 最近 10 天、同收支类型、按使用次数排序的 10 个二级分类
+    const frequentCategories = useMemo(
+        () => pickFrequentCategories(bills, categories, billState.type),
+        [bills, categories, billState.type],
+    );
+
+    const [activeGroupId, setActiveGroupId] = useState(
+        () =>
+            findGroupOfCategory(categories, billState.categoryId)?.id ??
+            categories[0]?.id ??
+            "",
+    );
+
+    // 默认选中「常用」第一个 + 一级高亮同步，必须放在同一个 effect 里：
+    // 两个 effect 会读到同一批次的旧 state，后者会把「常用」按所属大类覆盖掉。
+    const defaultCategoryRef = useRef(billState.categoryId);
+    const frequentDefaultAppliedRef = useRef(false);
+    useEffect(() => {
+        // 新建账单默认落在「常用」的第一个二级分类，而不是第一个一级大类的首个二级。
+        // 常用依赖异步全量账单，数据就绪后应用一次；若用户此时已手动选过分类
+        // （categoryId 不再是初始值），说明是明确选择，不再接管。
+        const first = frequentCategories[0];
+        if (
+            isCreate &&
+            !frequentDefaultAppliedRef.current &&
+            billState.categoryId === defaultCategoryRef.current &&
+            first
+        ) {
+            frequentDefaultAppliedRef.current = true;
+            defaultCategoryRef.current = first.id;
+            setActiveGroupId(FREQUENT_GROUP_ID);
+            setBillState((v) => ({ ...v, categoryId: first.id }));
+            // 本轮不要再按 categoryId 反查大类，否则刚设的「常用」会被覆盖
+            return;
         }
-        return list;
-    }, [categories, selectedParent]);
+        // 预测分类、自动规则建议、抽屉选择、编辑回填改了 categoryId 时，一级高亮
+        // 跟着所属大类同步；「常用」是跨大类虚拟分组，停在这里时不跳走
+        if (activeGroupId === FREQUENT_GROUP_ID) {
+            return;
+        }
+        const owner = findGroupOfCategory(categories, billState.categoryId);
+        if (owner) {
+            setActiveGroupId(owner.id);
+        }
+    }, [
+        isCreate,
+        frequentCategories,
+        categories,
+        billState.categoryId,
+        activeGroupId,
+    ]);
+
+    const isFrequentGroup = activeGroupId === FREQUENT_GROUP_ID;
+    const activeGroup = categoryGroups.find(
+        (group) => group.id === activeGroupId,
+    );
+    const groupSubCategories = isFrequentGroup
+        ? frequentCategories
+        : (activeGroup?.children ?? []);
+    // 一级行横滑提示：还有内容可滑时才显示右缘淡出 + 箭头
+    const [groupRowAtEnd, setGroupRowAtEnd] = useState(false);
+    const syncGroupRowScroll = useCallback((el: HTMLDivElement) => {
+        setGroupRowAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+    }, []);
+
+    // 从抽屉选中靠后的大类后，把对应 chip 横向滚进可视区
+    const groupRowRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const container = groupRowRef.current;
+        if (!container) {
+            return;
+        }
+        syncGroupRowScroll(container);
+        const chip = container.querySelector<HTMLElement>(
+            `[data-group="${activeGroupId}"]`,
+        );
+        if (!chip) {
+            return;
+        }
+        const bounds = container.getBoundingClientRect();
+        const target = chip.getBoundingClientRect();
+        if (target.left < bounds.left || target.right > bounds.right) {
+            container.scrollTo({
+                left: container.scrollLeft + (target.left - bounds.left) - 12,
+                behavior: "smooth",
+            });
+        }
+    }, [activeGroupId, syncGroupRowScroll]);
+
+    // 下划线是单个指示器：放在滚动内容里随横滑移动，切换大类时 translateX 滑到目标项中心
+    const [groupIndicatorX, setGroupIndicatorX] = useState<number | null>(null);
+    useLayoutEffect(() => {
+        const chip = groupRowRef.current?.querySelector<HTMLElement>(
+            `[data-group="${activeGroupId}"]`,
+        );
+        if (!chip) {
+            return;
+        }
+        setGroupIndicatorX(chip.offsetLeft + chip.offsetWidth / 2 - 12);
+    }, [activeGroupId]);
+
+    // 二级分类整行左右划：切大类或从抽屉选中靠后的二级，都自动滚到可见位置
+    const subRowRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const container = subRowRef.current;
+        if (!container) {
+            return;
+        }
+        const cell = container.querySelector<HTMLElement>(
+            `[data-sub="${billState.categoryId}"]`,
+        );
+        if (!cell) {
+            container.scrollTo({ left: 0 });
+            return;
+        }
+        const bounds = container.getBoundingClientRect();
+        const target = cell.getBoundingClientRect();
+        if (target.left < bounds.left || target.right > bounds.right) {
+            container.scrollTo({
+                left: container.scrollLeft + (target.left - bounds.left) - 12,
+                behavior: "smooth",
+            });
+        }
+    }, [billState.categoryId]);
 
     // 自动记账规则建议：备注命中规则且目标分类与当前不同时提示，由用户点击确认
     const { rules: autoRules } = useAutoRules();
@@ -242,19 +349,21 @@ export default function EditorForm({
         : "";
 
     const changeType = (type: BillType) => {
-        setBillState((v) => {
-            if (v.type === type) {
-                return v;
-            }
-            return {
-                ...v,
-                type,
-                categoryId:
-                    type === "expense"
-                        ? ExpenseBillCategories[0].id
-                        : IncomeBillCategories[0].id,
-            };
-        });
+        if (billState.type === type) {
+            return;
+        }
+        // 切换收支类型等于重新进入默认态，同样优先落到该类型的「常用」第一个
+        const nextGroups = type === "expense" ? expenses : incomes;
+        const first = pickFrequentCategories(bills, nextGroups, type)[0];
+        const defaultId =
+            first?.id ??
+            (type === "expense"
+                ? getMatchDefaultCategory(ExpenseBillCategories[0].id)
+                : getMatchDefaultCategory(IncomeBillCategories[0].id));
+        defaultCategoryRef.current = defaultId;
+        frequentDefaultAppliedRef.current = true;
+        setActiveGroupId(first ? FREQUENT_GROUP_ID : (nextGroups[0]?.id ?? ""));
+        setBillState((v) => ({ ...v, type, categoryId: defaultId }));
     };
 
     const toConfirm = useCallback(() => {
@@ -262,16 +371,6 @@ export default function EditorForm({
             ...billState,
         });
     }, [onConfirm, billState]);
-
-    const toAddAgain = () => {
-        toConfirm();
-        setTimeout(() => {
-            goAddBill({
-                ...defaultBill,
-                time: billState.time,
-            });
-        }, 10);
-    };
 
     const chooseImage = async () => {
         const [file] = await showFilePicker({ accept: FORMAT_IMAGE_SUPPORTED });
@@ -360,7 +459,70 @@ export default function EditorForm({
           ? amountToNumber(billState?.amount)
           : 0;
 
-    const [moreOpen, setMoreOpen] = useState(false);
+    // 点一级大类（含「常用」）：切换分组并自动选中该组第一个二级分类
+    const chooseGroupById = (id: string) => {
+        setActiveGroupId(id);
+        const children =
+            id === FREQUENT_GROUP_ID
+                ? frequentCategories
+                : (categoryGroups.find((group) => group.id === id)?.children ??
+                  []);
+        const first = children[0];
+        if (first) {
+            setBillState((v) => ({ ...v, categoryId: first.id }));
+        }
+    };
+
+    // 点「更多」：从底部上滑分类抽屉，不显示浮层
+    const openCategorySheet = async () => {
+        const result = await showBillCategorySheet({
+            groups: categoryGroups,
+            selectedId: billState.categoryId,
+            frequent: frequentCategories,
+            type: billState.type,
+        }).catch(() => undefined);
+        if (!result) {
+            return;
+        }
+        const { categoryId } = result;
+        if (categoryId) {
+            setBillState((v) => ({ ...v, categoryId }));
+            // 抽屉里可以选任意大类的二级，一级高亮要跟着切过去
+            const owner = findGroupOfCategory(categories, categoryId);
+            if (owner) {
+                setActiveGroupId(owner.id);
+            }
+        }
+    };
+
+    // 点金额前的货币符号：从底部上滑选择账单币种，复用原有汇率换算逻辑
+    const openCurrencySheet = async () => {
+        const result = await showBillCurrencySheet({
+            selectedId: targetCurrency.id,
+        }).catch(() => undefined);
+        if (!result) {
+            return;
+        }
+        if (result.manage) {
+            showCurrencyList();
+            return;
+        }
+        if (result.currencyId) {
+            changeCurrency(result.currencyId);
+        }
+    };
+
+    // 点备注：从底部上滑一层抽屉输入，推荐备注也收进抽屉里
+    const openRemarkSheet = async () => {
+        const value = await showRemarkSheet({
+            value: billState.comment ?? "",
+            recommends: predictComments,
+        }).catch(() => undefined);
+        if (value === undefined) {
+            return;
+        }
+        setBillState((v) => ({ ...v, comment: value }));
+    };
 
     const tagSelectorRef = useRef<HTMLDivElement>(null);
     useWheelScrollX(tagSelectorRef);
@@ -374,6 +536,9 @@ export default function EditorForm({
         intl.locale === "zh" ? "M月D日 HH:mm" : "MMM D, HH:mm",
     );
 
+    // meta 行：宽度仍随内容，但高度、内边距统一，靠容器统一 gap 保证相邻间距一致
+    const metaChipClass =
+        "flex h-9 flex-shrink-0 items-center justify-center gap-1.5 rounded-full bg-panel px-3 text-sm";
     const iconChipClass =
         "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-panel text-ink-secondary";
 
@@ -406,7 +571,7 @@ export default function EditorForm({
             }}
         >
             <PopupLayout
-                className="h-full scrollbar-hidden"
+                className="h-full scrollbar-hidden pb-0!"
                 hideBack
                 handle
                 title={
@@ -433,119 +598,155 @@ export default function EditorForm({
             >
                 <div className="flex min-h-0 flex-1 flex-col">
                     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-hidden">
-                        {/* categories */}
+                        {/* 吸收剩余高度，让金额框贴近键盘，不在两者之间留大块空白 */}
+                        <div className="min-h-0 flex-1" aria-hidden />
+                        {/* categories：一级大类横滑 + 二级分类左右划 + 右边缘小展开按钮 */}
                         <div
                             data-sheet-drag
-                            className="mx-3 flex-shrink-0 rounded-[22px] bg-panel px-2 pb-3 pt-2.5"
+                            className="mx-3 flex-shrink-0 overflow-hidden rounded-[22px] bg-panel"
                         >
-                            <div className="flex items-start gap-1">
-                                {quickCategories.map((item) => (
-                                    <CategoryTile
-                                        key={item.id}
-                                        category={item}
-                                        selected={
-                                            selectedParent?.id === item.id
-                                        }
-                                        className="flex-1"
-                                        onClick={() =>
-                                            handleParentCategoryClick(item.id)
-                                        }
-                                    />
-                                ))}
-                                <Popover
-                                    open={moreOpen}
-                                    onOpenChange={setMoreOpen}
+                            {/* 一级行白底顶到卡片上沿与左右边缘：选中只靠橙字 + 下划线；
+                                下划线单个指示器在滚动内容里滑动，右缘渐变暗示可以横滑 */}
+                            <div className="relative">
+                                <div
+                                    ref={groupRowRef}
+                                    onScroll={(event) =>
+                                        syncGroupRowScroll(event.currentTarget)
+                                    }
+                                    className="h-10 overflow-x-auto bg-panel scrollbar-hidden"
                                 >
-                                    <PopoverTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className="flex min-w-0 flex-1 flex-col items-center gap-1.5"
-                                        >
-                                            <div className="flex size-11 items-center justify-center rounded-2xl bg-ground-muted text-ink-secondary">
-                                                <i className="icon-[mdi--dots-horizontal] size-6" />
-                                            </div>
-                                            <span className="text-xs text-ink-secondary">
-                                                {t("more")}
-                                            </span>
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                        align="end"
-                                        side="top"
-                                        sideOffset={10}
-                                        className="w-[min(88vw,340px)] rounded-2xl p-3"
-                                    >
-                                        <div className="grid grid-cols-4 gap-x-1 gap-y-3">
-                                            {categories.map((item) => (
-                                                <CategoryTile
-                                                    key={item.id}
-                                                    category={item}
-                                                    selected={
-                                                        selectedParent?.id ===
-                                                        item.id
+                                    <div className="relative flex h-10 w-max min-w-full items-center">
+                                        {[
+                                            {
+                                                id: FREQUENT_GROUP_ID,
+                                                name: t("bill-frequent"),
+                                            },
+                                            ...categoryGroups.map((group) => ({
+                                                id: group.id,
+                                                name: group.name,
+                                            })),
+                                        ].map((group) => {
+                                            const active =
+                                                group.id === activeGroupId;
+                                            return (
+                                                <button
+                                                    key={group.id}
+                                                    type="button"
+                                                    data-group={group.id}
+                                                    onClick={() =>
+                                                        chooseGroupById(
+                                                            group.id,
+                                                        )
                                                     }
-                                                    className="w-full"
-                                                    onClick={() => {
-                                                        handleParentCategoryClick(
-                                                            item.id,
-                                                        );
-                                                        setMoreOpen(false);
+                                                    className={cn(
+                                                        "flex h-10 min-w-[50px] shrink-0 items-center justify-center px-1.5 text-[12px] transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
+                                                        active
+                                                            ? "font-medium text-brand"
+                                                            : "text-ink-secondary/80 hover:text-ink-secondary",
+                                                    )}
+                                                >
+                                                    {group.name}
+                                                </button>
+                                            );
+                                        })}
+                                        <span
+                                            aria-hidden
+                                            className="absolute bottom-0 left-0 h-[3px] w-6 rounded-t-full bg-brand transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                                            style={{
+                                                transform: `translateX(${groupIndicatorX ?? 0}px)`,
+                                                opacity:
+                                                    groupIndicatorX === null
+                                                        ? 0
+                                                        : 1,
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                {/* 右缘只用渐变淡出暗示还能横滑，不再放箭头；滑到底自动隐藏 */}
+                                {!groupRowAtEnd && (
+                                    <div
+                                        className="pointer-events-none absolute inset-y-0 right-0 w-20"
+                                        style={{
+                                            background:
+                                                "linear-gradient(to right, transparent 0%, var(--dp-color-panel) 100%)",
+                                        }}
+                                    />
+                                )}
+                            </div>
+
+                            {/* 白色区域上下留白对称，让二级图标行垂直居中于白色区；
+                                留白收至 10px：一级行与二级图标之间原本 14px 显得空 */}
+                            <div className="flex items-center gap-1.5 px-3 py-2.5">
+                                <div className="relative min-w-0 flex-1">
+                                    {groupSubCategories.length === 0 ? (
+                                        <div className="flex h-[72px] items-center justify-center text-[12px] text-ink-secondary">
+                                            {isFrequentGroup
+                                                ? t("bill-frequent-empty")
+                                                : t("inventory-empty")}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div
+                                                ref={subRowRef}
+                                                className="flex gap-3 overflow-x-auto scrollbar-hidden"
+                                            >
+                                                {groupSubCategories.map(
+                                                    (item) => (
+                                                        <div
+                                                            key={item.id}
+                                                            data-sub={item.id}
+                                                            className="w-[calc((100%-48px)/5)] shrink-0"
+                                                        >
+                                                            <BillCategoryCell
+                                                                category={item}
+                                                                selected={
+                                                                    billState.categoryId ===
+                                                                    item.id
+                                                                }
+                                                                onClick={() =>
+                                                                    setBillState(
+                                                                        (
+                                                                            v,
+                                                                        ) => ({
+                                                                            ...v,
+                                                                            categoryId:
+                                                                                item.id,
+                                                                        }),
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                            {groupSubCategories.length > 5 && (
+                                                <div
+                                                    className="pointer-events-none absolute inset-y-0 right-0 w-12"
+                                                    style={{
+                                                        background:
+                                                            "linear-gradient(to left, var(--dp-color-panel), transparent)",
                                                     }}
                                                 />
-                                            ))}
-                                        </div>
-                                        <button
-                                            type="button"
-                                            className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-ground-muted text-xs text-ink-secondary"
-                                            onClick={() => {
-                                                setMoreOpen(false);
-                                                showCategoryList(
-                                                    billState.type,
-                                                );
-                                            }}
-                                        >
-                                            <i className="icon-[mdi--cog-outline] size-4" />
-                                            {t("edit-categories")}
-                                        </button>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                            {(subCategories?.length ?? 0) > 0 && (
-                                <div className="mt-2.5 flex gap-1.5 overflow-x-auto scrollbar-hidden">
-                                    {subCategories?.map((subCategory) => {
-                                        const selected =
-                                            billState.categoryId ===
-                                            subCategory.id;
-                                        return (
-                                            <button
-                                                key={subCategory.id}
-                                                type="button"
-                                                className={cn(
-                                                    "h-7 flex-shrink-0 rounded-full px-3 text-xs transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)]",
-                                                    selected
-                                                        ? "bg-brand/10 font-medium text-brand"
-                                                        : "bg-ground-muted text-ink-secondary",
-                                                )}
-                                                onClick={() =>
-                                                    setBillState((v) => ({
-                                                        ...v,
-                                                        categoryId:
-                                                            subCategory.id,
-                                                    }))
-                                                }
-                                            >
-                                                {subCategory.name}
-                                            </button>
-                                        );
-                                    })}
+                                            )}
+                                        </>
+                                    )}
                                 </div>
-                            )}
+                                <button
+                                    type="button"
+                                    aria-label={t("more")}
+                                    onClick={openCategorySheet}
+                                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand"
+                                >
+                                    <i className="icon-[lucide--layout-grid] size-3.5" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* meta chips */}
                         <div
                             ref={tagSelectorRef}
-                            className="mt-3 flex flex-shrink-0 items-center gap-2 overflow-x-auto px-3 scrollbar-hidden"
+                            data-meta-row
+                            className="mt-4 flex flex-shrink-0 items-center gap-3 overflow-x-auto px-3 scrollbar-hidden [&>*]:m-0 [&>*]:shrink-0"
                         >
                             <WheelDatePicker
                                 title={t("ledger")}
@@ -583,47 +784,13 @@ export default function EditorForm({
                                     });
                                 }}
                             >
-                                <div className="flex h-9 items-center gap-1.5 rounded-full bg-panel px-3 text-sm">
-                                    <i className="icon-[mdi--calendar-blank-outline] size-4 text-ink-secondary" />
+                                <div className={metaChipClass}>
+                                    <i className="icon-[lucide--calendar] size-4 text-ink-secondary" />
                                     <span className="whitespace-nowrap text-[15px] font-medium text-ink">
                                         {dateLabel}
                                     </span>
                                 </div>
                             </WheelDatePicker>
-
-                            {quickCurrencies.length > 0 ? (
-                                <Select
-                                    value={targetCurrency?.id}
-                                    onValueChange={changeCurrency}
-                                >
-                                    <SelectTrigger className="h-9 w-fit flex-shrink-0 gap-1.5 rounded-full border-0 bg-panel px-3 text-sm shadow-none [&>svg]:hidden">
-                                        <div className="flex items-center gap-1.5">
-                                            <i className="icon-[mdi--wallet-outline] size-4 text-ink-secondary" />
-                                            <span className="whitespace-nowrap text-[15px] font-medium text-ink">
-                                                {targetCurrency?.label}
-                                            </span>
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {quickCurrencies.map((currency) => (
-                                            <SelectItem
-                                                key={currency.id}
-                                                value={currency.id}
-                                            >
-                                                {currency.label}
-                                                {`(${currency.symbol})`}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            ) : (
-                                <div className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-panel px-3 text-sm">
-                                    <i className="icon-[mdi--wallet-outline] size-4 text-ink-secondary" />
-                                    <span className="whitespace-nowrap text-ink">
-                                        {baseCurrency.label}
-                                    </span>
-                                </div>
-                            )}
 
                             <TagGroupSelector
                                 isCreate={isCreate}
@@ -647,21 +814,8 @@ export default function EditorForm({
                                     showTagList();
                                 }}
                             >
-                                <i className="icon-[mdi--tag-outline] size-5" />
+                                <i className="icon-[lucide--tag] size-5" />
                             </button>
-
-                            {isCreate && (
-                                <button
-                                    type="button"
-                                    className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-panel px-3 text-sm text-ink-secondary"
-                                    onClick={toAddAgain}
-                                >
-                                    <i className="icon-[mdi--reload] size-4" />
-                                    <span className="whitespace-nowrap">
-                                        {t("add-again")}
-                                    </span>
-                                </button>
-                            )}
 
                             {billState.images?.map((img, index) => (
                                 <Deletable
@@ -689,7 +843,7 @@ export default function EditorForm({
                                     className={iconChipClass}
                                     onClick={chooseImage}
                                 >
-                                    <i className="icon-[mdi--image-plus-outline] size-5" />
+                                    <i className="icon-[lucide--image-plus] size-5" />
                                 </button>
                             )}
 
@@ -707,7 +861,7 @@ export default function EditorForm({
                                         className={iconChipClass}
                                         onClick={handlePickLocation}
                                     >
-                                        <i className="icon-[mdi--map-marker] size-5" />
+                                        <i className="icon-[lucide--map-pin] size-5" />
                                     </button>
                                 </Deletable>
                             ) : (
@@ -721,26 +875,33 @@ export default function EditorForm({
                                         }));
                                     }}
                                 >
-                                    <i className="icon-[mdi--add-location] size-5" />
+                                    <i className="icon-[lucide--map-pin-plus] size-5" />
                                 </CurrentLocation>
                             )}
                         </div>
 
-                        {/* amount */}
+                        {/* amount：iOS 底部安全区会吃掉内容区高度，顶部 spacer 压到 0 后
+                            金额框仍可能溢出到键盘底下；粘在内容区底部保证金额始终完整可见 */}
                         <div
                             data-sheet-drag
-                            className="mx-3 mt-3 flex-shrink-0 rounded-[22px] bg-panel px-4 py-3"
+                            className="sticky bottom-0 z-10 mx-3 mt-4 flex-shrink-0 rounded-[22px] bg-panel px-4 py-3"
                         >
-                            <div className="flex items-center gap-3">
+                            {/* 金额清空时数字容器会塌 4px，固定行高避免白框在 60/64px 间跳动 */}
+                            <div className="flex min-h-10 items-center gap-3">
                                 <div className="flex min-w-0 flex-1 items-baseline">
-                                    <span
+                                    <button
+                                        type="button"
+                                        aria-label={t("bill-choose-currency")}
+                                        data-currency-trigger
+                                        onClick={openCurrencySheet}
                                         className={cn(
-                                            "mr-0.5 text-2xl font-semibold",
+                                            "mr-0.5 flex shrink-0 items-baseline gap-0.5 text-2xl font-semibold",
                                             amountColor,
                                         )}
                                     >
-                                        {targetCurrency?.symbol}
-                                    </span>
+                                        <span>{targetCurrency?.symbol}</span>
+                                        <i className="icon-[lucide--chevron-down] size-3 self-center opacity-50" />
+                                    </button>
                                     <Calculator.Value
                                         label={t("amount")}
                                         onConfirm={toConfirm}
@@ -750,33 +911,42 @@ export default function EditorForm({
                                         )}
                                     />
                                 </div>
-                                <RemarkHint
-                                    recommends={predictComments}
-                                    onSelect={(v) => {
-                                        setBillState((prev) => ({
-                                            ...prev,
-                                            comment: `${prev.comment} ${v}`,
-                                        }));
-                                    }}
+                                {/* 备选 B：折算/负数提示是金额行右下角的 10px 角标，不另起一行 */}
+                                {(billState.currency ||
+                                    billState.amount < 0) && (
+                                    <span className="flex shrink-0 flex-col items-end gap-1 self-end pb-0.5 text-[10px] leading-none text-ink-secondary">
+                                        {billState.currency && (
+                                            <span className="whitespace-nowrap">
+                                                ≈ {baseCurrency.symbol}{" "}
+                                                {amountToNumber(
+                                                    billState.amount,
+                                                )}
+                                            </span>
+                                        )}
+                                        {billState.amount < 0 && (
+                                            <span className="whitespace-nowrap text-destructive">
+                                                {t("bill-negative-tip")}
+                                            </span>
+                                        )}
+                                    </span>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={openRemarkSheet}
+                                    className="flex h-9 w-24 flex-shrink-0 items-center justify-end"
                                 >
-                                    <div className="flex h-9 w-24 flex-shrink-0 items-center">
-                                        <IOSUnscrolledInput
-                                            value={billState.comment}
-                                            onChange={(e) => {
-                                                setBillState((v) => ({
-                                                    ...v,
-                                                    comment: e.target.value,
-                                                }));
-                                            }}
-                                            type="text"
-                                            className="w-full bg-transparent text-right text-sm text-ink placeholder:text-ink-secondary/60 outline-none"
-                                            placeholder={t(
-                                                "click-to-add-comment",
-                                            )}
-                                            enterKeyHint="done"
-                                        />
-                                    </div>
-                                </RemarkHint>
+                                    <span
+                                        className={cn(
+                                            "w-full truncate text-right text-sm",
+                                            billState.comment
+                                                ? "text-ink"
+                                                : "text-ink-secondary/60",
+                                        )}
+                                    >
+                                        {billState.comment ||
+                                            t("click-to-add-comment")}
+                                    </span>
+                                </button>
                             </div>
                             {ruleSuggestion && (
                                 <button
@@ -791,35 +961,18 @@ export default function EditorForm({
                                         }));
                                     }}
                                 >
-                                    <i className="icon-[mdi--auto-fix] size-3" />
+                                    <i className="icon-[lucide--wand-sparkles] size-3" />
                                     {t("auto-rule-suggest", {
                                         category: suggestedCategoryName,
                                     })}
                                 </button>
                             )}
-                            {(billState.currency || billState.amount < 0) && (
-                                <div className="mt-1 flex items-center justify-between text-[11px] text-ink-secondary">
-                                    {billState.currency ? (
-                                        <span>
-                                            ≈ {baseCurrency.symbol}{" "}
-                                            {amountToNumber(billState.amount)}{" "}
-                                            {baseCurrency.label}
-                                        </span>
-                                    ) : (
-                                        <span />
-                                    )}
-                                    {billState.amount < 0 && (
-                                        <span className="text-destructive">
-                                            {t("bill-negative-tip")}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
 
-                    {/* keypad */}
-                    <div className="mt-3 flex flex-shrink-0 flex-col px-3 pb-3">
+                    {/* keypad：底部安全区由键盘区自己承担（取 max 不叠加），
+                        避免弹层与键盘各留一份、把内容区挤到盖住金额框 */}
+                    <div className="mt-3 flex flex-shrink-0 flex-col px-3 pb-[max(0.75rem,var(--safe-area-inset-bottom))]">
                         <Calculator.Keyboard
                             variant="sheet"
                             actionLabel={t("done")}
@@ -828,6 +981,9 @@ export default function EditorForm({
                     </div>
                 </div>
                 <LocationPickerProvider />
+                <BillCategorySheetProvider />
+                <BillCurrencySheetProvider />
+                <RemarkSheetProvider />
             </PopupLayout>
         </Calculator.Root>
     );

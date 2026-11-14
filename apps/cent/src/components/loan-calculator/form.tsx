@@ -158,7 +158,7 @@ export default function LoanCalculatorForm({
                                     className="flex size-5 cursor-pointer items-center justify-center rounded-full text-ink-secondary hover:bg-ground-muted"
                                     onClick={() => remove(plan.id)}
                                 >
-                                    <i className="icon-[mdi--close] size-3" />
+                                    <i className="icon-[apk--close] size-3" />
                                 </button>
                             </span>
                         ))}
@@ -223,7 +223,7 @@ export default function LoanCalculatorForm({
                         disabled={!input}
                         onClick={toSave}
                     >
-                        <i className="icon-[mdi--content-save-outline]" />
+                        <i className="icon-[lucide--save]" />
                         {t("loan-save-plan")}
                     </Button>
                 </div>
@@ -318,7 +318,7 @@ function YearlyDetail({
                     {t("loan-yearly-detail")}
                     <i
                         className={cn(
-                            "icon-[mdi--chevron-down] size-4 text-ink-secondary transition-transform",
+                            "icon-[lucide--chevron-down] size-4 text-ink-secondary transition-transform",
                             open && "rotate-180",
                         )}
                     />

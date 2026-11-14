@@ -22,7 +22,6 @@ import { useLedgerStore } from "@/store/ledger";
 import { cn } from "@/utils";
 import createConfirmProvider from "../confirm";
 import Deletable from "../deletable";
-import { Button } from "../ui/button";
 
 export type InventoryItemValue = Omit<InventoryItem, "id" | "userId" | "time">;
 
@@ -30,7 +29,6 @@ const MAX_IMAGES = 3;
 
 export default function InventoryItemForm({
     edit,
-    onCancel,
     onConfirm,
 }: {
     edit?: InventoryItem;
@@ -76,37 +74,35 @@ export default function InventoryItemForm({
         }
     };
 
+    const submit = () => {
+        if (!valid) return;
+        onConfirm?.({
+            name: name.trim(),
+            kind,
+            category: category.trim() || undefined,
+            quantity,
+            unit: unit.trim() || undefined,
+            price,
+            expiryDate,
+            images: images.length > 0 ? images : undefined,
+            memberIds: memberIds.length > 0 ? memberIds : undefined,
+            remark: remark.trim() || undefined,
+            status: edit?.status ?? "in_use",
+        });
+    };
+
     return (
+        // APK 折叠态：标题居中加粗，不设返回/右上确认，改由底部全宽橙色按钮提交
         <PopupLayout
-            title={edit ? t("inventory-edit") : t("inventory-add")}
-            onBack={onCancel}
-            handle
-            right={
-                <Button
-                    size="sm"
-                    disabled={!valid}
-                    onClick={() =>
-                        onConfirm?.({
-                            name: name.trim(),
-                            kind,
-                            category: category.trim() || undefined,
-                            quantity,
-                            unit: unit.trim() || undefined,
-                            price,
-                            expiryDate,
-                            images: images.length > 0 ? images : undefined,
-                            memberIds:
-                                memberIds.length > 0 ? memberIds : undefined,
-                            remark: remark.trim() || undefined,
-                            status: edit?.status ?? "in_use",
-                        })
-                    }
-                >
-                    {t("confirm")}
-                </Button>
+            title={
+                <span className="text-lg font-semibold text-ink">
+                    {edit ? t("inventory-edit") : t("inventory-add")}
+                </span>
             }
+            hideBack
+            handle
         >
-            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
                 <FormCard>
                     <FormRow label={t("inventory-name")}>
                         <RowInput
@@ -283,7 +279,7 @@ export default function InventoryItemForm({
                                 className="flex size-14 cursor-pointer items-center justify-center rounded-2xl bg-ground-muted text-ink-secondary"
                                 onClick={chooseImage}
                             >
-                                <i className="icon-[mdi--camera-outline] size-5" />
+                                <i className="icon-[lucide--camera] size-5" />
                             </button>
                         </FormBlock>
                     )}
@@ -291,6 +287,16 @@ export default function InventoryItemForm({
                         <CountedRowInput value={remark} onChange={setRemark} />
                     </FormRow>
                 </FormCard>
+            </div>
+            <div className="flex-shrink-0 px-4 pb-[max(16px,var(--safe-area-inset-bottom))] pt-2">
+                <button
+                    type="button"
+                    disabled={!valid}
+                    onClick={submit}
+                    className="h-12 w-full cursor-pointer rounded-2xl bg-brand text-[16px] font-medium text-white shadow-[0_6px_16px_rgba(245,130,32,0.28)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {edit ? t("confirm") : t("confirm-add")}
+                </button>
             </div>
         </PopupLayout>
     );

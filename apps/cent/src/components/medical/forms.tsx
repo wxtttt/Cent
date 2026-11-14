@@ -97,7 +97,7 @@ export default function MedicalProfileForm({
                 </Button>
             }
         >
-            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 {/* 头像：圆形 + 相机角标，与家小满建档页一致 */}
                 <div className="flex justify-center pt-1">
                     <div className="relative">
@@ -114,11 +114,11 @@ export default function MedicalProfileForm({
                                 />
                             ) : (
                                 <span className="flex size-24 items-center justify-center rounded-full bg-ground-muted text-ink-secondary">
-                                    <i className="icon-[mdi--account-outline] size-10" />
+                                    <i className="icon-[lucide--user] size-10" />
                                 </span>
                             )}
                             <span className="absolute right-0 bottom-0 flex size-7 items-center justify-center rounded-full bg-panel shadow-[0_2px_8px_rgba(92,62,30,0.2)]">
-                                <i className="icon-[mdi--camera-outline] size-4 text-ink" />
+                                <i className="icon-[lucide--camera] size-4 text-ink" />
                             </span>
                         </button>
                         {avatar && (
@@ -128,7 +128,7 @@ export default function MedicalProfileForm({
                                 className="absolute -top-1 -right-1 flex size-6 cursor-pointer items-center justify-center rounded-full bg-panel text-ink-secondary shadow-[0_2px_8px_rgba(92,62,30,0.2)]"
                                 onClick={() => setAvatar(undefined)}
                             >
-                                <i className="icon-[mdi--close] size-3" />
+                                <i className="icon-[apk--close] size-3" />
                             </button>
                         )}
                     </div>
@@ -321,7 +321,7 @@ export function MedicalVisitForm({
                 </Button>
             }
         >
-            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 <FormCard>
                     {profiles.length > 0 && (
                         <FormRow label={t("stat-member")}>
@@ -406,7 +406,7 @@ export function MedicalVisitForm({
                                 className="flex size-14 cursor-pointer items-center justify-center rounded-2xl bg-ground-muted text-ink-secondary"
                                 onClick={chooseImage}
                             >
-                                <i className="icon-[mdi--camera-outline] size-5" />
+                                <i className="icon-[lucide--camera] size-5" />
                             </button>
                         </FormBlock>
                     )}
@@ -477,7 +477,7 @@ export function MedicalMedicineForm({
                 </Button>
             }
         >
-            <div className="flex flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 <FormCard>
                     <FormRow label={t("medical-medicine-name")}>
                         <RowInput

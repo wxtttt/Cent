@@ -13,6 +13,10 @@ const config = {
     orderKeys: ["time"],
 };
 const key = "web-dav-config";
+/** 退出登录后仍保留的「上次连接信息」：地址 / 账号 / 昵称，不含密码 */
+const lastAccountKey = "web-dav-last-account";
+/** 退出登录清空 localStorage 期间的内存暂存 */
+let logoutSnapshot: WebDAVEdit | undefined;
 
 const getAuth = () => {
     const data = localStorage.getItem(key);
@@ -21,6 +25,19 @@ const getAuth = () => {
     }
     const parsed = JSON.parse(data);
     return parsed as WebDAVEdit;
+};
+
+const getLastAccount = () => {
+    const data =
+        localStorage.getItem(key) ?? localStorage.getItem(lastAccountKey);
+    if (!data) {
+        return;
+    }
+    try {
+        return JSON.parse(data) as WebDAVEdit;
+    } catch {
+        return;
+    }
 };
 
 type WebDAVPrivateMeta = {
@@ -32,6 +49,8 @@ export const WebDAVEndpoint: SyncEndpointFactory = {
     name: "webdav",
     login: async ({ modal }) => {
         const auth = await modal.webDavAuth({
+            // 带出上次的地址 / 账号 / 昵称，重新登录时不用重敲
+            ...(getLastAccount() ?? {}),
             check: async (data) => {
                 const remote = data.remote.replace(/\/$/, "");
                 await checkWebDAVConfig({
@@ -119,6 +138,30 @@ export const WebDAVEndpoint: SyncEndpointFactory = {
         });
 
         return {
+            beforeLogout: () => {
+                const current = getAuth();
+                if (!current) {
+                    return;
+                }
+                // 只保留识别账号所需的信息，密码不落盘
+                logoutSnapshot = {
+                    remote: current.remote,
+                    username: current.username,
+                    password: "",
+                    proxy: current.proxy,
+                    customUserName: current.customUserName,
+                };
+            },
+            afterLogout: () => {
+                if (!logoutSnapshot) {
+                    return;
+                }
+                localStorage.setItem(
+                    lastAccountKey,
+                    JSON.stringify(logoutSnapshot),
+                );
+                logoutSnapshot = undefined;
+            },
             logout: async () => {
                 await repo.detach();
                 for (const entry of ENTRY_NAMES) {

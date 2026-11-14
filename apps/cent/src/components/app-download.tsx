@@ -95,7 +95,7 @@ export function AppDownloadIcons({
                     aria-label={t("download-ios-app")}
                 >
                     <i
-                        className={cn("icon-[mdi--apple]", iconClassName)}
+                        className={cn("icon-[lucide--apple]", iconClassName)}
                         aria-hidden="true"
                     ></i>
                     <span className="sr-only">{t("download-ios-app")}</span>
@@ -110,7 +110,10 @@ export function AppDownloadIcons({
                     aria-label={t("download-android-app")}
                 >
                     <i
-                        className={cn("icon-[mdi--android]", iconClassName)}
+                        className={cn(
+                            "icon-[lucide--smartphone]",
+                            iconClassName,
+                        )}
                         aria-hidden="true"
                     ></i>
                     <span className="sr-only">{t("download-android-app")}</span>

@@ -121,7 +121,7 @@ export default function CurrencyListForm({
             right={
                 <div className="flex gap-2 items-center">
                     <Button onClick={() => toUpdateCurrency()}>
-                        <i className="icon-[mdi--add]"></i>
+                        <i className="icon-[lucide--plus]"></i>
                     </Button>
                 </div>
             }
@@ -131,7 +131,7 @@ export default function CurrencyListForm({
                     <PopoverTrigger>
                         <div className="flex items-center gap-1">
                             {t("base-currency")}
-                            <i className="icon-[mdi--question-mark-circle-outline]"></i>
+                            <i className="icon-[lucide--circle-help]"></i>
                         </div>
                     </PopoverTrigger>
                     <PopoverContent>
@@ -168,7 +168,7 @@ export default function CurrencyListForm({
                         <PopoverTrigger>
                             <div className="flex items-center gap-1">
                                 {t("exchange-rate")}
-                                <i className="icon-[mdi--question-mark-circle-outline]"></i>
+                                <i className="icon-[lucide--circle-help]"></i>
                             </div>
                         </PopoverTrigger>
                         <PopoverContent className="p-2 text-xs w-fit">
@@ -195,7 +195,7 @@ export default function CurrencyListForm({
                     >
                         <i
                             className={cn(
-                                "icon-[mdi--refresh]",
+                                "icon-[lucide--refresh-cw]",
                                 loading && "animate-spin",
                             )}
                         ></i>
@@ -233,7 +233,7 @@ export default function CurrencyListForm({
                                                 );
                                             }}
                                         >
-                                            <i className="icon-[mdi--close]"></i>
+                                            <i className="icon-[apk--close]"></i>
                                         </Button>
                                     </>
                                 );
@@ -296,7 +296,7 @@ export default function CurrencyListForm({
                                             ]);
                                         }}
                                     >
-                                        <i className="icon-[mdi--arrow-collapse-up]"></i>
+                                        <i className="icon-[lucide--chevrons-up]"></i>
                                     </Button>
                                 </>
                             );

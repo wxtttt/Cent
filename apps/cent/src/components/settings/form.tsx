@@ -3,9 +3,7 @@ import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { useUserStore } from "@/store/user";
 import modal from "../modal";
-import SponsorBanner, { SponsorProvider } from "../sponsor";
 import { Button } from "../ui/button";
-import AboutSettingsItem, { AdvancedGuideItem } from "./about";
 import AgentApiSettingsItem from "./agent-api";
 import AssistantSettingsItem from "./assistant";
 import LabSettingsItem from "./lab";
@@ -22,6 +20,7 @@ function UserInfo() {
     const toLogOut = async () => {
         await modal.prompt({ title: t("logout-warning") });
 
+        StorageAPI.beforeLogout?.();
         await Promise.all([
             StorageAPI.logout(),
             new Promise<void>((res) => {
@@ -32,6 +31,7 @@ function UserInfo() {
         ]);
         localStorage.clear();
         sessionStorage.clear();
+        StorageAPI.afterLogout?.();
         location.reload();
     };
     return (
@@ -71,7 +71,7 @@ function UserInfo() {
                             StorageAPI.loginWith(StorageAPI.type);
                         }}
                     >
-                        <i className="icon-[mdi--reload]"></i>
+                        <i className="icon-[lucide--rotate-ccw]"></i>
                         {t("re-login")}
                     </Button>
                 )}
@@ -103,7 +103,6 @@ export default function SettingsForm({
             <div className="divide-y divide-solid flex flex-col overflow-hidden">
                 <UserInfo />
                 <div className="flex-1 overflow-y-auto flex flex-col py-4">
-                    <SponsorBanner />
                     <div>
                         <div className="text-xs opacity-60 px-8">
                             {t("book-settings")}
@@ -128,15 +127,12 @@ export default function SettingsForm({
                         <div className="flex flex-col divide-y">
                             <MapSettingsItem />
                             <LabSettingsItem />
-                            <AboutSettingsItem />
                             <ThemeSettingsItem />
                             <LanguageSettingsItem />
-                            <AdvancedGuideItem />
                         </div>
                     </div>
                 </div>
             </div>
-            <SponsorProvider />
         </PopupLayout>
     );
 }

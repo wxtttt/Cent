@@ -1,9 +1,12 @@
 /** biome-ignore-all lint/suspicious/noArrayIndexKey: <explanation> */
+
+import dayjs from "dayjs";
 import { useMemo } from "react";
 import type { BillTag } from "@/components/bill-tag/type";
 import useCategory from "@/hooks/use-category";
 import { useCreators } from "@/hooks/use-creator";
 import { useCurrency } from "@/hooks/use-currency";
+import { useMembers } from "@/hooks/use-member";
 import { useTag } from "@/hooks/use-tag";
 import { amountToNumber } from "@/ledger/bill";
 import type { Bill, BillCategory } from "@/ledger/type";
@@ -40,6 +43,8 @@ interface BaseBillItemProps {
     onClick?: () => void;
     className?: string;
     showTime?: boolean;
+    /** 日期已由日头承载时只渲染 HH:mm（APK 明细卡无日期） */
+    timeOnly?: boolean;
     showAssets?: boolean;
 }
 
@@ -61,21 +66,24 @@ export function BaseBillItem({
     onClick,
     className,
     showTime,
+    timeOnly,
     showAssets,
 }: BaseBillItemProps) {
     return (
         <button
             type="button"
             className={cn(
-                "bill-item w-full cursor-pointer rounded-3xl border border-rule bg-panel p-4 text-left shadow-panel transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] hover:bg-ground-muted/40 active:scale-[0.995]",
+                "bill-item w-full cursor-pointer rounded-3xl border border-rule bg-panel p-4 text-left transition-[background-color,transform] duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] hover:bg-ground-muted/40 active:scale-[0.995]",
                 className,
             )}
             data-bill-tags={tags?.map((v) => v.name).join(" ")}
             onClick={onClick}
         >
             <div className="flex items-start gap-3">
-                <div className="flex size-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                    {category?.icon && <CategoryIcon icon={category.icon} />}
+                <div className="flex size-10 flex-shrink-0 items-center justify-center rounded-full bg-icon-well text-brand">
+                    {category?.icon && (
+                        <CategoryIcon icon={category.icon} className="size-8" />
+                    )}
                 </div>
                 <div className="flex min-w-0 flex-1 items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -84,13 +92,15 @@ export function BaseBillItem({
                         </div>
                         {showTime && (
                             <div className="mt-0.5 text-xs text-ink-secondary">
-                                {denseTime(time)}
+                                {timeOnly
+                                    ? dayjs(time).format("HH:mm")
+                                    : denseTime(time)}
                             </div>
                         )}
                     </div>
                     <div
                         className={cn(
-                            "flex flex-shrink-0 flex-col items-end font-display text-lg font-bold tabular-nums",
+                            "flex flex-shrink-0 flex-col items-end font-display text-xl font-bold tabular-nums",
                             type === "expense"
                                 ? "text-semantic-expense"
                                 : type === "income"
@@ -103,7 +113,11 @@ export function BaseBillItem({
                                 {type === "income" ? "+" : "-"}
                                 {currencySymbol}
                             </span>
-                            <Money value={amountToNumber(amount)} accurate />
+                            <Money
+                                value={amountToNumber(amount)}
+                                accurate
+                                pad
+                            />
                         </div>
                         {targetCurrency && currencyAmount !== undefined && (
                             <div className="text-xs font-normal text-ink-secondary">
@@ -111,6 +125,7 @@ export function BaseBillItem({
                                 <Money
                                     value={amountToNumber(currencyAmount)}
                                     accurate
+                                    pad
                                 />
                             </div>
                         )}
@@ -120,7 +135,7 @@ export function BaseBillItem({
 
             {comment && (
                 <div className="mt-2 flex items-start gap-1.5 text-sm text-ink-secondary">
-                    <i className="icon-[mdi--comment-processing-outline] mt-0.5 size-4 flex-shrink-0"></i>
+                    <i className="icon-[lucide--message-square] mt-0.5 size-4 flex-shrink-0"></i>
                     <span className="line-clamp-2">{comment}</span>
                 </div>
             )}
@@ -144,8 +159,8 @@ export function BaseBillItem({
                         className={cn(
                             "size-4 flex-shrink-0",
                             tags && tags.length > 0
-                                ? "icon-[mdi--tag-outline]"
-                                : "icon-[mdi--book-outline]",
+                                ? "icon-[lucide--tag]"
+                                : "icon-[lucide--book]",
                         )}
                     ></i>
                     <span className="truncate">
@@ -162,7 +177,7 @@ export function BaseBillItem({
                             className="size-5 rounded-full object-cover"
                         />
                     ) : (
-                        <i className="icon-[mdi--account-circle-outline] size-4"></i>
+                        <i className="icon-[lucide--circle-user] size-4"></i>
                     )}
                     <span className="max-w-[80px] truncate">
                         {creatorLabel}
@@ -178,6 +193,7 @@ interface BillItemProps {
     onClick?: () => void;
     className?: string;
     showTime?: boolean;
+    timeOnly?: boolean;
     showAssets?: boolean;
 }
 
@@ -186,6 +202,7 @@ export default function BillItem({
     className,
     onClick,
     showTime,
+    timeOnly,
     showAssets,
 }: BillItemProps) {
     const t = useIntl();
@@ -198,8 +215,12 @@ export default function BillItem({
 
     const { id: selfId } = useUserStore();
     const creators = useCreators();
-    const creator = creators.find((c) => c.id === bill.creatorId);
-    const isMe = creator?.id === selfId;
+    const { members } = useMembers();
+    const creator = creators.find(
+        (c) => String(c.id) === String(bill.creatorId),
+    );
+    const member = members.find((m) => String(m.id) === String(bill.creatorId));
+    const isMe = String(bill.creatorId) === String(selfId);
     const tags = bill.tagIds
         ?.map((id) => allTags.find((t) => t.id === id))
         .filter((v) => v !== undefined);
@@ -219,7 +240,11 @@ export default function BillItem({
         <BaseBillItem
             category={category}
             tags={tags}
-            creatorLabel={isMe ? t("me") : (creator?.name ?? "unknown-user")}
+            creatorLabel={
+                isMe
+                    ? t("me")
+                    : (creator?.name ?? member?.name ?? t("unknown-user"))
+            }
             creatorAvatar={creator?.avatar_url}
             targetCurrency={currency}
             currencyAmount={bill.currency?.amount}
@@ -233,6 +258,7 @@ export default function BillItem({
             onClick={onClick}
             className={className}
             showTime={showTime}
+            timeOnly={timeOnly}
             showAssets={showAssets}
         />
     );

@@ -38,7 +38,7 @@ export default function WidgetList({ onCancel }: { onCancel?: () => void }) {
                                 await reorder(ordered.map((o) => o.id));
                             }}
                         >
-                            <i className="icon-[mdi--reorder-horizontal]"></i>
+                            <i className="icon-[lucide--grip]"></i>
                         </Button>
                     )}
                 </div>
@@ -50,7 +50,7 @@ export default function WidgetList({ onCancel }: { onCancel?: () => void }) {
                             await showWidgetEdit();
                         }}
                     >
-                        <i className="icon-[mdi--add]" />
+                        <i className="icon-[lucide--plus]" />
                         {t("add-widget")}
                     </Button>
                     {widgets.map((widget) => (
@@ -72,7 +72,7 @@ export default function WidgetList({ onCancel }: { onCancel?: () => void }) {
                                             await showWidgetEdit(widget);
                                         }}
                                     >
-                                        <i className="icon-[mdi--edit-outline]" />
+                                        <i className="icon-[apk--edit]" />
                                     </Button>
                                     <Button
                                         variant="destructive"
@@ -86,7 +86,7 @@ export default function WidgetList({ onCancel }: { onCancel?: () => void }) {
                                             await remove(widget.id);
                                         }}
                                     >
-                                        <i className="icon-[mdi--delete]" />
+                                        <i className="icon-[apk--trash]" />
                                     </Button>
                                 </div>
                             </div>

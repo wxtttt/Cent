@@ -47,14 +47,30 @@ export default defineConfig(({ mode }) => {
             registerType: "prompt",
             injectRegister: false,
             includeAssets: ["favicon.ico", "apple-touch-icon.png"],
+            // 图片也进预缓存：iOS PWA 冷启动后 HTTP 缓存常被系统回收，
+            // 未预缓存的图片（吉祥物立绘等）要等切页签后现走网络才显示
+            injectManifest: {
+                globPatterns: [
+                    "**/*.{js,css,html,svg,png,webp,ico,woff,woff2}",
+                ],
+            },
             manifest: {
-                name: "Cent - 日计",
-                short_name: "Cent",
-                description: "Accounting your life - 记录每一天",
-                theme_color: "#ffffff",
+                name: "胖记",
+                short_name: "胖记",
+                description: "胖记 - 记录每一天",
+                theme_color: "#f3e6d3",
+                background_color: "#f3e6d3",
                 icons: [
-                    { src: "icon.png", sizes: "192x192", type: "image/png" },
-                    { src: "icon.png", sizes: "512x512", type: "image/png" },
+                    {
+                        src: "icon-192.png",
+                        sizes: "192x192",
+                        type: "image/png",
+                    },
+                    {
+                        src: "icon.png",
+                        sizes: "512x512",
+                        type: "image/png",
+                    },
                 ],
                 protocol_handlers: [
                     {

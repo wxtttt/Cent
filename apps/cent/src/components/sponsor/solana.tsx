@@ -43,7 +43,7 @@ export function SolanaSponsor() {
                             onClick={copyAddress}
                             className="shrink-0"
                         >
-                            <i className="icon-[mdi--content-copy] size-4"></i>
+                            <i className="icon-[lucide--copy] size-4"></i>
                             <span className="ml-1 text-xs">
                                 {t("copy-address")}
                             </span>

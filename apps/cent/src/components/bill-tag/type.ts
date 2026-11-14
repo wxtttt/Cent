@@ -1,5 +1,5 @@
-export type BillTag = {
-    id: string;
-    name: string;
-    preferCurrency?: string;
-};
+import type { BillTag } from "@/ledger/type";
+
+export type { BillTag };
+
+export type EditTag = Omit<BillTag, "id"> & { id?: string };

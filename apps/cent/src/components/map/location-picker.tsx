@@ -134,7 +134,7 @@ function LocationPickerForm({
                     <div ref={mapRef} className="h-full w-full" />
                     {!error && (
                         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                            <i className="icon-[mdi--map-marker] size-10 -translate-y-5 text-red-600 drop-shadow-md" />
+                            <i className="icon-[lucide--map-pin] size-10 -translate-y-5 text-red-600 drop-shadow-md" />
                         </div>
                     )}
                     {loading && (
@@ -145,7 +145,7 @@ function LocationPickerForm({
                     {error && (
                         <div className="absolute inset-0 flex items-center justify-center bg-background">
                             <div className="px-4 text-center">
-                                <i className="icon-[mdi--alert-circle-outline] mx-auto mb-2 size-8 text-destructive" />
+                                <i className="icon-[lucide--circle-alert] mx-auto mb-2 size-8 text-destructive" />
                                 <div className="text-sm text-muted-foreground">
                                     {error}
                                 </div>

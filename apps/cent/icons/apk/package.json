@@ -1,0 +1,7 @@
+{
+  "name": "@iconify-json/apk",
+  "version": "1.0.0",
+  "description": "家小满 APK 原 SVG 图标集（反编译导出）",
+  "main": "icons.json",
+  "files": ["icons.json", "info.json"]
+}

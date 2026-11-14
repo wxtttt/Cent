@@ -11,7 +11,7 @@ export default function Loading({
 }) {
     return (
         <div className={cn("flex items-center gap-2", className)}>
-            <i className="icon-[mdi--loading] animate-spin"></i>
+            <i className="icon-[lucide--loader-circle] animate-spin"></i>
             {children}
         </div>
     );

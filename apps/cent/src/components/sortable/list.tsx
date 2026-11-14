@@ -50,7 +50,7 @@ function SortableListItem({ id, name }: SortableItem) {
             className="bg-background border rounded-md p-2 shadow-sm active:cursor-grabbing flex items-center justify-between"
         >
             <div>{name}</div>
-            <i className="icon-[mdi--reorder-horizontal]"></i>
+            <i className="icon-[lucide--grip]"></i>
         </div>
     );
 }

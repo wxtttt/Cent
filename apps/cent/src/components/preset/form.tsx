@@ -320,7 +320,7 @@ export default function PresetForm({ onCancel }: { onCancel?: () => void }) {
                 <div className="px-4 pb-4">
                     <div className="text-sm py-1">{t("theme-market")}</div>
                     <div className="w-full border rounded-md p-4 flex flex-col items-center justify-center gap-2 bg-muted/30">
-                        <i className="icon-[mdi--store-outline] size-8 opacity-40"></i>
+                        <i className="icon-[lucide--store] size-8 opacity-40"></i>
                         <div className="text-sm opacity-60 text-center">
                             {t("theme-market-coming-soon")}
                         </div>
