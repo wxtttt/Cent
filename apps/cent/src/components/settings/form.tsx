@@ -2,7 +2,7 @@ import { StorageAPI } from "@/api/storage";
 import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { useUserStore } from "@/store/user";
-import modal from "../modal";
+import { logoutWithConfirm } from "@/utils/logout";
 import { Button } from "../ui/button";
 import AgentApiSettingsItem from "./agent-api";
 import AssistantSettingsItem from "./assistant";
@@ -18,21 +18,7 @@ function UserInfo() {
     const t = useIntl();
     const { id, avatar_url, name, expired } = useUserStore();
     const toLogOut = async () => {
-        await modal.prompt({ title: t("logout-warning") });
-
-        StorageAPI.beforeLogout?.();
-        await Promise.all([
-            StorageAPI.logout(),
-            new Promise<void>((res) => {
-                setTimeout(() => {
-                    res();
-                }, 100);
-            }),
-        ]);
-        localStorage.clear();
-        sessionStorage.clear();
-        StorageAPI.afterLogout?.();
-        location.reload();
+        await logoutWithConfirm(t("logout-warning"));
     };
     return (
         <div className="flex items-center justify-between gap-2 px-8 py-4">

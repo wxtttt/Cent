@@ -3,42 +3,25 @@ import { Scheduler } from "@/database/scheduler";
 import { BillIndexedDBStorage } from "@/database/storage";
 import type { Bill } from "@/ledger/type";
 import { createTidal } from "@/tidal";
-import { checkWebDAVConfig, createWebDAVSyncer } from "@/tidal/web-dav";
+import { createWebDAVSyncer } from "@/tidal/web-dav";
 import { ENTRY_NAMES, type EntryItem, type TidalRepo } from "../entries";
 import type { SyncEndpointFactory } from "../type";
+import {
+    getCurrentBookId,
+    getWebDAVAuth,
+    webDAVConfigKey,
+    webDAVLastAccountKey,
+} from "./account";
 
 const config = {
     repoPrefix: "cent-journal",
     entryName: "ledger",
     orderKeys: ["time"],
 };
-const key = "web-dav-config";
-/** 退出登录后仍保留的「上次连接信息」：地址 / 账号 / 昵称，不含密码 */
-const lastAccountKey = "web-dav-last-account";
 /** 退出登录清空 localStorage 期间的内存暂存 */
 let logoutSnapshot: WebDAVEdit | undefined;
 
-const getAuth = () => {
-    const data = localStorage.getItem(key);
-    if (!data) {
-        return;
-    }
-    const parsed = JSON.parse(data);
-    return parsed as WebDAVEdit;
-};
-
-const getLastAccount = () => {
-    const data =
-        localStorage.getItem(key) ?? localStorage.getItem(lastAccountKey);
-    if (!data) {
-        return;
-    }
-    try {
-        return JSON.parse(data) as WebDAVEdit;
-    } catch {
-        return;
-    }
-};
+const getAuth = getWebDAVAuth;
 
 type WebDAVPrivateMeta = {
     _webDAVUserAliases?: string[];
@@ -48,31 +31,9 @@ export const WebDAVEndpoint: SyncEndpointFactory = {
     type: "webdav",
     name: "webdav",
     login: async ({ modal }) => {
-        const auth = await modal.webDavAuth({
-            // 带出上次的地址 / 账号 / 昵称，重新登录时不用重敲
-            ...(getLastAccount() ?? {}),
-            check: async (data) => {
-                const remote = data.remote.replace(/\/$/, "");
-                await checkWebDAVConfig({
-                    remoteUrl: remote,
-                    username: data.username,
-                    password: data.password,
-                    proxy: data.proxy,
-                }).catch((error) => {
-                    modal.toast.error(
-                        (error as Error)?.message ?? JSON.stringify(error),
-                    );
-                    return Promise.reject(error);
-                });
-            },
-        });
-        if (!auth) {
-            return;
-        }
-
-        localStorage.setItem("SYNC_ENDPOINT", "webdav");
-        localStorage.setItem("web-dav-config", JSON.stringify(auth));
-        location.reload();
+        // 路由页模式：连接表单自持「校验 → 保存 → 刷新」（见 components/modal/web-dav.tsx），
+        // 这里只负责从登录页 / 重新登录入口进入 /login/webdav
+        modal.webDavAuth();
     },
     manuallyLogin: undefined,
     init: ({ modal }) => {
@@ -157,7 +118,7 @@ export const WebDAVEndpoint: SyncEndpointFactory = {
                     return;
                 }
                 localStorage.setItem(
-                    lastAccountKey,
+                    webDAVLastAccountKey,
                     JSON.stringify(logoutSnapshot),
                 );
                 logoutSnapshot = undefined;
@@ -175,6 +136,45 @@ export const WebDAVEndpoint: SyncEndpointFactory = {
                     avatar_url: "/icon.png",
                 };
                 return Me;
+            },
+            // 「选择用户」页用：当前账本可选的身份 = 自己（账号名回退）+ 账本别名；
+            // 别名读取失败（离线预览 / 网络故障）退化为只有自己，保证页面可用
+            getUserChoices: async () => {
+                const bookId = getCurrentBookId();
+                let aliases: string[] = [];
+                if (bookId) {
+                    try {
+                        aliases = await getUserAliases(bookId);
+                    } catch {
+                        aliases = [];
+                    }
+                }
+                const fallback = auth.customUserName || auth.username;
+                return [fallback, ...aliases.filter((a) => a !== fallback)];
+            },
+            // 写入所选身份并登记进账本别名（别名登记尽力而为，失败不阻断），刷新后 getUserInfo 即用新身份
+            setCurrentUser: async (name) => {
+                auth.customUserName = name;
+                localStorage.setItem(webDAVConfigKey, JSON.stringify(auth));
+                const bookId = getCurrentBookId();
+                if (bookId) {
+                    try {
+                        const meta = await repo.getMeta(bookId);
+                        if (!meta?._webDAVUserAliases?.includes(name)) {
+                            const newMeta = meta ?? {};
+                            newMeta._webDAVUserAliases = [
+                                ...(meta?._webDAVUserAliases ?? []),
+                                name,
+                            ];
+                            await repo.batch(bookId, [
+                                { type: "meta", metaValue: newMeta },
+                            ]);
+                        }
+                    } catch {
+                        // 别名登记失败不影响本机身份生效，下次联网 initBook 会补写
+                    }
+                }
+                location.reload();
             },
             getCollaborators: async (id) => {
                 const aliases = await getUserAliases(id);

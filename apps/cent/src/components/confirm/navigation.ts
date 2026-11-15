@@ -7,9 +7,9 @@ export function setAppNavigator(fn: NavigateFunction | null) {
     appNavigate = fn;
 }
 
-/** 进入一个二级路由页（FromRight 右滑） */
-export function goPage(path: string) {
-    appNavigate?.(path);
+/** 进入一个二级路由页（FromRight 右滑）；replace 用于栈底 fallback 就地替换 */
+export function goPage(path: string, options?: { replace?: boolean }) {
+    appNavigate?.(path, options);
 }
 
 /** 二级路由页返回上一个导航层级 */

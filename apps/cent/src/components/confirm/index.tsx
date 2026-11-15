@@ -1,6 +1,5 @@
 import { VisuallyHidden } from "radix-ui";
 import { type ReactNode, useEffect, useMemo, useRef } from "react";
-import { useLocation, useNavigate } from "react-router";
 import { useShallow } from "zustand/shallow";
 import { useVisualViewport } from "@/hooks/use-visual-viewport";
 import { cn } from "@/utils";
@@ -12,7 +11,8 @@ import {
     DialogPortal,
     DialogTitle,
 } from "../ui/dialog";
-import { goBack, goPage } from "./navigation";
+import { goBack } from "./navigation";
+import { openRoute, useRoutePage } from "./route-modal";
 import { useGlobalConfirmStore } from "./state"; // 引入上面创建的全局 store
 
 export default function createConfirmProvider<Value, Returned = Value>(
@@ -54,8 +54,6 @@ export default function createConfirmProvider<Value, Returned = Value>(
 
     function Confirm() {
         const returnFocusRef = useRef<HTMLElement | null>(null);
-        const location = useLocation();
-        const navigate = useNavigate();
         // 2. 仅监听属于自己 ID 的那部分状态
         const state = useGlobalConfirmStore(
             useShallow((s) => s.instances[instanceId]),
@@ -68,20 +66,29 @@ export default function createConfirmProvider<Value, Returned = Value>(
             [state?.zIndex],
         );
         const viewport = useVisualViewport();
+        // 路由页适配层：location 匹配与开/关编排收敛在 useRoutePage，provider 只做渲染宿主；
+        // 未配置 routePath 时 active 恒为 false，hook 仍无条件调用以满足 hooks 规则
+        const routePage = useRoutePage(routePath ?? "", "/");
         // 3. 组件卸载时清理全局 Store 中的数据，避免内存泄漏
         useEffect(() => {
             return () => useGlobalConfirmStore.getState().remove(instanceId);
         }, []);
-        // 二级路由页：由 URL 驱动、无遮罩、右侧滑入；页面自身保留 PopupLayout 返回头
-        if (routePath) {
-            if (location.pathname !== routePath) return null;
+        // 二级路由页：由 URL 驱动、无遮罩、右侧滑入；关闭先播右滑出场动画再回退
+        if (routePath && routePage.active) {
             return (
                 <div
                     data-route-page
                     data-route-path={routePath}
-                    className="dp-route-from-right fixed inset-0 z-[3] flex flex-col overflow-hidden bg-ground"
+                    onAnimationEnd={routePage.onExitAnimationEnd}
+                    className={cn(
+                        // 内容块用 min-h-full + my-auto 居中（登录页同款），长表单靠这里滚动
+                        "fixed inset-0 z-[3] flex flex-col overflow-y-auto overscroll-contain bg-ground",
+                        routePage.closing
+                            ? "dp-route-to-right"
+                            : "dp-route-from-right",
+                    )}
                 >
-                    <Form onCancel={() => navigate(-1)} />
+                    <Form onCancel={routePage.requestClose} />
                 </div>
             );
         }
@@ -221,7 +228,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
     // 4. 暴露的 open 方法封装了 instanceId
     const confirm = (value?: Value) => {
         if (routePath) {
-            goPage(routePath);
+            openRoute(routePath);
             return Promise.resolve(undefined as Returned);
         }
         const [promise, cancel] = useGlobalConfirmStore
@@ -235,7 +242,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
 
     const withController = (value?: Value) => {
         if (routePath) {
-            goPage(routePath);
+            openRoute(routePath);
             return {
                 promise: Promise.resolve(undefined as Returned),
                 cancel: () => goBack(),

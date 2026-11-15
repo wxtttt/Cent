@@ -61,6 +61,11 @@ export type SyncEndpoint = {
     getUserInfo: (id?: string) => Promise<UserInfo>;
     getCollaborators: (id: string) => Promise<UserInfo[]>;
 
+    /** WebDAV / S3 专用：当前账本可选的用户身份（自己 + 账本别名），供「选择用户」页用 */
+    getUserChoices?: () => Promise<string[]>;
+    /** WebDAV / S3 专用：写入所选身份（config.customUserName + 账本别名）并刷新 */
+    setCurrentUser?: (name: string) => Promise<void>;
+
     getOnlineAsset?: (src: string, store: string) => Promise<Blob | undefined>;
 
     forceNeedSync?: (store: string) => void;

@@ -5,10 +5,10 @@ import {
     useEffect,
     useRef,
 } from "react";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/button-styles";
 import { useIntl } from "@/locale";
 import createConfirmProvider from "../confirm";
 import IOSUnscrolledInput from "../input";
-import { Button } from "../ui/button";
 
 // 简易对话框，调用后弹出对话框，包含取消和确定按钮，点击取消将会reject promise，点击确认则会resolve，值取决于对话框中input的值
 type PromptOptions = {
@@ -40,41 +40,41 @@ const PromptForm = ({
         }
     }, [autoFocus]);
     return (
-        <div className="w-full h-full flex flex-col p-4">
-            <div className="flex-1 flex flex-col gap-2">
+        // 全应用共用的确认 prompt：按钮走 button-styles 的 48px 双态常量（r20 约定），
+        // 取消/确认等宽成对，样式与登录页等弹层入口保持一致
+        <div className="flex w-full flex-col p-5">
+            <div className="min-w-0 text-[16px] font-semibold leading-relaxed text-ink">
                 {edit?.title}
-                {edit?.input && (
-                    <IOSUnscrolledInput
-                        ref={inputRef}
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                        {...edit.input}
-                    />
-                )}
-
-                <div className="w-full flex gap-2 pt-2 items-center justify-end">
-                    {edit?.cancellable !== false && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                                onCancel?.();
-                            }}
-                        >
-                            {t("cancel")}
-                        </Button>
-                    )}
-                    <Button
-                        size="sm"
-                        onClick={async () => {
-                            const value = await edit?.onConfirm?.(
-                                inputRef.current,
-                            );
-                            onConfirm?.(value ?? inputRef.current?.value);
+            </div>
+            {edit?.input && (
+                <IOSUnscrolledInput
+                    ref={inputRef}
+                    className="mt-3 flex h-10 w-full rounded-xl border border-input bg-transparent px-3 text-[15px] shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    {...edit.input}
+                />
+            )}
+            <div className="mt-4 flex w-full gap-3">
+                {edit?.cancellable !== false && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onCancel?.();
                         }}
+                        className={`${BTN_SECONDARY} flex-1`}
                     >
-                        {t("confirm")}
-                    </Button>
-                </div>
+                        {t("cancel")}
+                    </button>
+                )}
+                <button
+                    type="button"
+                    className={`${BTN_PRIMARY} flex-1`}
+                    onClick={async () => {
+                        const value = await edit?.onConfirm?.(inputRef.current);
+                        onConfirm?.(value ?? inputRef.current?.value);
+                    }}
+                >
+                    {t("confirm")}
+                </button>
             </div>
         </div>
     );
