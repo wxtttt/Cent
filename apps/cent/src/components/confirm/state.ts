@@ -49,6 +49,9 @@ export const useGlobalConfirmStore = create<
 
         const openId = `id-${Date.now()}`;
         const { promise, reject, resolve } = Promise.withResolvers<any>();
+        // 关闭抽屉会 reject；调用点未必 await（例如从宫格导航到二级页）。
+        // 在源头附着静默 catch，避免全局 unhandledrejection，调用方仍可正常 catch。
+        void promise.catch(() => {});
 
         let cancelled = false;
         const innerCancel = () => {

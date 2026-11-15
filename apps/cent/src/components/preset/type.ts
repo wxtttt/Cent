@@ -1,6 +1,5 @@
 import type { BillFilterView } from "@/ledger/extra-type";
 import type { BillCategory, BillTag, BillTagGroup } from "@/ledger/type";
-import type { Widget } from "../widget/type";
 
 /** 导入预设时可能影响的配置项（与 README 中策略一致） */
 export const PRESET_MERGE_RISK = {
@@ -9,7 +8,6 @@ export const PRESET_MERGE_RISK = {
     CATEGORY_WOULD_CHANGE: "CATEGORY_WOULD_CHANGE",
     FILTERS_WOULD_CHANGE: "FILTERS_WOULD_CHANGE",
     CSS_WOULD_CHANGE: "CSS_WOULD_CHANGE",
-    WIDGETS_WOULD_CHANGE: "WIDGETS_WOULD_CHANGE",
 } as const;
 
 export type PresetMergeRisk =
@@ -20,8 +18,7 @@ export type PresetExportSection =
     | "tags"
     | "categories"
     | "customFilters"
-    | "customCSS"
-    | "widgets";
+    | "customCSS";
 
 export type OnlinePreset = {
     id: string;
@@ -44,5 +41,4 @@ export type PresetConfig = {
     };
     category?: BillCategory[];
     customFilters?: BillFilterView[];
-    widgets?: Widget[];
 };

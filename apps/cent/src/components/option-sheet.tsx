@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import { BTN_PRIMARY, BTN_SECONDARY, PRESSABLE_ROW } from "./button-styles";
+import {
+    BTN_PRIMARY,
+    BTN_SECONDARY,
+    PRESSABLE_ROW,
+    SHEET_FOOTER,
+} from "./button-styles";
 import createConfirmProvider from "./confirm";
 
 export type OptionItem = { id: string; label: string };
@@ -78,7 +83,7 @@ const OptionSheetForm = ({
                     })}
                 </div>
             </div>
-            <div className="border-t border-rule/70 bg-ground px-5 pt-2.5 pb-5">
+            <div className={SHEET_FOOTER}>
                 <div className="flex gap-2.5">
                     <button
                         type="button"

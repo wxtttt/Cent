@@ -9,7 +9,6 @@ import type {
 import { useLedgerStore } from "@/store/ledger";
 import { useUserStore } from "@/store/user";
 import { version } from "~build/package";
-import type { Widget } from "../widget/type";
 import {
     PRESET_MERGE_RISK,
     type PresetConfig,
@@ -85,13 +84,6 @@ export function mergeBillCustomFilters(
     return mergeByNameOrId(oldList, incoming);
 }
 
-export function mergeBillWidgets(
-    oldList: Widget[],
-    incoming: Widget[],
-): Widget[] {
-    return mergeByNameOrId(oldList, incoming);
-}
-
 function appendOverlapMergeRisk<T extends { id: string; name: string }>(
     risks: PresetMergeRisk[],
     currentList: T[],
@@ -137,12 +129,6 @@ export function checkPresetMergeRisk(
         incoming.customFilters,
         PRESET_MERGE_RISK.FILTERS_WOULD_CHANGE,
     );
-    appendOverlapMergeRisk(
-        risks,
-        current.widgets ?? [],
-        incoming.widgets,
-        PRESET_MERGE_RISK.WIDGETS_WOULD_CHANGE,
-    );
 
     if (incoming.customCSS !== undefined) {
         const a = String(current.customCSS ?? "");
@@ -174,9 +160,6 @@ export function pickPresetForExport(
     }
     if (sections.includes("customCSS")) {
         out.customCSS = full.customCSS;
-    }
-    if (sections.includes("widgets")) {
-        out.widgets = full.widgets;
     }
     return out;
 }
@@ -220,7 +203,6 @@ export function getCurrentPreset(): PresetConfig {
     const tagGroups = state.infos?.meta.personal?.[userId]?.tagGroups;
     const category = state.infos?.meta.categories;
     const customFilters = state.infos?.meta.customFilters;
-    const widgets = state.infos?.meta.widgets;
     return {
         customCSS,
         tag: {
@@ -229,7 +211,6 @@ export function getCurrentPreset(): PresetConfig {
         },
         category,
         customFilters,
-        widgets,
     };
 }
 
@@ -240,15 +221,13 @@ export async function applyPreset(preset: PresetConfig): Promise<void> {
     const incCategories = preset.category;
     const incFilters = preset.customFilters;
     const incCSS = preset.customCSS;
-    const incWidgets = preset.widgets;
 
     const hasMetaChange =
         (incTags !== undefined && incTags.length > 0) ||
         (incGroups !== undefined && incGroups.length > 0) ||
         (incCategories !== undefined && incCategories.length > 0) ||
         (incFilters !== undefined && incFilters.length > 0) ||
-        (incCSS !== undefined && incCSS.length > 0) ||
-        (incWidgets !== undefined && incWidgets.length > 0);
+        (incCSS !== undefined && incCSS.length > 0);
 
     if (hasMetaChange) {
         await useLedgerStore.getState().updateGlobalMeta((prev) => {
@@ -268,9 +247,6 @@ export async function applyPreset(preset: PresetConfig): Promise<void> {
                     prev.customFilters ?? [],
                     incFilters,
                 );
-            }
-            if (incWidgets !== undefined && incWidgets.length > 0) {
-                next.widgets = mergeBillWidgets(prev.widgets ?? [], incWidgets);
             }
 
             const personalNeedsUpdate =

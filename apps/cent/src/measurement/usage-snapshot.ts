@@ -140,12 +140,6 @@ export function buildUsageSnapshotMetrics({
             "custom_theme_enabled",
             Boolean(personal.customCSS?.trim()),
         ),
-        metric("widget_count", meta.widgets?.length ?? 0, bucketSmall),
-        metric(
-            "home_widget_count",
-            personal.homeWidgets?.length ?? 0,
-            bucketSmall,
-        ),
     );
     if (collaboratorCount !== undefined) {
         result.push(

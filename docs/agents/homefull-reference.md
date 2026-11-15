@@ -19,3 +19,15 @@ UI 对齐的参考对象是用户自有的 Flutter 应用「家小满」（`com.
   - 验证组合：`pnpm lint` + 393×852 / 360×780 / 430×932 三视口无横向溢出与文字裁切 + 亮/暗主题变量未被污染。
 - **分类插画资产**（2026-11-10）：家小满分类图标由 CDN `cdn.homefull.cn/material/ledger-category-template/{name}.png` 下发，已抓取 102 张 114×114 PNG 到 `E:\code\_apk_homefull\illustrations\network\category\`，`category-icons.json` 记录名称/类型/URL。生成脚本 `E:\code\_apk_homefull\tools\build-category-assets.py` 同时产出 `ledger/category.ts`、`components/category/illustrations.ts` 与 zh/en 分类名 key；重跑时 JSON 追加会跳过已有 key。分类名称、顺序与视觉以 APK「类别」页现场巡航截图（`cruise-all/pages/003.png`、`031.png`、`032.png`）为准：胶囊三段 tab、白色圆角卡内列表行（红色圆形减号 / 彩色插画 / 名称 / 编辑铅笔 / 拖拽手柄）。**已全量引入**（2026-11-10）：脚本 `all_assets()` 合并 42 个默认分类 + 56 个自定义 + 5 个转账向图标（按源文件名去重），转 WebP（quality=88）后 `public/category/` 共 103 个 ASCII 文件名文件、360300 B ≈ 352 KiB（其中 `cash-gift.webp` 与 `gift-income.webp` 同源），`illustrations.ts` 为 102 条不重复清单，加上预览共 103 个 `<img>` 格；PWA precache 192 条约 3494 KiB（比只放默认 42 张多 61 条、约 +195 KiB），JS/CSS 体积不变，运行时只在打开表单时加载。脚本不再清空输出目录，重跑不会删已有资产。
 - **本机 Python**：全局 `PYTHONHOME` 指向 `D:\ShadowBot\shadowbot-6.3.39\python`（3.7 标准库），PATH 优先命中的 3.13 解释器与之混用会报 `_sre.MAGIC mismatch`。直接用带 Pillow / numpy 的完整路径 `/d/ShadowBot/shadowbot-6.3.39/python/python.exe` 即可；**不要清空或改动任何全局环境变量**，也不要给命令加 `PYTHONHOME= PYTHONPATH=` 这类前缀。
+
+## 行车能耗实机造数据（2026-11-15 r28）
+
+旧巡航（`cruise-all/pages/006.png` 空态、`035.png` 添加车辆抽屉）**只采到空态**；有数据部分必须自己造。工具与产物都在 `E:\code\_apk_homefull\vehicle-test\`：
+
+- `adbhelper.py` 封装 `dump / tap / tap_text / text / shot / ui_snapshot / back`。**坑**：Git Bash 会把 `/sdcard/window.xml` 转成 Windows 路径，必须用 `adb exec-out "uiautomator dump /dev/tty"` 从 stdout 取；截图用 `adb exec-out screencap -p` 拿 bytes 再写文件；`bounds="[x1,y1][x2,y2]"` 是绝对坐标。
+- 设备 `emulator-5554`、包名 `com.nightingales.homefull`、分辨率 1080×2340。冷启动 `monkey -p … -c android.intent.category.LAUNCHER 1` → 等 6~8s（首页有 AI 文案异步加载）→ `swipe 20 900 900 900 300` 开抽屉 → `tap 432 1557` 进「行车能耗」。
+- **中文输入不可用**：IME 只有 LatinIME / 语音，没装 ADBKeyBoard，`adb shell input text` 对中文无效（实测输入框仍显示占位符）。造数据用 ASCII 车辆名（Xiaobai / Model3 / HybridX）与数字，界面其余文案仍是中文，不影响版式参考。
+- **点按坑**：空态说明「添加车辆后，每次加油…」也含「添加车辆」，按文本模糊匹配会点到说明文字；用 `exact=True` 或固定坐标 `(540,1484)`。键盘弹起后抽屉整体上移约 685px，输入坐标要用上移后的，收键盘（`back`）后恢复。
+- 造数据顺序：添加燃油车 → 记 1 笔（12000 km / ¥300 / 40 L，加满）→ 再记 1 笔（12500 km / ¥280 / 35 L，加满）算出 7.00 L/100km → 打开编辑记录改日期到 10 月可看跨月双柱（同时会触发「请核对里程」里程倒挂提示）→ 加纯电车与混动车看能源类型差异。
+- 产物：`03`~`31` 共 20+ 张 1080×2340 实机截图 + XML；本仓整合图 `.playwright-cli/make-r28-apk-overview.py` → `r28-apk-vehicle-states.png`（8 张数据态）/ `r28-apk-vehicle-interactions.png`（8 张交互）。
+- **实测口径与我们的实现差异 → `docs/agents/ui-vehicle.md`**，不要在本文档展开页面细节。截图偶尔抓到动画过渡帧会整屏花屏，等 2s 再重截即可。

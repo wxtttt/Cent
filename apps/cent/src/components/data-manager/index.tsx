@@ -136,6 +136,7 @@ function Form({ onCancel }: { onCancel?: () => void }) {
             await importFromPreviewResult({
                 bills: data.items,
                 meta: data.meta,
+                entries: data.entries,
                 strategy: "overlap",
             });
             toast.success(t("sample-data-done"));
@@ -231,6 +232,7 @@ export const [DataManagerProvider, showDataManager] = createConfirmProvider(
     Form,
     {
         dialogTitle: "data-manager",
+        routePath: "/data",
         dialogModalClose: true,
         contentClassName:
             "h-full w-full max-h-full max-w-full rounded-none sm:rounded-panel sm:max-h-[min(520px,calc(100vh-32px))] sm:w-[90vw] sm:max-w-[500px]",

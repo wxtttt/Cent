@@ -36,8 +36,7 @@ import { SortableListWithEnableProvider } from "@/components/sortable/enable";
 import { SortableGroupProvider } from "@/components/sortable/group";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { VehicleProvider, VehicleRecordProvider } from "@/components/vehicle";
-import { WidgetEditProvider } from "@/components/widget/edit-form";
-import { WidgetListProvider } from "@/components/widget/list-form";
+import { VehiclePageProvider } from "@/components/vehicle/page-form";
 import { useBudget } from "@/hooks/use-budget";
 import { useMembers } from "@/hooks/use-member";
 import { useInitPreset } from "@/hooks/use-preset";
@@ -110,7 +109,6 @@ export default function MainLayout() {
                 <SortableGroupProvider />
                 <Settings />
                 <PresetProvider />
-                <WidgetListProvider />
                 <DataManagerProvider />
                 <ImportPreviewProvider />
                 <InventoryItemProvider />
@@ -119,7 +117,7 @@ export default function MainLayout() {
                 <MedicalMedicineProvider />
                 <VehicleProvider />
                 <VehicleRecordProvider />
-                <WidgetEditProvider />
+                <VehiclePageProvider />
                 <CurrencyListProvider />
                 <LoanCalculatorProvider />
                 <BookGuide />

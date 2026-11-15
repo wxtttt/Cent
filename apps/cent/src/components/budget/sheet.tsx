@@ -1,5 +1,6 @@
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import { type ReactNode, useMemo, useState } from "react";
+import { useBudget } from "@/hooks/use-budget";
 import type { BillCategory, BillTag, Member } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
@@ -8,6 +9,7 @@ import {
     BTN_PRIMARY,
     BTN_SECONDARY,
     PRESSABLE_ROW,
+    SHEET_FOOTER,
 } from "../button-styles";
 import createConfirmProvider from "../confirm";
 import { createDeleteConfirm } from "../delete-confirm";
@@ -97,8 +99,8 @@ function SheetShell({
                 )}
                 <div className="mt-5 mb-2">{children}</div>
             </div>
-            {/* 长表单滚动时，操作按钮常驻抽屉底部 */}
-            <div className="border-t border-rule/70 bg-ground px-5 pt-2.5 pb-5">
+            {/* 长表单滚动时，操作按钮常驻抽屉底部；间距走全局统一常量 */}
+            <div className={SHEET_FOOTER}>
                 <div className="flex gap-2.5">
                     <button
                         type="button"
@@ -330,34 +332,48 @@ function StartDayForm({
     onConfirm?: (v: BudgetSheetResult) => void;
 }) {
     const t = useIntl();
+    const { budgets } = useBudget();
     const [value, setValue] = useState(edit.value);
     const changed = value !== edit.value;
 
-    /** 用与 setStartDay 相同的锚点算法预演，保证提示与实际落库结果一致 */
+    /**
+     * 用与 setStartDay 相同的锚点算法预演，保证提示与实际落库结果一致。
+     * 「当前周期」优先取账本里覆盖今天的普通预算记录（冻结边界），没有记录
+     * 才回落到按当前起始日现算；过渡期 = 当前周期起始 → 生效日前一天，
+     * 归属月按新起始日反推 periodContaining(now, value) 的起始年月。
+     */
     const preview = useMemo(() => {
         const now = dayjs();
+        const nowTs = now.valueOf();
+        const current = budgets.find(
+            (b) =>
+                b.kind === "normal" &&
+                b.periodStart <= nowTs &&
+                b.periodEnd >= nowTs,
+        );
+        const [fallbackStart, fallbackEnd] = periodContaining(now, edit.value);
+        const curStart = current ? dayjs(current.periodStart) : fallbackStart;
+        const curEnd = current ? dayjs(current.periodEnd) : fallbackEnd;
+
         const effective = firstAnchorAfter(now, value);
         const [newStart, newEnd] = periodFrom(effective, value);
-        const [tStart, tEnd] = periodContaining(now, value);
         const gapEnd = effective.subtract(1, "day").endOf("day");
-        const month = t("budget-period-month", {
-            y: tStart.year(),
-            m: tStart.month() + 1,
-        });
+        const [prevStart] = periodContaining(now, value);
+        const dateText = (d: Dayjs) =>
+            t("start-day-date-cn", { m: d.month() + 1, d: d.date() });
+
         return {
-            effective: t("start-day-effective-hint", {
-                n: value,
-                m: effective.month() + 1,
-                d: effective.date(),
-                period: periodLabel(newStart, newEnd),
-            }),
-            transition: t("start-day-transition-hint", {
-                range: periodLabel(now.startOf("day"), gapEnd),
-                month,
-                period: periodLabel(tStart, tEnd),
-            }),
+            currentStart: dateText(curStart),
+            currentEnd: dateText(curEnd),
+            isTransitionNow: Boolean(current?.isTransition),
+            effectiveDate: dateText(effective),
+            newPeriod: periodLabel(newStart, newEnd),
+            gapStart: dateText(curStart),
+            gapEnd: dateText(gapEnd),
+            hasGap: !gapEnd.isBefore(curStart, "day"),
+            prevMonth: t("start-day-month-cn", { m: prevStart.month() + 1 }),
         };
-    }, [value, t]);
+    }, [budgets, edit.value, value, t]);
 
     return (
         <SheetShell
@@ -382,27 +398,59 @@ function StartDayForm({
                     </button>
                 ))}
             </div>
-            <div className="mt-4 rounded-2xl bg-brand/10 px-3.5 py-3">
-                {changed ? (
-                    <div className="flex flex-col gap-2 text-[12px] leading-relaxed text-ink">
-                        <p className="flex gap-2">
-                            <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand" />
-                            <span>{preview.effective}</span>
-                        </p>
-                        <p className="flex gap-2">
-                            <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand" />
-                            <span>{preview.transition}</span>
-                        </p>
-                    </div>
-                ) : (
-                    <p className="text-[12px] leading-relaxed text-ink-secondary">
-                        {t("start-day-hint-idle")}
-                    </p>
-                )}
+            {/* 上下两段：生效周期 / 过渡期，中间一条极淡分隔线。
+                选中日期在日历上高亮，生效日文字也用同色品牌橘呼应。 */}
+            <div className="mt-4 mb-3 rounded-2xl bg-brand/10 px-3.5 py-3">
+                <p className="text-[15px] font-semibold text-ink">
+                    {changed
+                        ? t("start-day-effective-title")
+                        : t("start-day-current-title")}
+                    {changed ? (
+                        <span className="tabular-nums text-brand">
+                            {preview.effectiveDate}
+                        </span>
+                    ) : (
+                        <span className="tabular-nums">
+                            <span className="text-brand">
+                                {preview.currentStart}
+                            </span>
+                            {" - "}
+                            {preview.currentEnd}
+                        </span>
+                    )}
+                </p>
+                <p className="mt-1 text-[11px] text-ink-secondary">
+                    {changed
+                        ? t("start-day-new-period-note", {
+                              period: preview.newPeriod,
+                          })
+                        : t("start-day-current-note", { n: edit.value })}
+                </p>
+
+                <div className="my-2.5 h-px bg-ink-secondary/15" />
+
+                <p className="text-[14px] font-semibold tabular-nums text-ink">
+                    {changed && preview.hasGap ? (
+                        <>
+                            {t("start-day-transition-title")}
+                            {preview.gapStart} - {preview.gapEnd}
+                        </>
+                    ) : preview.isTransitionNow ? (
+                        t("start-day-transition-active")
+                    ) : (
+                        t("start-day-no-transition")
+                    )}
+                </p>
+                <p className="mt-1 text-[11px] text-ink-secondary">
+                    {changed && preview.hasGap
+                        ? t("start-day-transition-note", {
+                              month: preview.prevMonth,
+                          })
+                        : preview.isTransitionNow
+                          ? t("start-day-transition-active-note")
+                          : t("start-day-no-transition-note")}
+                </p>
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-ink-secondary">
-                {t("start-day-note")}
-            </p>
         </SheetShell>
     );
 }
@@ -440,7 +488,7 @@ function MembersForm({
         );
     return (
         <SheetShell
-            title={t("participants")}
+            title={t("included-members")}
             hint={t("participants-hint")}
             onCancel={onCancel}
             onSave={() => onConfirm?.(normalizeJoiners(value, edit.members))}

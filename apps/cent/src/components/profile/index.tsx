@@ -23,7 +23,7 @@ import { showPreset } from "../preset";
 import { showScheduled } from "../scheduled";
 import { showSettings } from "../settings";
 import { AboutSettingsProvider, showAboutSettings } from "../settings/about";
-import { showWidgetList } from "../widget";
+import { showVehicle } from "../vehicle/page-form";
 
 function GridAction({
     icon,
@@ -169,6 +169,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("budget-manager"),
             icon: "icon-[apk--budget]",
             onClick: () => {
+                onCancel?.();
                 showBudget();
             },
         },
@@ -177,29 +178,26 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("category-management"),
             icon: "icon-[apk--category]",
             onClick: () => {
+                onCancel?.();
                 showCategoryList();
-            },
-        },
-        {
-            key: "widget",
-            label: t("widget-settings"),
-            icon: "icon-[apk--home]",
-            onClick: () => {
-                showWidgetList();
             },
         },
         {
             key: "books",
             label: t("books"),
             icon: "icon-[apk--ledger]",
-            onClick: showBookGuide,
+            onClick: () => {
+                onCancel?.();
+                showBookGuide();
+            },
         },
         {
             key: "vehicle",
             label: t("vehicle-title"),
             icon: "icon-[apk--vehicle]",
             onClick: () => {
-                navigate("/vehicle");
+                onCancel?.();
+                void showVehicle();
             },
         },
         {
@@ -207,6 +205,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("edit-tags"),
             icon: "icon-[lucide--tag]",
             onClick: () => {
+                onCancel?.();
                 showTagList();
             },
         },
@@ -215,6 +214,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("member-management"),
             icon: "icon-[lucide--users]",
             onClick: () => {
+                onCancel?.();
                 showMemberList();
             },
         },
@@ -225,6 +225,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("loan-calculator"),
             icon: "icon-[apk--loan]",
             onClick: () => {
+                onCancel?.();
                 showLoanCalculator();
             },
         },
@@ -233,6 +234,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("currency-manager"),
             icon: "icon-[apk--gold]",
             onClick: () => {
+                onCancel?.();
                 showCurrencyList();
             },
         },
@@ -241,6 +243,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("data-manager"),
             icon: "icon-[apk--bill-export]",
             onClick: () => {
+                onCancel?.();
                 showDataManager();
             },
         },
@@ -249,6 +252,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("preset"),
             icon: "icon-[lucide--palette]",
             onClick: () => {
+                onCancel?.();
                 showPreset();
             },
         },
@@ -257,6 +261,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
             label: t("settings"),
             icon: "icon-[lucide--settings]",
             onClick: () => {
+                onCancel?.();
                 showSettings();
             },
         },
@@ -434,7 +439,16 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                                             </span>
                                         </span>
                                     ) : hasBill ? (
-                                        <span className="flex size-[23px] items-center justify-center rounded-full bg-brand font-medium text-on-brand">
+                                        // 非本月的补位日期只是相邻月份的已记录提示，
+                                        // 用浅橙底 + 淡橙字弱化，别和本月的实心橙圈抢视线
+                                        <span
+                                            className={cn(
+                                                "flex size-[23px] items-center justify-center rounded-full leading-none",
+                                                inMonth
+                                                    ? "bg-brand font-medium text-on-brand"
+                                                    : "bg-brand/20 font-normal text-brand/70",
+                                            )}
+                                        >
                                             {day.date()}
                                         </span>
                                     ) : (
@@ -553,7 +567,7 @@ export function ProfileAvatar({ className }: { className?: string }) {
                 className,
             )}
             onClick={() => {
-                showProfile();
+                void showProfile().catch(() => {});
             }}
         >
             {avatarUrl ? (

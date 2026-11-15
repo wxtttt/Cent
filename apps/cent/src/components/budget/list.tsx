@@ -516,8 +516,8 @@ export default function BudgetListForm({
             .join(" ");
 
     /**
-     * 分类明细固定列出所有一级支出分类：设了额度的显示额度与进度，
-     * 没设置的金额位置写「未设置」，让「哪些分类还没设」一眼可见。
+     * 分类明细只列有信息量的行：设了额度，或当期实际有支出。
+     * 既没设额度又没支出的一律不占位，避免展开后铺一屏「未设置」。
      * 分类额度只是普通预算内的分项上限，不累加进总额（见 util.budgetTotal）。
      */
     const categoryLines = (b: Budget) => {
@@ -525,21 +525,32 @@ export default function BudgetListForm({
             (b.categoriesBudget ?? []).map((c) => [c.id, c.budget]),
         );
         const used = stat(b).encountered.categoriesUsed;
-        return topCategories.map((c) => {
-            const budget = configured.get(c.id) ?? 0;
+        const visible = topCategories
+            .map((c) => ({
+                category: c,
+                budget: configured.get(c.id) ?? 0,
+                used: used?.find((v) => v.id === c.id)?.used ?? 0,
+            }))
+            .filter((v) => v.budget > 0 || v.used > 0);
+        if (visible.length === 0) {
             return (
-                <div key={c.id} className="px-3 py-2">
-                    <StatLine
-                        label={c.name}
-                        used={used?.find((v) => v.id === c.id)?.used ?? 0}
-                        total={budget}
-                        variant="category"
-                        indent
-                        unset={budget <= 0}
-                    />
+                <div className="px-3 py-3 text-[12px] text-ink-secondary">
+                    {t("no-budget")}
                 </div>
             );
-        });
+        }
+        return visible.map(({ category, budget, used: usedValue }) => (
+            <div key={category.id} data-category-line className="px-3 py-2">
+                <StatLine
+                    label={category.name}
+                    used={usedValue}
+                    total={budget}
+                    variant="category"
+                    indent
+                    unset={budget <= 0}
+                />
+            </div>
+        ));
     };
 
     /** 通用月份滚轮选择器：选中的月首映射到已有预算周期，没有则取时间最近的一条 */

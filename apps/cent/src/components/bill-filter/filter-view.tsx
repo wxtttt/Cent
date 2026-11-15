@@ -2,7 +2,6 @@ import { Collapsible } from "radix-ui";
 import { useMemo, useState } from "react";
 import { DefaultCurrencyId } from "@/api/currency/currencies";
 import { useCurrency } from "@/hooks/use-currency";
-import { useWidget } from "@/hooks/use-widget";
 import type { BillFilterViewModule } from "@/ledger/extra-type";
 import type { BillFilter } from "@/ledger/type";
 import { useIntl } from "@/locale";
@@ -61,7 +60,6 @@ export default function BillFilterView({
         edit?.modules,
     );
     const t = useIntl();
-    const { widgets } = useWidget();
 
     const { quickCurrencies } = useCurrency();
 
@@ -81,20 +79,6 @@ export default function BillFilterView({
                         freeze: builtIn.id === "base-analysis",
                     });
                     addedIds.add(builtIn.id);
-                } else if (
-                    typeof moduleId === "string" &&
-                    moduleId.startsWith("widget-")
-                ) {
-                    const widgetId = moduleId.slice(7);
-                    const widget = widgets.find((w) => w.id === widgetId);
-                    if (widget) {
-                        items.push({
-                            id: moduleId,
-                            name: widget.name,
-                            enable: true,
-                        });
-                        addedIds.add(moduleId);
-                    }
                 }
             });
         }
@@ -108,18 +92,6 @@ export default function BillFilterView({
                     freeze: builtIn.id === "base-analysis",
                 });
                 addedIds.add(builtIn.id);
-            }
-        });
-
-        widgets.forEach((widget) => {
-            const widgetModuleId =
-                `widget-${widget.id}` as BillFilterViewModule;
-            if (!addedIds.has(widgetModuleId)) {
-                items.push({
-                    id: widgetModuleId,
-                    name: widget.name,
-                    enable: false,
-                });
             }
         });
 

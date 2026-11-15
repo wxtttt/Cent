@@ -75,8 +75,7 @@ export type BillFilterViewModule =
     | "map" // AnalysisMap 地图模块
     | "analysis" // AnalysisDetail 简易分析模块
     | "top-expense" // 最高支出模块
-    | "top-income" // 最高收入模块
-    | `widget-${string}`; // Widget 组件
+    | "top-income"; // 最高收入模块
 
 export type BillFilterView = {
     id: string;
@@ -147,7 +146,6 @@ export type PersonalMeta = {
     /** 最近导入记录（按时间倒序，最多保留 20 条） */
     importHistory?: ImportHistoryEntry[];
     customCSS?: string;
-    homeWidgets?: string[]; // 首页展示的widget列表，元素为widget id
     assistant?: {
         bigmodel?: {
             apiKey?: string;

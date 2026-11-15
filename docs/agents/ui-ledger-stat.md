@@ -16,3 +16,7 @@
 ## 账单卡创建者显示
 
 - 创建者名称先查 `infos.creators`、再查 `GlobalMeta.members`，最后才回落 `t("unknown-user")`；**不要写死字面量 `"unknown-user"`**（曾导致首页与记账页账单卡右下角出现一堆英文 key）。两种成员体系 ID 不保证一致，见 `docs/agents/domain-model.md`。
+
+## 统计筛选视图模块（r25）
+
+- `components/bill-filter/filter-view.tsx` 的「自定义模块」配置只保留 6 个内置模块（`base-analysis` / `top-words` / `map` / `analysis` / `top-expense` / `top-income`）；原来额外枚举用户 Widget 的 `widget-${id}` 选项已随 Widget 功能删除。旧筛选视图里存下的 `widget-xxx` id 匹配不到内置模块会被忽略，不会渲染空白卡片。

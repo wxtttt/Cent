@@ -1,11 +1,13 @@
 import type { Bill, Budget, ExportedJSON, GlobalMeta } from "@/ledger/type";
+import type { Vehicle, VehicleRecord } from "@/vehicle/types";
 
 /**
  * 一键载入的完整测试账本。数据按「当前月往前 5 个月」动态生成，
- * 任何时候载入都能看到有账单、有预算、有标签成员的当期数据。
+ * 任何时候载入都能看到有账单、有预算、有标签成员以及车辆的当期数据。
  * 五个月分别覆盖：未设置预算 / 有总额无分类预算 / 只有普通预算且有分类预算 /
  * 有分类预算+1 条特殊预算 / 完整多预算（2 条特殊），用于回归预算页的各种边界态。
  * 分类额度刻意不等于普通预算总额，用来验证「分类额度不累加进普通预算，但账单支出照常计入」。
+ * 车辆数据覆盖燃油 / 纯电 / 混动三种能源，随 entries.vehicle 一起覆盖写入。
  * 该文件不引入任何运行时依赖，可直接被 Node(strip-types) 执行导出 JSON 备份。
  */
 const YUAN = 10000;
@@ -285,6 +287,299 @@ const normalCategories = [
     { id: "entertainment", budget: 600 },
 ];
 
+/**
+ * 车辆示例数据：燃油 / 纯电 / 混动各一台，覆盖加油、充电、保养、维修，
+ * 供「载入示例数据」与账本一起覆盖进 entry: vehicle 桶。
+ * 固定 id + sample 标记，重复载入不会产生副本。
+ */
+type VehicleSeed = {
+    vehicleId: string;
+    monthsAgo: number;
+    day: number;
+    type: VehicleRecord["type"];
+    odometer: number;
+    cost: number;
+    volume?: number;
+    fuelGrade?: VehicleRecord["fuelGrade"];
+    remark?: string;
+};
+
+const VEHICLE_SEEDS: VehicleSeed[] = [
+    // 小白（燃油）：每月加满一次，中间穿插保养与维修
+    {
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 5,
+        day: 8,
+        type: "fuel",
+        odometer: 31800,
+        cost: 312,
+        volume: 40.2,
+        fuelGrade: "92",
+        remark: "中石化",
+    },
+    {
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 4,
+        day: 9,
+        type: "fuel",
+        odometer: 32420,
+        cost: 340,
+        volume: 43.7,
+        fuelGrade: "92",
+    },
+    {
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 3,
+        day: 7,
+        type: "fuel",
+        odometer: 33010,
+        cost: 320,
+        volume: 41.3,
+        fuelGrade: "95",
+    },
+    {
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 3,
+        day: 20,
+        type: "maintenance",
+        odometer: 33120,
+        cost: 680,
+        remark: "更换机油机滤",
+    },
+    {
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 2,
+        day: 11,
+        type: "fuel",
+        odometer: 33670,
+        cost: 300,
+        volume: 38.5,
+        fuelGrade: "92",
+    },
+    {
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 1,
+        day: 6,
+        type: "fuel",
+        odometer: 34240,
+        cost: 310,
+        volume: 39.9,
+        fuelGrade: "92",
+    },
+    {
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 1,
+        day: 22,
+        type: "repair",
+        odometer: 34310,
+        cost: 1280,
+        remark: "更换刹车片",
+    },
+    {
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 0,
+        day: 8,
+        type: "fuel",
+        odometer: 34890,
+        cost: 316,
+        volume: 40.6,
+        fuelGrade: "98",
+        remark: "中石油",
+    },
+    // 小蓝（纯电）：每月充满一次
+    {
+        vehicleId: "sample-vehicle-ev",
+        monthsAgo: 5,
+        day: 12,
+        type: "charge",
+        odometer: 10500,
+        cost: 58,
+        volume: 48.2,
+        remark: "家充桩",
+    },
+    {
+        vehicleId: "sample-vehicle-ev",
+        monthsAgo: 4,
+        day: 14,
+        type: "charge",
+        odometer: 10840,
+        cost: 57,
+        volume: 47.6,
+    },
+    {
+        vehicleId: "sample-vehicle-ev",
+        monthsAgo: 3,
+        day: 10,
+        type: "charge",
+        odometer: 11190,
+        cost: 59,
+        volume: 49.0,
+        remark: "商场快充",
+    },
+    {
+        vehicleId: "sample-vehicle-ev",
+        monthsAgo: 2,
+        day: 13,
+        type: "charge",
+        odometer: 11540,
+        cost: 58,
+        volume: 48.3,
+    },
+    {
+        vehicleId: "sample-vehicle-ev",
+        monthsAgo: 2,
+        day: 18,
+        type: "maintenance",
+        odometer: 11550,
+        cost: 320,
+        remark: "轮胎换位",
+    },
+    {
+        vehicleId: "sample-vehicle-ev",
+        monthsAgo: 1,
+        day: 9,
+        type: "charge",
+        odometer: 11880,
+        cost: 57,
+        volume: 47.6,
+    },
+    {
+        vehicleId: "sample-vehicle-ev",
+        monthsAgo: 0,
+        day: 6,
+        type: "charge",
+        odometer: 12220,
+        cost: 57,
+        volume: 47.6,
+        remark: "家充桩",
+    },
+    // 小闪（混动）：加油与充电交替，覆盖抽屉里的「加油 / 充电」切换
+    {
+        vehicleId: "sample-vehicle-hybrid",
+        monthsAgo: 2,
+        day: 5,
+        type: "fuel",
+        odometer: 21000,
+        cost: 280,
+        volume: 36.0,
+        fuelGrade: "95",
+    },
+    {
+        vehicleId: "sample-vehicle-hybrid",
+        monthsAgo: 1,
+        day: 12,
+        type: "charge",
+        odometer: 21520,
+        cost: 46,
+        volume: 38.0,
+    },
+    {
+        vehicleId: "sample-vehicle-hybrid",
+        monthsAgo: 1,
+        day: 25,
+        type: "fuel",
+        odometer: 22000,
+        cost: 262,
+        volume: 33.6,
+        fuelGrade: "95",
+    },
+    {
+        vehicleId: "sample-vehicle-hybrid",
+        monthsAgo: 0,
+        day: 5,
+        type: "charge",
+        odometer: 22460,
+        cost: 40,
+        volume: 32.0,
+    },
+];
+
+const sampleTime = (anchor: Date, monthsAgo: number, day: number) => {
+    const base = new Date(
+        anchor.getFullYear(),
+        anchor.getMonth() - monthsAgo,
+        1,
+    );
+    const maxDay =
+        monthsAgo === 0
+            ? anchor.getDate()
+            : new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+    return new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        Math.min(day, maxDay),
+        10,
+        0,
+        0,
+    ).getTime();
+};
+
+const createVehicleSampleEntries = (anchor: Date) => {
+    const now = anchor.getTime();
+    const vehicles: (Vehicle & { __create_at: number; __update_at: number })[] =
+        [
+            {
+                id: "sample-vehicle-gas",
+                userId: "me",
+                time: now,
+                name: "小白",
+                plate: "苏A·8F52",
+                energyType: "gas",
+                initialOdometer: 31200,
+                sample: true,
+                __create_at: now,
+                __update_at: now,
+            },
+            {
+                id: "sample-vehicle-ev",
+                userId: "me",
+                time: now,
+                name: "小蓝",
+                plate: "苏A·D7391",
+                energyType: "electric",
+                initialOdometer: 9800,
+                sample: true,
+                __create_at: now,
+                __update_at: now,
+            },
+            {
+                id: "sample-vehicle-hybrid",
+                userId: "me",
+                time: now,
+                name: "小闪",
+                plate: "苏A·C6666",
+                energyType: "hybrid",
+                initialOdometer: 20400,
+                sample: true,
+                __create_at: now,
+                __update_at: now,
+            },
+        ];
+    const records: (VehicleRecord & {
+        __create_at: number;
+        __update_at: number;
+    })[] = VEHICLE_SEEDS.map((s, i) => {
+        const time = sampleTime(anchor, s.monthsAgo, s.day);
+        return {
+            id: `sample-vehicle-record-${String(i + 1).padStart(2, "0")}`,
+            userId: "me",
+            time,
+            vehicleId: s.vehicleId,
+            type: s.type,
+            odometer: s.odometer,
+            cost: s.cost,
+            volume: s.volume,
+            fuelGrade: s.fuelGrade,
+            isFull: s.type === "fuel" || s.type === "charge" ? true : undefined,
+            remark: s.remark,
+            sample: true,
+            __create_at: time,
+            __update_at: time,
+        };
+    });
+    return [...vehicles, ...records];
+};
+
 export const createSampleData = (anchor: Date = new Date()): ExportedJSON => {
     const months = [4, 3, 2, 1, 0].map((back) => {
         const d = new Date(anchor.getFullYear(), anchor.getMonth() - back, 1);
@@ -445,5 +740,9 @@ export const createSampleData = (anchor: Date = new Date()): ExportedJSON => {
         baseCurrency: "CNY",
     };
 
-    return { items, meta };
+    return {
+        items,
+        meta,
+        entries: { vehicle: createVehicleSampleEntries(anchor) },
+    };
 };
