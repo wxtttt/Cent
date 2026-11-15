@@ -1,19 +1,26 @@
-/** biome-ignore-all lint/security/noDangerouslySetInnerHtml: <explanation> */
-/** biome-ignore-all lint/a11y/noStaticElementInteractions: <explanation> */
-/** biome-ignore-all lint/a11y/useKeyWithClickEvents: <explanation> */
-import { type ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { type Currency, DefaultCurrencies } from "@/api/currency/currencies";
+import { DefaultCurrencies } from "@/api/currency/currencies";
+import { FormCard, FormSection, RowChevron } from "@/components/form-rows";
 import { useCurrency } from "@/hooks/use-currency";
 import PopupLayout from "@/layouts/popup-layout";
 import type { CustomCurrency } from "@/ledger/type";
 import { useIntl } from "@/locale";
+import { useLedgerStore } from "@/store/ledger";
+import { useUserStore } from "@/store/user";
 import { cn } from "@/utils";
-import { Button } from "../ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
+import { BTN_TAP, PRESSABLE_ROW } from "../button-styles";
 import { EditCurrencyProvider, showEditCurrency } from "./edit-form";
 import { ManualRateProvider, showManualRateUpdate } from "./manual-rate-form";
+import {
+    CurrencyDeleteProvider,
+    CurrencyOptionProvider,
+    showCurrencyOptionSheet,
+} from "./sheets";
+
+/** 汇率显示统一 4 位有效数字，避免 toFixed(6) 的长尾 */
+const formatRate = (value: number) =>
+    new Intl.NumberFormat("en", { maximumSignificantDigits: 4 }).format(value);
 
 export default function CurrencyListForm({
     edit,
@@ -40,18 +47,11 @@ export default function CurrencyListForm({
         updateQuickCurrencies,
     } = useCurrency();
 
-    const others = allCurrencies.filter((c) =>
-        quickCurrencies.every((v) => v.id !== c.id),
+    // 手动设置的汇率只存个人 meta，用于在汇率行上标出「手动」
+    const uid = useUserStore((s) => s.id);
+    const manualRates = useLedgerStore(
+        (s) => s.infos?.meta.personal?.[uid]?.rates,
     );
-
-    /**
-     * 判断是否为自定义货币类型 (CustomCurrency)
-     */
-    const isCustomCurrency = (
-        v: CustomCurrency | Currency,
-    ): v is CustomCurrency => {
-        return customCurrencies.some((c) => c.id === v.id);
-    };
 
     const rates = useMemo(() => {
         return DefaultCurrencies.map((currency) => {
@@ -61,6 +61,72 @@ export default function CurrencyListForm({
             };
         });
     }, [baseCurrency.id, convert]);
+
+    const [loading, setLoading] = useState(false);
+    const toRefresh = async () => {
+        setLoading(true);
+        try {
+            await refresh();
+            toast.success(t("rate-update-success"));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toUpdateCurrency = async (currency?: CustomCurrency) => {
+        const newCurrency = await showEditCurrency(currency);
+        if (!newCurrency) {
+            return;
+        }
+        if (typeof newCurrency === "string") {
+            if (currency?.id) {
+                deleteCustomCurrency(currency.id);
+            }
+            return;
+        }
+        updateCustomCurrency(newCurrency);
+    };
+
+    const toPickBaseCurrency = async () => {
+        const result = await showCurrencyOptionSheet({
+            title: t("base-currency"),
+            hint: t("base-currency-switch-hint"),
+            options: DefaultCurrencies.map((currency) => ({
+                id: currency.id,
+                label: t(currency.labelKey),
+            })),
+            selected: [baseCurrency.id],
+            searchable: true,
+        }).catch(() => undefined);
+        if (!result) {
+            return;
+        }
+        // 单选语义复用多选抽屉：结果里剔除当前本位币，取最后点选的那一个
+        const next = result.filter((id) => id !== baseCurrency.id);
+        if (next.length > 0) {
+            void setBaseCurrency(next[next.length - 1]);
+        }
+    };
+
+    const toPickQuickCurrencies = async () => {
+        const selectedIds = quickCurrencies.map((c) => c.id);
+        const result = await showCurrencyOptionSheet({
+            title: t("bill-quick-currencies"),
+            hint: t("quick-currencies-desc"),
+            options: allCurrencies.map((c) => ({ id: c.id, label: c.label })),
+            selected: selectedIds,
+            searchable: true,
+        }).catch(() => undefined);
+        if (!result) {
+            return;
+        }
+        // 保持既有顺序在前、新勾选的追加在后，避免快捷区顺序每次都重排
+        const next = [
+            ...selectedIds.filter((id) => result.includes(id)),
+            ...result.filter((id) => !selectedIds.includes(id)),
+        ];
+        void updateQuickCurrencies(next);
+    };
 
     const toManuallyUpdate = async (
         currency: (typeof DefaultCurrencies)[number],
@@ -88,290 +154,222 @@ export default function CurrencyListForm({
         }
     };
 
-    const [loading, setLoading] = useState(false);
-    const toRefresh = async () => {
-        setLoading(true);
-        try {
-            await refresh();
-            toast.success(t("rate-update-success"));
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const toUpdateCurrency = async (currency?: CustomCurrency) => {
-        const newCurrency = await showEditCurrency(currency);
-        if (!newCurrency) {
-            return;
-        }
-        if (typeof newCurrency === "string") {
-            if (currency?.id) {
-                deleteCustomCurrency(currency.id);
-            }
-            return;
-        }
-        updateCustomCurrency(newCurrency);
-    };
+    const rateCurrencies = DefaultCurrencies.filter(
+        (currency) => currency.id !== baseCurrency.id,
+    );
 
     return (
         <PopupLayout
             onBack={onCancel}
             title={t("currency-manager")}
-            className="flex flex-col h-full overflow-hidden"
+            backStyle="circle"
+            className="dp-drawer-surface h-full bg-ground"
             right={
-                <div className="flex gap-2 items-center">
-                    <Button onClick={() => toUpdateCurrency()}>
-                        <i className="icon-[lucide--plus]"></i>
-                    </Button>
-                </div>
+                <button
+                    type="button"
+                    data-currency-add
+                    onClick={() => void toUpdateCurrency()}
+                    aria-label={t("add-new-currency")}
+                    className="-mr-1 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                >
+                    <i className="icon-[lucide--plus] size-5" />
+                </button>
             }
         >
-            <div className="flex justify-between px-4 border-b py-4">
-                <Popover>
-                    <PopoverTrigger>
-                        <div className="flex items-center gap-1">
-                            {t("base-currency")}
-                            <i className="icon-[lucide--circle-help]"></i>
-                        </div>
-                    </PopoverTrigger>
-                    <PopoverContent>
-                        <div
-                            className="text-sm [&>div]:text-xs [&>div]:opacity-60 [&>div]:py-2"
-                            dangerouslySetInnerHTML={{
-                                __html: t("currency_change_warning"),
-                            }}
-                        ></div>
-                    </PopoverContent>
-                </Popover>
-                <Select value={baseCurrency.id} onValueChange={setBaseCurrency}>
-                    <SelectTrigger className="w-fit">
-                        <div>{baseCurrency.label}</div>
-                    </SelectTrigger>
-                    <SelectContent>
-                        {DefaultCurrencies.map((currency) => {
-                            return (
-                                <SelectItem
-                                    key={currency.id}
-                                    value={currency.id}
-                                >
-                                    {t(currency.labelKey)}
-                                </SelectItem>
-                            );
-                        })}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="w-full px-6 flex justify-between py-1">
-                <div className="text-xs opacity-60">{t("currency")}</div>
-                <div className="text-xs opacity-60 flex items-center gap-2">
-                    <Popover>
-                        <PopoverTrigger>
-                            <div className="flex items-center gap-1">
-                                {t("exchange-rate")}
-                                <i className="icon-[lucide--circle-help]"></i>
-                            </div>
-                        </PopoverTrigger>
-                        <PopoverContent className="p-2 text-xs w-fit">
-                            <div>
-                                {t("exchange-rate-from", {
-                                    a: (
-                                        <a
-                                            className="underline"
-                                            href="https://ecb.europa.eu"
-                                            target="_blank"
-                                            rel="noopener"
-                                        >
-                                            ecb.europa.eu
-                                        </a>
-                                    ),
-                                })}
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-                    <Button
-                        className="p-0 h-fit"
-                        disabled={loading}
-                        onClick={toRefresh}
-                    >
-                        <i
+            <div
+                data-currency-page
+                className="scrollbar-hidden flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-6"
+            >
+                <section>
+                    <FormSection title={t("base-currency")} />
+                    <FormCard>
+                        <button
+                            type="button"
+                            data-currency-base-row
+                            onClick={() => void toPickBaseCurrency()}
                             className={cn(
-                                "icon-[lucide--refresh-cw]",
-                                loading && "animate-spin",
+                                "flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2 text-left",
+                                PRESSABLE_ROW,
                             )}
-                        ></i>
-                    </Button>
-                </div>
-            </div>
-            <div className="flex-1 overflow-y-auto pb-4">
-                <div className="border rounded-md px-2 mx-2 mb-4">
-                    <div className="text-xs opacity-60 py-2">
-                        {t("quick-currencies")}
-                    </div>
-                    <div>
-                        {quickCurrencies.length === 0 ? (
-                            <div className="text-center text-xs opacity-60 py-4">
-                                {t("quick-entry-empty")}{" "}
+                        >
+                            <span className="flex-shrink-0 text-[15px] text-ink">
+                                {t("base-currency")}
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                                <span className="truncate text-[15px] text-ink">
+                                    {baseCurrency.label}
+                                </span>
+                                <RowChevron />
+                            </span>
+                        </button>
+                    </FormCard>
+                </section>
+
+                <section>
+                    <FormSection title={t("bill-quick-currencies")} />
+                    <FormCard>
+                        <button
+                            type="button"
+                            data-currency-quick-row
+                            onClick={() => void toPickQuickCurrencies()}
+                            className={cn(
+                                "flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2 text-left",
+                                PRESSABLE_ROW,
+                            )}
+                        >
+                            <span className="flex-shrink-0 text-[15px] text-ink">
+                                {t("bill-quick-currencies")}
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                                <span
+                                    className={cn(
+                                        "truncate text-[15px]",
+                                        quickCurrencies.length > 0
+                                            ? "text-ink"
+                                            : "text-ink-secondary/70",
+                                    )}
+                                >
+                                    {quickCurrencies.length > 0
+                                        ? quickCurrencies
+                                              .map((c) => c.label)
+                                              .join("、")
+                                        : t("not-set")}
+                                </span>
+                                <RowChevron />
+                            </span>
+                        </button>
+                    </FormCard>
+                </section>
+
+                <section>
+                    <FormSection title={t("custom-currencies")} />
+                    <FormCard>
+                        {customCurrencies.length === 0 ? (
+                            <div className="px-4 py-5 text-center text-[13px] text-ink-secondary">
+                                {t("custom-currencies-empty")}
                             </div>
                         ) : (
-                            quickCurrencies.map((currency) => {
-                                const tail = (
-                                    <>
-                                        <Button
-                                            size={"sm"}
-                                            variant="ghost"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                updateQuickCurrencies(
-                                                    quickCurrencies
-                                                        .filter(
-                                                            (v) =>
-                                                                v.id !==
-                                                                currency.id,
-                                                        )
-                                                        .map((v) => v.id),
-                                                );
-                                            }}
-                                        >
-                                            <i className="icon-[apk--close]"></i>
-                                        </Button>
-                                    </>
-                                );
-                                if (isCustomCurrency(currency)) {
-                                    const rate = currency.rateToBase;
-                                    return (
-                                        <CurrencyItem
-                                            key={currency.id}
-                                            name={currency.name}
-                                            symbol={currency.symbol}
-                                            rate={rate}
-                                            onClick={() =>
-                                                toUpdateCurrency(currency)
-                                            }
-                                        >
-                                            {tail}
-                                        </CurrencyItem>
-                                    );
-                                }
-                                const rate = rates.find(
-                                    (r) => r.id === currency.id,
-                                );
-                                return (
-                                    <CurrencyItem
-                                        key={currency.id}
-                                        name={t(currency.labelKey)}
-                                        symbol={currency.symbol}
-                                        icon={currency.icon}
-                                        rate={rate?.predict}
-                                        onClick={() =>
-                                            toManuallyUpdate(currency)
-                                        }
-                                    >
-                                        {tail}
-                                    </CurrencyItem>
-                                );
-                            })
+                            customCurrencies.map((currency) => (
+                                <button
+                                    key={currency.id}
+                                    type="button"
+                                    data-currency-custom-row={currency.id}
+                                    onClick={() =>
+                                        void toUpdateCurrency(currency)
+                                    }
+                                    className={cn(
+                                        "flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left",
+                                        PRESSABLE_ROW,
+                                    )}
+                                >
+                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ground-muted text-[13px] font-medium text-ink">
+                                        {currency.symbol}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-[15px] text-ink">
+                                            {currency.name}
+                                        </span>
+                                        <span className="block truncate text-[11px] text-ink-secondary">
+                                            {currency.symbol}
+                                        </span>
+                                    </span>
+                                    <span className="shrink-0 text-[13px] text-ink">
+                                        {formatRate(currency.rateToBase)}
+                                    </span>
+                                    <RowChevron />
+                                </button>
+                            ))
                         )}
+                    </FormCard>
+                </section>
+
+                <section>
+                    <div className="flex items-center justify-between px-1 pb-2">
+                        <span className="text-[15px] font-semibold text-ink">
+                            {t("exchange-rate")}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => void toRefresh()}
+                            disabled={loading}
+                            aria-label={t("exchange-rate")}
+                            className={cn(
+                                "disabled:cursor-not-allowed disabled:opacity-40",
+                                BTN_TAP,
+                            )}
+                        >
+                            <i
+                                className={cn(
+                                    "icon-[lucide--refresh-cw] size-3.5",
+                                    loading && "animate-spin",
+                                )}
+                            />
+                        </button>
                     </div>
-                </div>
-                <div className="border rounded-md px-2 mx-2">
-                    <div className="text-xs opacity-60 py-2">
-                        {t("other-currencies")}
-                    </div>
-                    <div>
-                        {others.map((currency) => {
-                            const tail = (
-                                <>
-                                    <Button
-                                        size={"sm"}
-                                        variant="ghost"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            updateQuickCurrencies([
-                                                currency.id,
-                                                ...quickCurrencies.map(
-                                                    (v) => v.id,
-                                                ),
-                                            ]);
-                                        }}
-                                    >
-                                        <i className="icon-[lucide--chevrons-up]"></i>
-                                    </Button>
-                                </>
-                            );
-                            if (isCustomCurrency(currency)) {
-                                const rate = currency.rateToBase;
-                                return (
-                                    <CurrencyItem
-                                        key={currency.id}
-                                        name={currency.name}
-                                        symbol={currency.symbol}
-                                        rate={rate}
-                                        onClick={() =>
-                                            toUpdateCurrency(currency)
-                                        }
-                                    >
-                                        {tail}
-                                    </CurrencyItem>
-                                );
-                            }
+                    <FormCard>
+                        {rateCurrencies.map((currency) => {
                             const rate = rates.find(
                                 (r) => r.id === currency.id,
                             );
+                            const manual = manualRates?.[currency.id] != null;
                             return (
-                                <CurrencyItem
+                                <button
                                     key={currency.id}
-                                    name={t(currency.labelKey)}
-                                    symbol={currency.symbol}
-                                    icon={currency.icon}
-                                    rate={rate?.predict}
-                                    onClick={() => toManuallyUpdate(currency)}
+                                    type="button"
+                                    data-currency-rate-row={currency.id}
+                                    onClick={() =>
+                                        void toManuallyUpdate(currency)
+                                    }
+                                    className={cn(
+                                        "flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left",
+                                        PRESSABLE_ROW,
+                                    )}
                                 >
-                                    {tail}
-                                </CurrencyItem>
+                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ground-muted text-[17px]">
+                                        {currency.icon}
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate text-[15px] text-ink">
+                                            {t(currency.labelKey)}
+                                        </span>
+                                        <span className="block truncate text-[11px] text-ink-secondary">
+                                            {currency.id} · {currency.symbol}
+                                        </span>
+                                    </span>
+                                    {manual && (
+                                        <span className="shrink-0 rounded-full bg-ground-muted px-1.5 py-0.5 text-[10px] text-ink-secondary">
+                                            {t("manual-rate")}
+                                        </span>
+                                    )}
+                                    <span className="shrink-0 text-[13px] text-ink">
+                                        {rate ? formatRate(rate.predict) : "—"}
+                                    </span>
+                                    <RowChevron />
+                                </button>
                             );
                         })}
-                    </div>
-                </div>
+                    </FormCard>
+                </section>
+
+                <p className="px-2 text-center text-[11px] leading-relaxed text-ink-secondary/80">
+                    {t("exchange-rate-from", {
+                        a: (
+                            <a
+                                className="underline"
+                                href="https://ecb.europa.eu"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                ecb.europa.eu
+                            </a>
+                        ),
+                    })}
+                </p>
             </div>
+            <CurrencyOptionProvider />
+            <CurrencyDeleteProvider />
             <EditCurrencyProvider />
             <ManualRateProvider />
         </PopupLayout>
-    );
-}
-
-function CurrencyItem({
-    name,
-    icon,
-    symbol,
-    rate,
-    children,
-    onClick,
-}: {
-    name: string;
-    symbol: string;
-    icon?: ReactNode;
-    rate?: number;
-    children?: ReactNode;
-    onClick?: () => void;
-}) {
-    return (
-        <div
-            className="py-2 border-b w-full flex justify-between items-center cursor-pointer"
-            onClick={onClick}
-        >
-            <div className="flex items-center gap-2">
-                {icon && <div className="text-xl">{icon}</div>}
-                <div className="text-left">
-                    <div>{name}</div>
-                    <div className="text-xs opacity-60">{`(${symbol})`}</div>
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className="text-sm">{rate?.toFixed(6)}</div>
-                {children}
-            </div>
-        </div>
     );
 }

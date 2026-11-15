@@ -129,3 +129,20 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 6. **内存紧张下 WebKit 连续截图会拖崩浏览器**：当时可用物理内存约 1.6 GB，9 张 402×874 截图把 WebKit 打崩、日志只有半行。给 `shot()` 加 `if (tag === "webkit") return;` 跳过截图后 WebKit 46/46 全过；Chromium 保留截图供概览图使用。用户明确要求控制内存，**双引擎一律串行、跑完立即 close**。
 7. **验证脚本的断言写法**：`placeholder` 不进 `innerText`；「全部」态默认车可能是混动，段控同时有加油 / 充电是正确行为；「距上次」要先显式切到目标类型再断言。
 8. `.playwright-cli/make-r30-overview.py`：9 张改动后截图整合，纯 Pillow CPU 操作，不开浏览器、不跑构建，避免再吃内存。
+
+## r31 验证（2026-11-15，币种抽屉搜索 + 汇率与货币页重构；worktree `E:\code\_cent_currency`）
+
+> r31b 复审后（自定义币种段上移到汇率之前、新增按钮挪到页面右上角、本位币/快捷币种选项抽屉加 `searchable`）断言扩到 **42 项**，重建 `index-u17uuQN6.js`；最终 **Chromium 42/42 + WebKit 42/42、errors: []**。
+
+- `.playwright-cli/verify-r31.js`：**一个脚本双引擎**（UA 判定），`pass/total/failed/errors` 精简输出。BASE **不写死 5173**——本轮 5173 / 5174 被并发会话占用，本会话 preview 绑 **5175**，端口以 preview 日志或 `.playwright-cli/check-port.cjs`（比对 dist 入口哈希与各端口返回）为准。流程：注入离线账本 → 左侧抽屉「汇率与货币」宫格 → `/currency` 路由页四段结构（自定义币种段序 + 右上角按钮 + 31 币种 − 本位币 = 30 汇率行）→ 本位币选项抽屉开/关不改值 → 快捷币种抽屉搜索过滤 → 勾「美元、日元」回写摘要 → 手动汇率设 0.5 出「手动」徽标 → 清空恢复 → 右上角新增自定义币种/编辑/删除二次确认 → 返回首页 → 记一笔币种抽屉搜索（名称「美」单命中 / 代码「USD」/ 空态 / 清空恢复 / 结果直选切 `$`）→ 横向溢出 + pageerror。截图仅 Chromium（WebKit 内存紧跳截图）。
+
+**本轮新增踩坑（按重要性）**：
+
+1. **WebKit 行点击间歇吞掉**（r31b 新坑）：点行后弹层没开是偶发的，`dispatchEvent` 兜底也可能不打进被覆盖的元素。所有「点行 → 开抽屉」统一走 `openSheet(loc, needle, key)` 辅助——点完确认弹层真出现了，没出现再点（最多 3 次）；**抽屉没开时下一步的 `locator.fill` 会干等 30s 把整个 run 打死**，输入框操作前必须 `count()` 守卫并短路（失败项显式置 false）。
+2. **WebKit 下 personal meta 写入慢于固定 sleep**：手动汇率确认后 IndexedDB 写入在负载高时超过 900ms，徽标晚到导致 set / clear 两个断言都误报（首轮 35/37 的根因）。所有「操作后立刻断言 DOM 状态」的等待一律改 `page.waitForFunction(..., { timeout: 8000 })` 轮询，不要 `waitForTimeout(900)` 猜。
+3. **kurrency 汇率源离线重试风暴**：应用会持续抓 `raw.githubusercontent.com/glink25/kurrency/main/data/latest.json`，离线预览下 WebKit 一次跑出 **483~535 次 `Failed to fetch`**（Chromium 仅 2 次），循环失败本身又会拖慢页面、最终把内存紧张的 WebKit 拖崩（一次 run 中途 `browser has been closed`）。解法：脚本里 `page.route("**/raw.githubusercontent.com/**", r => r.fulfill({...}))` 直接 fulfill 一个 `{date, base:"EUR", rates:{全 31 币种}}` 的合法响应，store 一次成功即停；只 `abort` 不够（失败更快反而重试更多）。该噪声按 verification.md r15 口径过滤，**不是 UI 缺陷**。
+4. **`playwright-cli open` 输出不能接 findstr 管道**（与 r30 的 head 坑同源）：`open ... | findstr` 管道关闭会带走刚启动的 WebKit，后续 run-code 全部 `Browser 'default' is not open`。open 输出重定向到文件或 NUL 都可以。
+5. **内存红线**：机器剩 0.4 GB 空闲时 WebKit 启动即崩，等回落到 ~1 GB 才能跑；跑完立即 close，并用 `Get-CimInstance` 复核无残留 `WebKit|MiniBrowser|headless` 进程。
+6. **Chromium 首轮 35/37 的两个失败均为脚本误报**：默认币种实际 31 个（排除本位币 30 行，不是 29）；`Failed to fetch` 是 kurrency / 登录探测的既有噪声，需进过滤名单。
+7. **并发会话会实时重建挤端口**：本轮 5173 / 5174 的入口哈希在验证期间两次变化（其他会话在重建自己的 dist），本会话 preview 也会被挤到下一端口，每次构建/验证前都要重新核对 BASE 端口与哈希。
+

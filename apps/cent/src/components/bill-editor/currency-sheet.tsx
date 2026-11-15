@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useCurrency } from "@/hooks/use-currency";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
@@ -86,6 +87,8 @@ function CurrencySheetForm({
     const t = useIntl();
     const { baseCurrency, quickCurrencies, allCurrencies } = useCurrency();
     const selectedId = edit?.selectedId ?? baseCurrency.id;
+    const [query, setQuery] = useState("");
+    const keyword = query.trim().toLowerCase();
 
     const toOption = (c: (typeof allCurrencies)[number]): CurrencyOption => ({
         id: c.id,
@@ -100,6 +103,16 @@ function CurrencySheetForm({
     ];
     const quick = quickCurrencies.map(toOption);
 
+    // 搜索按名称（美元）/ 代码（USD）/ 符号（$）匹配，与分类抽屉同一套交互
+    const searchResults = keyword
+        ? all.filter(
+              (c) =>
+                  c.label.toLowerCase().includes(keyword) ||
+                  c.id.toLowerCase().includes(keyword) ||
+                  c.symbol.toLowerCase().includes(keyword),
+          )
+        : [];
+
     const pick = (currencyId: string) => onConfirm?.({ currencyId });
 
     return (
@@ -107,60 +120,101 @@ function CurrencySheetForm({
             <div className="flex justify-center pb-3">
                 <span className="h-1 w-10 rounded-full bg-ink-secondary/30" />
             </div>
-            <div className="flex items-center justify-between pb-3">
+            <div className="flex items-center justify-between gap-3 pb-3">
                 <span className="text-[17px] font-semibold text-ink">
                     {t("bill-choose-currency")}
                 </span>
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    aria-label={t("cancel")}
-                    className="flex size-8 items-center justify-center rounded-full bg-panel text-ink-secondary"
-                >
-                    <i className="icon-[lucide--x] size-4" />
-                </button>
+                <div className="flex h-8 w-[116px] items-center gap-1.5 rounded-full bg-panel px-2.5 text-ink-secondary">
+                    <i className="icon-[lucide--search] size-3.5 shrink-0" />
+                    <input
+                        type="search"
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder={t("search")}
+                        aria-label={t("search")}
+                        className="w-full min-w-0 bg-transparent text-[12px] text-ink outline-none placeholder:text-ink-secondary/70 [&::-webkit-search-cancel-button]:hidden"
+                    />
+                    {query && (
+                        <button
+                            type="button"
+                            aria-label={t("clear")}
+                            onClick={() => setQuery("")}
+                            className="flex size-4 shrink-0 items-center justify-center"
+                        >
+                            <i className="icon-[lucide--x] size-3" />
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="max-h-[52vh] space-y-4 overflow-y-auto scrollbar-hidden">
-                <section>
-                    <div className="pb-2 text-[12px] text-ink-secondary">
-                        {t("bill-quick-currencies")}
-                    </div>
-                    {quick.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2">
-                            {quick.map((currency) => (
-                                <CurrencyCell
-                                    key={currency.id}
-                                    currency={currency}
-                                    selected={currency.id === selectedId}
-                                    isBase={currency.id === baseCurrency.id}
-                                    onClick={() => pick(currency.id)}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="rounded-xl bg-panel px-3 py-3 text-[12px] leading-relaxed text-ink-secondary">
-                            {t("bill-quick-currency-empty")}
-                        </div>
-                    )}
-                </section>
+                {keyword ? (
+                    <section>
+                        {searchResults.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-2">
+                                {searchResults.map((currency) => (
+                                    <CurrencyCell
+                                        key={currency.id}
+                                        currency={currency}
+                                        selected={currency.id === selectedId}
+                                        isBase={currency.id === baseCurrency.id}
+                                        onClick={() => pick(currency.id)}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-xl bg-panel px-3 py-3 text-center text-[12px] text-ink-secondary">
+                                {t("search-empty-results")}
+                            </div>
+                        )}
+                    </section>
+                ) : (
+                    <>
+                        <section>
+                            <div className="pb-2 text-[12px] text-ink-secondary">
+                                {t("bill-quick-currencies")}
+                            </div>
+                            {quick.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                    {quick.map((currency) => (
+                                        <CurrencyCell
+                                            key={currency.id}
+                                            currency={currency}
+                                            selected={
+                                                currency.id === selectedId
+                                            }
+                                            isBase={
+                                                currency.id === baseCurrency.id
+                                            }
+                                            onClick={() => pick(currency.id)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="rounded-xl bg-panel px-3 py-3 text-[12px] leading-relaxed text-ink-secondary">
+                                    {t("bill-quick-currency-empty")}
+                                </div>
+                            )}
+                        </section>
 
-                <section>
-                    <div className="pb-2 text-[12px] text-ink-secondary">
-                        {t("bill-all-currencies")}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        {all.map((currency) => (
-                            <CurrencyCell
-                                key={currency.id}
-                                currency={currency}
-                                selected={currency.id === selectedId}
-                                isBase={currency.id === baseCurrency.id}
-                                onClick={() => pick(currency.id)}
-                            />
-                        ))}
-                    </div>
-                </section>
+                        <section>
+                            <div className="pb-2 text-[12px] text-ink-secondary">
+                                {t("bill-all-currencies")}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {all.map((currency) => (
+                                    <CurrencyCell
+                                        key={currency.id}
+                                        currency={currency}
+                                        selected={currency.id === selectedId}
+                                        isBase={currency.id === baseCurrency.id}
+                                        onClick={() => pick(currency.id)}
+                                    />
+                                ))}
+                            </div>
+                        </section>
+                    </>
+                )}
             </div>
 
             <button
