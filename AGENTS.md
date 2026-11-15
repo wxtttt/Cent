@@ -81,7 +81,7 @@
 
 **2026-11-15 23:02 口径变更登记**（**选择账本页补返回按钮**，用户问「选择账本为什么没有返回按钮」，细节 → `docs/agents/ui-login.md`）：合并引导页（`book/form.tsx`）的左上角圆形返回**改为始终显示**——从个人页等入口进入（`onCancel` 有值）仍是关页返回；**登录后的首次引导返回 = 退出登录回登录页**（登录是流程的一环，要允许反悔换一种登录方式；不能只隐藏登录层，因为登录层仅在未登录时渲染），走新增的 `utils/logout.ts` `logoutWithConfirm`（与设置页 `toLogOut` 共用同一套：`logout-warning` prompt 确认，取消静默留在原地 → beforeLogout 快照 → 端点 logout → 清空本地存储 → afterLogout 恢复上次连接信息 → reload；WebDAV / S3 的连接信息由快照保留，重填成本低）。`verify-login.js` 补断言：返回 → 弹「退出登录」确认 → 确认后回到登录页。
 
-**2026-11-15 23:10 提交与发布登记**（用户明确「push 并合到 next 然后发布」，worktree `feat-login-261115`）：把登录提交（b26e3b2）、next 同步合并（b78bbdc）与返回按钮修复（ecdb17a）push 到 `origin/feat-login-261115`，再 `--no-ff` 合入 `release/next` 并 push；随后按 `docs/agents/deployment.md` 口径用 wrangler 发布 Cloudflare Pages（`cent-test` / `--branch main`，本部署为用户本轮明确要求）。登录工作自此进入 next，`feat-login-261115` 与 `release/next` 在合并点树内容一致。
+**2026-11-15 23:10 提交与发布登记**（用户明确「push 并合到 next 然后发布」，worktree `feat-login-261115`）：把登录提交（b26e3b2）、next 同步合并（b78bbdc）与返回按钮修复（ecdb17a）push 到 `origin/feat-login-261115`，再 `--no-ff` 合入 `release/next`（cd1bb7c）并 push；随后按 `docs/agents/deployment.md` 口径用 wrangler 发布 Cloudflare Pages（`cent-test` / `--branch main`，本部署为用户本轮明确要求）——**已发布并核对**：线上主域 `cent-test.pages.dev` 的主 bundle 为 `index-De2v6Ox0.js`（与本轮构建一致）、`<title>胖记</title>`、zh 语言分片原始字节与本地一致且含「完成设置 / 多人协作家庭管理App」新文案。校验坑（已记 `deployment.md`）：PowerShell `Invoke-WebRequest` 的 `.Content` 解码会让语言分片哈希比对全错，须用 node fetch / curl 原始字节。登录工作自此进入 next 并上线。
 
 ## 1. 项目速览
 
