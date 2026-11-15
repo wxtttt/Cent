@@ -1,10 +1,13 @@
-import { Dialog, VisuallyHidden } from "radix-ui";
 import { useIntl } from "@/locale";
 import { useBookStore } from "@/store/book";
 import { useIsLogin } from "@/store/user";
-import { cn } from "@/utils";
-import { BookForm } from "./form";
+import { BookForm, hasUserIdentity } from "./form";
 
+/**
+ * 登录后引导页入口：登录后没有选中账本，或（WebDAV / S3 共享账号）尚未选定
+ * 身份时自动出现。页面本体在 BookForm（全屏、账本 + 身份合并的分组列表），
+ * 这里只负责出现条件。
+ */
 export default function BookGuide() {
     const t = useIntl();
     const isLogin = useIsLogin();
@@ -12,40 +15,14 @@ export default function BookGuide() {
     if (!isLogin) {
         return null;
     }
-    if (currentBookId !== undefined) {
+    // 已选账本且身份已定才不显示：共享账号还要补选身份（缺失时账单 creatorId 会混在一起）
+    if (currentBookId !== undefined && hasUserIdentity()) {
         return null;
     }
-
     return (
-        <Dialog.Root open={currentBookId === undefined}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed z-[2] inset-0 bg-black/50 data-[state=open]:animate-overlay-show"></Dialog.Overlay>
-                <Dialog.Content>
-                    <VisuallyHidden.Root>
-                        <Dialog.Title>{t("select-a-book")}</Dialog.Title>
-                        <Dialog.Description>
-                            {t("select-a-book")}
-                        </Dialog.Description>
-                    </VisuallyHidden.Root>
-                    <div className="fixed z-[3] top-0 left-0 w-full h-full flex justify-center items-center pointer-events-none">
-                        <Dialog.Content
-                            className={cn(
-                                "bg-panel max-h-[55vh] w-fit max-w-[500px] rounded-panel border border-rule shadow-panel data-[state=open]:animate-content-show",
-                            )}
-                        >
-                            <VisuallyHidden.Root>
-                                <Dialog.Title>
-                                    {t("select-a-book")}
-                                </Dialog.Title>
-                                <Dialog.Description>
-                                    {t("select-a-book")}
-                                </Dialog.Description>
-                            </VisuallyHidden.Root>
-                            <BookForm />
-                        </Dialog.Content>
-                    </div>
-                </Dialog.Content>
-            </Dialog.Portal>
-        </Dialog.Root>
+        <div className="contents">
+            <span className="sr-only">{t("select-a-book")}</span>
+            <BookForm />
+        </div>
     );
 }

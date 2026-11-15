@@ -730,8 +730,26 @@ button {
 	box-shadow: -8px 0 24px rgba(92, 62, 30, 0.08);
 }
 
+/* 二级路由页关闭：先播右滑出场（等价 UWP 的导航后退），动画结束才真正 navigate 回退，
+   避免「组件先卸载、动画来不及播」；由 confirm/route-modal.ts 的关闭流程驱动。 */
+@keyframes dp-route-to-right {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(100%);
+	}
+}
+
+.dp-route-to-right {
+	animation: dp-route-to-right 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	will-change: transform;
+	box-shadow: -8px 0 24px rgba(92, 62, 30, 0.08);
+}
+
 @media (prefers-reduced-motion: reduce) {
-	.dp-route-from-right {
+	.dp-route-from-right,
+	.dp-route-to-right {
 		animation: none;
 		will-change: auto;
 	}

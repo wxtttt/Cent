@@ -1,20 +1,18 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+﻿import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
-import { useIntl } from "@/locale";
-import createConfirmProvider from "../confirm";
-import { Button } from "../ui/button";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "../ui/form";
-import { Input } from "../ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+    getLastWebDAVAccount,
+    saveWebDAVAccount,
+} from "@/api/endpoints/web-dav/account";
+import { BTN_PRIMARY } from "@/components/button-styles";
+import { FieldRow } from "@/components/login/field-row";
+import { useIntl } from "@/locale";
+import { checkWebDAVConfig } from "@/tidal/web-dav";
+import createConfirmProvider from "../confirm";
+import { Form, FormField } from "../ui/form";
 
 export type WebDAVEdit = {
     remote: string;
@@ -34,232 +32,276 @@ export const createFormSchema = (t: any) =>
         username: z.string(),
         password: z.string(),
         proxy: z.optional(z.string()),
-        customUserName: z.optional(z.string()),
     });
 
-const LoadingForm = ({
-    edit,
-    onConfirm,
-    onCancel,
-}: {
-    edit?: LoadingState;
-    onCancel?: () => void;
-    onConfirm?: (v?: LoadingState) => void;
-}) => {
+// 常用服务商：点击自动填入标准地址，用户只需再填账号密码（坚果云可直接用）。
+// Nextcloud / 群晖的域名因人而异，模板里的中文占位直接改掉即可。
+const WEBDAV_PRESETS = [
+    { label: "坚果云", url: "https://dav.jianguoyun.com/dav/" },
+    { label: "Nextcloud", url: "https://你的域名/remote.php/dav/" },
+    { label: "群晖", url: "http://你的群晖地址:5005/" },
+];
+
+/**
+ * 登录方式二级路由页（/login/webdav）：结构对齐登录页——无标题栏、只放品牌图标，
+ * 行式下划线输入（左标签 + 右输入 + 底部细线，参考主流 iOS 登录页），「测试连接」为
+ * 品牌色文字链；底部只留一颗 54px 确认按钮（返回走左上角圆钮，用户口径去掉取消）。
+ * 内容不足一屏时垂直居中，超出一屏时自然滚动（按钮随内容排在末尾）。
+ * 外层补 dp-drawer-surface：亮色下与登录页同一套中性灰白底（#f4f4f4），
+ * 不再回落到应用暖米色；深色自动回落全局暗色令牌。
+ * 路由页拿不到 edit 注入，表单自持完成链——默认值直接从 localStorage 带出上次连接信息，
+ * 校验通过后自己写入端点配置并刷新。用户身份不再在这里填昵称，改由登录后的
+ * 「选择账本与用户」页决定（见 book/form.tsx）。
+ */
+const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
     const t = useIntl();
     const formSchema = useMemo(() => createFormSchema(t), [t]);
-    // 重新登录 / token 过期后再次打开时带出上次保存的配置：
-    // 之前 defaultValues 只给了 proxy，等于每次都要重新敲地址、账号、密码和昵称，
-    // 昵称（customUserName）还是账单署名的依据，重填容易变成另一个人
-    const restored = Boolean(edit?.remote || edit?.username);
+    // 重新登录 / token 过期后再次打开时带出上次的地址 / 账号
+    const last = getLastWebDAVAccount();
+    const restored = Boolean(last?.remote || last?.username);
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema) as any,
         defaultValues: {
-            remote: edit?.remote ?? "",
-            username: edit?.username ?? "",
-            password: edit?.password ?? "",
-            customUserName: edit?.customUserName ?? "",
-            proxy: edit?.proxy ?? "", //"https://oncent-backend.linkai.work/proxy?url=",
+            remote: last?.remote ?? "",
+            username: last?.username ?? "",
+            password: last?.password ?? "",
+            proxy: last?.proxy ?? "", //"https://oncent-backend.linkai.work/proxy?url=",
         },
     });
     const [checking, setChecking] = useState(false);
+    const [testing, setTesting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const errors = form.formState.errors;
+    const checkConnection = async (data: z.infer<typeof formSchema>) => {
+        await checkWebDAVConfig({
+            remoteUrl: data.remote,
+            username: data.username,
+            password: data.password,
+            proxy: data.proxy,
+        });
+    };
+    // 测试连接：只校验不落库，成功 / 失败都 toast，让用户放心点确认
+    const onTest = async (data: z.infer<typeof formSchema>) => {
+        setTesting(true);
+        try {
+            await checkConnection(data);
+            toast.success(t("login-test-ok"));
+        } catch (error) {
+            toast.error((error as Error)?.message ?? JSON.stringify(error));
+        } finally {
+            setTesting(false);
+        }
+    };
     const onSubmit = async (data: z.infer<typeof formSchema>) => {
         data.remote = data.remote.replace(/\/$/, "");
         setChecking(true);
         try {
-            await edit?.check?.(data);
-            onConfirm?.(data);
+            await checkConnection(data);
+            // 校验通过即登录成功：写入端点配置并刷新应用
+            saveWebDAVAccount(data as WebDAVEdit);
+        } catch (error) {
+            // 校验失败留在本页，错误信息 toast（原 endpoint check 回调的行为）
+            toast.error((error as Error)?.message ?? JSON.stringify(error));
         } finally {
             setChecking(false);
         }
     };
     return (
-        <div className="w-full h-full flex flex-col items-center justify-center overflow-hidden">
-            <a
-                className="flex py-4 items-center gap-1"
-                href="https://glink25.github.io/post/%E9%80%9A%E8%BF%87Web-DAV%E8%BF%9B%E8%A1%8CCent%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5/"
-                target="_blank"
-                rel="noopener"
+        <>
+            {/* 登录页没有顶栏，返回沿用 PopupLayout 圆钮样式悬浮在左上（fixed：滚动时不随内容走） */}
+            <button
+                type="button"
+                aria-label={t("back")}
+                onClick={onCancel}
+                className="fixed left-4 top-[calc(var(--safe-area-inset-top)+12px)] z-10 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)]"
             >
-                {t("sync-with-web-dav")}
-                <i className="icon-[lucide--circle-help]"></i>
-            </a>
-            {restored && (
-                <div className="mb-2 flex items-center gap-1 rounded-full bg-ground-muted px-3 py-1 text-xs text-ink-secondary">
-                    <i className="icon-[lucide--history] size-3.5"></i>
-                    {t("web-dav-restored-hint")}
-                </div>
-            )}
-            <Form {...form}>
-                <div className="w-full flex-1 min-h-0 flex flex-col gap-4 px-4 overflow-y-auto">
-                    <FormField
-                        control={form.control}
-                        name="remote"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel asChild>
-                                    <div>{t("web-dav-remote-url")}</div>
-                                </FormLabel>
-                                <FormControl>
-                                    <Input
-                                        placeholder="https://dav.jianguoyun.com/dav/"
-                                        {...field}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                <i className="icon-[lucide--chevron-left] size-5" />
+            </button>
+            <div className="dp-drawer-surface flex min-h-full w-full flex-col bg-ground text-ink">
+                <div className="mx-auto flex w-full max-w-[420px] flex-1 flex-col px-3 pt-[calc(var(--safe-area-inset-top)+40px)]">
+                    <div className="my-auto flex flex-col pb-2">
+                        {/* 二级登录页只要图标，不放应用名与简介（用户口径） */}
+                        <div className="flex justify-center">
+                            <img
+                                src="/icon.png"
+                                alt=""
+                                className="size-14 flex-shrink-0 rounded-[18px] shadow-[0_4px_16px_rgba(92,62,30,0.12)]"
+                            />
+                        </div>
+                        <div className="mt-2 text-center text-[13px] text-ink-secondary/80">
+                            {t("login-webdav-hint")}
+                        </div>
+                        {restored && (
+                            <div className="mt-3 flex items-center gap-1 self-center rounded-full bg-ground-muted px-3 py-1 text-xs text-ink-secondary">
+                                <i className="icon-[lucide--history] size-3.5" />
+                                {t("web-dav-restored-hint")}
+                            </div>
                         )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="username"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel asChild>
-                                    <div>{t("username")}</div>
-                                </FormLabel>
-                                <FormControl>
-                                    <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel asChild>
-                                    <div>{t("password")}</div>
-                                </FormLabel>
-                                <FormControl>
-                                    <div className="relative">
-                                        <Input
-                                            {...field}
-                                            type={
-                                                showPassword
-                                                    ? "text"
-                                                    : "password"
-                                            }
-                                            className="pr-10"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setShowPassword(!showPassword)
-                                            }
-                                            className="absolute right-0 top-0 h-full px-3 flex items-center text-ink-secondary hover:text-ink transition-colors"
-                                        >
-                                            {showPassword ? (
-                                                <i className="icon-[lucide--eye-off] size-4"></i>
-                                            ) : (
-                                                <i className="icon-[lucide--eye] size-4"></i>
-                                            )}
-                                        </button>
+                        <Form {...form}>
+                            {/* 字段列收窄居中：细线不顶满屏幕两边（主流 iOS 登录表单比例） */}
+                            <div className="mx-auto mt-9 flex w-full max-w-[300px] flex-col gap-6">
+                                {/* 常用服务商：点击自动填入标准地址，整组居中 */}
+                                <div className="flex flex-col items-center gap-2.5">
+                                    <span className="text-[12px] text-ink-secondary/70">
+                                        {t("login-providers")}
+                                    </span>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {WEBDAV_PRESETS.map((preset) => (
+                                            <button
+                                                key={preset.label}
+                                                type="button"
+                                                onClick={() => {
+                                                    form.setValue(
+                                                        "remote",
+                                                        preset.url,
+                                                    );
+                                                }}
+                                                className="rounded-full border border-rule bg-panel px-3.5 py-1.5 text-[13px] text-ink-secondary transition-colors hover:border-brand/60 hover:text-brand"
+                                            >
+                                                {preset.label}
+                                            </button>
+                                        ))}
                                     </div>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="proxy"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel asChild>
-                                    <a
-                                        className="flex items-center gap-1"
-                                        href={t("web-dav-proxy-url")}
-                                        target="_blank"
-                                        rel="noopener"
-                                    >
-                                        {t("proxy-url")}
-                                        <i className="icon-[lucide--circle-help]"></i>
-                                    </a>
-                                </FormLabel>
-                                <FormControl>
-                                    <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    {/* 使用webdav时，用户可能会将一个webdav配置分享给其他人使用，达成共享的效果，此时需要允许用户填写一个自定义昵称作为不同用户的区分 */}
-                    <div className="flex flex-col gap-4 rounded-md border p-2">
-                        <a
-                            className="flex items-center gap-1"
-                            href={t("web-dav-custom-user")}
-                            target="_blank"
-                            rel="noopener"
-                        >
-                            {t("custom-user")}
-                            <i className="icon-[lucide--circle-help]"></i>
-                        </a>
-                        <FormField
-                            control={form.control}
-                            name="customUserName"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel asChild>
-                                        <div className="flex items-center gap-1">
-                                            {t("custom-user-name")}
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <i className="icon-[lucide--circle-help] cursor-pointer"></i>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="text-xs p-2">
-                                                    <p>
-                                                        {t(
-                                                            "custom-user-name-tooltip",
-                                                        )}
-                                                    </p>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                    </FormLabel>
-                                    <FormControl>
-                                        <Input {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="remote"
+                                    render={({ field }) => (
+                                        <FieldRow
+                                            label={t("web-dav-remote-url")}
+                                            error={errors.remote?.message}
+                                            required
+                                        >
+                                            <input
+                                                {...field}
+                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
+                                                placeholder="https://dav.jianguoyun.com/dav/"
+                                            />
+                                        </FieldRow>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="username"
+                                    render={({ field }) => (
+                                        <FieldRow
+                                            label={t("username")}
+                                            error={errors.username?.message}
+                                            required
+                                        >
+                                            <input
+                                                {...field}
+                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
+                                            />
+                                        </FieldRow>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FieldRow
+                                            label={t("password")}
+                                            required
+                                        >
+                                            <span className="flex min-w-0 flex-1 items-center">
+                                                <input
+                                                    {...field}
+                                                    type={
+                                                        showPassword
+                                                            ? "text"
+                                                            : "password"
+                                                    }
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setShowPassword(
+                                                            !showPassword,
+                                                        )
+                                                    }
+                                                    className="flex-shrink-0 text-ink-secondary transition-colors hover:text-ink"
+                                                >
+                                                    {showPassword ? (
+                                                        <i className="icon-[lucide--eye-off] size-4" />
+                                                    ) : (
+                                                        <i className="icon-[lucide--eye] size-4" />
+                                                    )}
+                                                </button>
+                                            </span>
+                                        </FieldRow>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="proxy"
+                                    render={({ field }) => (
+                                        <FieldRow
+                                            label={t("proxy-url")}
+                                            optional
+                                            optionalLabel={t("login-optional")}
+                                        >
+                                            <span className="flex min-w-0 flex-1 items-center">
+                                                <input
+                                                    {...field}
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                />
+                                                <a
+                                                    className="flex-shrink-0 text-ink-secondary transition-colors hover:text-brand"
+                                                    href={t(
+                                                        "web-dav-proxy-url",
+                                                    )}
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                >
+                                                    <i className="icon-[lucide--circle-help] size-4" />
+                                                </a>
+                                            </span>
+                                        </FieldRow>
+                                    )}
+                                />
+                            </div>
+                            {/* 测试连接：主流做法是品牌色文字链，只校验不落库 */}
+                            <div className="mt-7 flex justify-center">
+                                <button
+                                    type="button"
+                                    disabled={testing}
+                                    onClick={() => {
+                                        form.handleSubmit(onTest)();
+                                    }}
+                                    className="text-[14px] text-brand transition-opacity disabled:opacity-60"
+                                >
+                                    {t("login-test-connection")}
+                                </button>
+                            </div>
+                        </Form>
                     </div>
                 </div>
-
-                <div className="p-4 w-full flex justify-end gap-2">
-                    <Button
-                        variant={"ghost"}
-                        className="sm:w-fit w-full"
-                        onClick={onCancel}
-                    >
-                        {t("cancel")}
-                    </Button>
-                    <Button
-                        className="sm:w-fit w-full"
-                        type="submit"
+                {/* 只留一颗确认按钮，作为列的兄弟节点钉在屏幕底部；
+                    内容超出一屏时随内容排在末尾 */}
+                <div className="mx-auto w-full max-w-[420px] px-3 pb-[calc(var(--safe-area-inset-bottom)+20px)] pt-2">
+                    <button
+                        type="button"
+                        className={`h-[54px]! w-full ${BTN_PRIMARY}`}
                         disabled={checking}
                         onClick={() => {
                             form.handleSubmit(onSubmit)();
                         }}
                     >
                         {t("confirm")}
-                    </Button>
+                    </button>
                 </div>
-            </Form>
-        </div>
+            </div>
+        </>
     );
 };
 
 export const [WebDAVAuthProvider, showWebDAVAuth] = createConfirmProvider(
     LoadingForm,
     {
-        dialogTitle: "loading",
+        dialogTitle: "WebDAV",
+        routePath: "/login/webdav",
         dialogModalClose: true,
-        contentClassName: "w-[350px] h-[520px] max-h-[calc(100vh-80px)] z-[2]",
-        fade: true,
     },
 );

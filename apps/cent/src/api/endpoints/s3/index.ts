@@ -3,25 +3,19 @@ import { Scheduler } from "@/database/scheduler";
 import { BillIndexedDBStorage } from "@/database/storage";
 import type { Bill } from "@/ledger/type";
 import { createTidal } from "@/tidal";
-import { checkS3Config, createS3Syncer } from "@/tidal/s3";
+import { createS3Syncer } from "@/tidal/s3";
 import { ENTRY_NAMES, type EntryItem, type TidalRepo } from "../entries";
 import type { SyncEndpointFactory } from "../type";
+import { getCurrentBookId } from "../web-dav/account";
+import { getS3Auth, s3ConfigKey } from "./account";
 
 const config = {
     repoPrefix: "cent-journal",
     entryName: "ledger",
     orderKeys: ["time"],
 };
-const key = "s3-config";
 
-const getAuth = () => {
-    const data = localStorage.getItem(key);
-    if (!data) {
-        return;
-    }
-    const parsed = JSON.parse(data);
-    return parsed as S3Edit;
-};
+const getAuth = getS3Auth;
 
 type S3PrivateMeta = {
     _s3UserAliases?: string[];
@@ -31,31 +25,9 @@ export const S3Endpoint: SyncEndpointFactory = {
     type: "s3",
     name: "s3",
     login: async ({ modal }) => {
-        const auth = await modal.s3Auth({
-            check: async (data) => {
-                await checkS3Config({
-                    endpoint: data.endpoint,
-                    region: data.region,
-                    accessKeyId: data.accessKeyId,
-                    secretAccessKey: data.secretAccessKey,
-                    bucket: data.bucket,
-                    forcePathStyle: data.forcePathStyle,
-                    sessionToken: data.sessionToken,
-                }).catch((error) => {
-                    modal.toast.error(
-                        (error as Error)?.message ?? JSON.stringify(error),
-                    );
-                    return Promise.reject(error);
-                });
-            },
-        });
-        if (!auth) {
-            return;
-        }
-
-        localStorage.setItem("SYNC_ENDPOINT", "s3");
-        localStorage.setItem(key, JSON.stringify(auth));
-        location.reload();
+        // 路由页模式：连接表单自持「校验 → 保存 → 刷新」（见 components/modal/s3.tsx），
+        // 这里只负责从登录页 / 重新登录入口进入 /login/s3
+        modal.s3Auth();
     },
     manuallyLogin: undefined,
     init: ({ modal }) => {
@@ -139,6 +111,45 @@ export const S3Endpoint: SyncEndpointFactory = {
                     avatar_url: "/icon.png",
                 };
                 return Me;
+            },
+            // 「选择用户」页用：当前账本可选的身份 = 自己（accessKeyId 回退）+ 账本别名；
+            // 别名读取失败（离线预览 / 网络故障）退化为只有自己，保证页面可用
+            getUserChoices: async () => {
+                const bookId = getCurrentBookId();
+                let aliases: string[] = [];
+                if (bookId) {
+                    try {
+                        aliases = await getUserAliases(bookId);
+                    } catch {
+                        aliases = [];
+                    }
+                }
+                const fallback = auth.customUserName || auth.accessKeyId;
+                return [fallback, ...aliases.filter((a) => a !== fallback)];
+            },
+            // 写入所选身份并登记进账本别名（别名登记尽力而为，失败不阻断），刷新后 getUserInfo 即用新身份
+            setCurrentUser: async (name) => {
+                auth.customUserName = name;
+                localStorage.setItem(s3ConfigKey, JSON.stringify(auth));
+                const bookId = getCurrentBookId();
+                if (bookId) {
+                    try {
+                        const meta = await repo.getMeta(bookId);
+                        if (!meta?._s3UserAliases?.includes(name)) {
+                            const newMeta = meta ?? {};
+                            newMeta._s3UserAliases = [
+                                ...(meta?._s3UserAliases ?? []),
+                                name,
+                            ];
+                            await repo.batch(bookId, [
+                                { type: "meta", metaValue: newMeta },
+                            ]);
+                        }
+                    } catch {
+                        // 别名登记失败不影响本机身份生效，下次联网 initBook 会补写
+                    }
+                }
+                location.reload();
             },
             getCollaborators: async (id) => {
                 const aliases = await getUserAliases(id);
