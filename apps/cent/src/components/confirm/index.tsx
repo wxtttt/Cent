@@ -1,5 +1,6 @@
 import { VisuallyHidden } from "radix-ui";
 import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { useShallow } from "zustand/shallow";
 import { useVisualViewport } from "@/hooks/use-visual-viewport";
 import { cn } from "@/utils";
@@ -11,6 +12,7 @@ import {
     DialogPortal,
     DialogTitle,
 } from "../ui/dialog";
+import { goBack, goPage } from "./navigation";
 import { useGlobalConfirmStore } from "./state"; // 引入上面创建的全局 store
 
 export default function createConfirmProvider<Value, Returned = Value>(
@@ -28,6 +30,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
         swipe,
         from,
         initialFocus,
+        routePath,
     }: {
         dialogTitle: string | ReactNode;
         dialogDescription?: string | ReactNode;
@@ -37,6 +40,13 @@ export default function createConfirmProvider<Value, Returned = Value>(
         swipe?: boolean;
         from?: "left" | "bottom";
         initialFocus?: string;
+        /**
+         * 配了路径就不再开 Dialog，改成由 location 驱动的独立二级路由页：
+         * 从右侧滑入（等价 UWP 的 SlideNavigationTransitionEffect.FromRight），
+         * 返回走 navigate(-1)，是一个真实导航层级而不是全屏弹窗。
+         * 底部抽屉类不要配置，继续用弹层。
+         */
+        routePath?: string;
     },
 ) {
     // 1. 为每个 Provider 实例生成一个唯一的 ID (在闭包中唯一)
@@ -44,6 +54,8 @@ export default function createConfirmProvider<Value, Returned = Value>(
 
     function Confirm() {
         const returnFocusRef = useRef<HTMLElement | null>(null);
+        const location = useLocation();
+        const navigate = useNavigate();
         // 2. 仅监听属于自己 ID 的那部分状态
         const state = useGlobalConfirmStore(
             useShallow((s) => s.instances[instanceId]),
@@ -60,6 +72,20 @@ export default function createConfirmProvider<Value, Returned = Value>(
         useEffect(() => {
             return () => useGlobalConfirmStore.getState().remove(instanceId);
         }, []);
+        // 二级路由页：由 URL 驱动、无遮罩、右侧滑入；页面自身保留 PopupLayout 返回头
+        if (routePath) {
+            if (location.pathname !== routePath) return null;
+            return (
+                <div
+                    data-route-page
+                    data-route-path={routePath}
+                    className="dp-route-from-right fixed inset-0 z-[3] flex flex-col overflow-hidden bg-ground"
+                >
+                    <Form onCancel={() => navigate(-1)} />
+                </div>
+            );
+        }
+
         // 如果该实例还未初始化（从未调用过 open），则不渲染
         if (!state) return null;
 
@@ -194,13 +220,27 @@ export default function createConfirmProvider<Value, Returned = Value>(
 
     // 4. 暴露的 open 方法封装了 instanceId
     const confirm = (value?: Value) => {
+        if (routePath) {
+            goPage(routePath);
+            return Promise.resolve(undefined as Returned);
+        }
         const [promise, cancel] = useGlobalConfirmStore
             .getState()
             .open<Value, Returned>(instanceId, value);
+        // 进入二级路由页时会主动 cancel 抽屉；附着静默 catch，
+        // 避免无人 await 的调用点产生 unhandledrejection
+        void promise.catch(() => {});
         return promise;
     };
 
     const withController = (value?: Value) => {
+        if (routePath) {
+            goPage(routePath);
+            return {
+                promise: Promise.resolve(undefined as Returned),
+                cancel: () => goBack(),
+            };
+        }
         const [promise, cancel] = useGlobalConfirmStore
             .getState()
             .open<Value, Returned>(instanceId, value);

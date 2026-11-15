@@ -42,3 +42,9 @@
 - **成员**：唯一候选来源是 `GlobalMeta.members`；`infos.creators` 是协作者体系，两者不保证同 ID。账单卡创建者名称先查 `creators`、再查 `members`，最后才回落到 `t("unknown-user")`——**不要写死字面量 `"unknown-user"`**（曾导致首页 / 记账页账单卡右下角一堆英文 key）。
 
 - 预算 / 标签的领域规则（周期、记录链、互斥计账、分配额度）见 `docs/agents/budget.md`。
+
+## Widget 功能已删除（r25）
+
+- 用户要求删掉 Widget 自定义脚本功能，按**无迁移**处理：`GlobalMeta.widgets`、`PersonalMeta.homeWidgets`、`BillFilterViewModule` 的 `` `widget-${string}` `` 联合成员，以及 `components/widget/type.ts` 的 `Widget` / DSL 类型全部移除；预设 `PresetConfig.widgets` 段、`PresetExportSection` 的 `"widgets"`、`WIDGETS_WOULD_CHANGE` 风险与 `mergeBillWidgets()` 一并删除。
+- 旧账本 / 旧预设里若还带 `widgets` / `homeWidgets` / `widget-xxx` 模块 id：读侧不解析、不报错，直接忽略。**不要为兼容旧数据把字段加回来，也不要写迁移脚本**。
+- `measurement` 的 `widget_count` / `home_widget_count` 指标与 `widget` / `home_widget` 配置变更埋点也已删除。

@@ -208,12 +208,23 @@ html:not(.dark) .dp-home-surface {
 	--titlebar-height: 28px;
 }
 
+/* iOS Safari 会把页面内 overflow 容器滚到边界后的回弹继续传给 document，
+   表现为整页被下拉、搜索栏上方露出一片空白。锁死根滚动并切断滚动链，
+   只保留各页面自己的 overflow-y-auto 容器滚动。 */
+html {
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	overscroll-behavior: none;
+}
+
 body {
 	width: 100vw;
 	height: 100vh;
 	min-width: 200px;
 	min-height: 200px;
 	touch-action: none;
+	overscroll-behavior: none;
 }
 
 #root {
@@ -699,6 +710,31 @@ button {
 	background-image: var(--dp-gradient-page-top);
 	background-repeat: no-repeat;
 	background-size: 100% 150px;
+}
+
+/* 二级路由页：等价 UWP 的 SlideNavigationTransitionEffect.FromRight。
+   从视口右侧整页滑入，带一点左侧投影体现导航层级；无遮罩、无圆角，
+   与底部抽屉（Dialog + rounded-t-[28px]）区分开。 */
+@keyframes dp-route-from-right {
+	from {
+		transform: translateX(100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+.dp-route-from-right {
+	animation: dp-route-from-right 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+	will-change: transform;
+	box-shadow: -8px 0 24px rgba(92, 62, 30, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dp-route-from-right {
+		animation: none;
+		will-change: auto;
+	}
 }
 
 /* 详细分配：点击 ± 时，金额上方飘出的 +N / -N 微反馈。

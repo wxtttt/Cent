@@ -33,11 +33,14 @@
 
 - **DPR=1 的亚像素坑**：日历圆环必须整数环宽 31/27/23px（橙环、白环各 2px）；1.5px 环宽会被取整成「1px 实色 + 1px 半透明」，左上半圈发淡、白环断开。任何 <2px 的边框/环宽都要在实景截图里按圆周角度取色验证，不能只看 DOM 尺寸。
 
+- **日历数字不要做光学补偿（r24，r23 已回滚）**：起始日 1–31 格子与左侧抽屉日历的数字保持原始 `line-height` 居中，不要为了「墨迹偏下 1px」加 `pb-[2px]` / `-top-px` / `tabular-nums`，也不要包位移 span。r23 按像素量墨迹包围盒做过一轮补偿，用户实测反馈「日历偏右、原来挺好的」，已整体撤销；这类亚像素级调整以用户实景观感为准，别用测量结果覆盖体感。
+
 - 注意语义色是反直觉的：支出为绿色、收入为红色，与现有账单卡片一致。
 
 - 深色模式通过 `.dark` 下的同名令牌覆盖实现，新增颜色必须同时考虑两套值。
 
-- 安全区统一用 `var(--safe-area-inset-*)` 或项目封装变量，不要在业务组件里直接写 `env(safe-area-inset-*)`。
+- 安全区统一用 `var(--safe-area-inset-*)` 或项目封装变量，不要在业务组件里直接写 `env(safe-area-inset-*)`。弹层经 Radix Portal 挂到 `body`，拿不到 `#root` 的 padding，必须自带安全区——统一由 `SHEET_FOOTER` 提供。
+- **根滚动锁定（r20）**：iOS Safari 会把页面内 `overflow` 容器滚到边界后的回弹继续传给 document，表现为整页被下拉、搜索栏上方露出空白。`index.css` 里 `html { position: fixed; inset: 0; overflow: hidden; overscroll-behavior: none }` + `body { overscroll-behavior: none }`，各页面的滚动容器再加 `overscroll-contain`（首页已加）。**不要再放开 html/body 的滚动**。
 
 - 页面是移动优先，主内容最大宽度约 960px；底部操作栏/键盘需处理 `--safe-area-inset-bottom`。
 
@@ -55,8 +58,8 @@
   - 破坏性删除：必须 `components/delete-confirm.tsx` 的 `createDeleteConfirm()` 二次确认；编辑态底部左侧按钮直接换成「删除」（`bg-[#fcdada] text-[#ef4444]`），**不再在按钮下方另挂红色删除链接**。
   - 三个工厂都是 `createConfirmProvider` 的实例工厂，**按模块各调一次**并把返回的 Provider 挂载到该模块根节点；同一 Provider 被挂两次会渲染两份弹层。嵌套三层弹层（页面 → 表单抽屉 → 选项/确认抽屉）由 confirm store 的 zIndex 栈支持，已过 Chromium + 真 WebKit。
   - 抽屉内分组统一「一张白卡 + `divide-y divide-rule/60` 细分割线」的行列表，**每行固定 `h-[52px]`**，不要因行内控件高度不同把行撑成参差；长明细（如详细分配）不在主卡里展开，点行再弹一层独立抽屉，标题行右侧给「已设置 N 项 / 未设置」+ `chevron-right`。
-  - 所有弹层的操作按钮统一 `h-10` / `text-[14px]` / `rounded-[10px]`，且**一律走 `components/button-styles.ts` 的共享常量**：可点态用实心品牌色或白底描边 + 轻投影 + 字重 600 + `enabled:hover` / `enabled:active` 按压反馈，禁用态用灰底灰字 + `cursor-not-allowed` + 无投影。禁止再用 `bg-ground-muted` 表示可点（和禁用态几乎一样，用户明确反馈「淡淡的像不能点击」）；hover/active 必须带 `enabled:` 前缀。
-  - **行内小按钮 `BTN_TAP`（r17 定稿）**：28px 圆形 + 1px 细描边 + 白底 + 轻投影，图标色改为主文字黑 `text-ink`（r15 的 `text-ink-secondary/80` 被用户反馈「灰得像禁用态」）；靠形状 + 边框 + hover/active 缩放表达可点，图标与分类名 / 金额**同色同级**。`BTN_COMPACT` 文字同样改黑。`BTN_TAP` 不做禁用态：越界由数据层 `capOf()` 封顶，「不加不减」即可。`BTN_STEP` / `BTN_ICON` 已删除，`PRESSABLE_ROW` 给行 / chip / 日期格。
+  - 所有弹层的操作按钮统一 `BTN_BASE`（**r20：48px / 15px / `rounded-[12px]`**，由 40px/14px 放大）与 `SHEET_FOOTER`（统一底部操作栏 `px-5 pt-3 pb-[calc(20px+var(--safe-area-inset-bottom))]`），且**一律走 `components/button-styles.ts` 的共享常量**：可点态用实心品牌色或白底描边 + 轻投影 + 字重 600 + `enabled:hover` / `enabled:active` 按压反馈，禁用态用灰底灰字 + `cursor-not-allowed` + 无投影。禁止再用 `bg-ground-muted` 表示可点（和禁用态几乎一样，用户明确反馈「淡淡的像不能点击」）；hover/active 必须带 `enabled:` 前缀。
+  - **行内小按钮 `BTN_TAP`（r17 定稿）**：28px 圆形 + 1px 细描边 + 白底 + 轻投影，图标色改为主文字黑 `text-ink`（r15 的 `text-ink-secondary/80` 被用户反馈「灰得像禁用态」）；靠形状 + 边框 + hover/active 缩放表达可点，图标与分类名 / 金额**同色同级**。`BTN_COMPACT` 文字同样改黑。`BTN_TAP` 不做禁用态：越界由数据层 `capOf() = total` 封顶，「不加不减」即可（r20：详细分配里唯一有禁用态的是超额时的底部确认按钮）。`BTN_STEP` / `BTN_ICON` 已删除，`PRESSABLE_ROW` 给行 / chip / 日期格。
   - **轻量状态汇总与微反馈**（r18 定稿）：顶部汇总卡不要用抢眼的橘色背景，也不要整行染橙——「已分配」「剩余可分配」等**所有状态文字都用主文字黑 `text-ink`**（r18 用户「状态栏的灰字也改成黑色吧」，r16 的 `text-ink-secondary/80` 已废弃），只有后面的 `¥金额` 放大成 20px 品牌橙，其余信息压成 11px。零总额 / 超额提示直接落在这一行并同样用黑色（超额红字除外），不再单独占一条说明块。点击微调时用 `index.css` 的 `@keyframes budget-step-float` 让 `+N` / `-N` 在金额上方飘出 720ms。**关键坑**：气泡水平居中只能由动画的 `transform: translate(-50%, …)` 负责，绝不能再叠加 Tailwind v4 的 `-translate-x-1/2`（独立的 `translate` 属性），否则两者合成 -100% 位移、气泡飘到分类名上方。数值本身保持主文字黑色。
   - **颜色层级**（r18）：分类标题、金额、`+` / `-` / 清零 / 智能分配等按钮符号、状态栏文字**全部用主文字黑 `text-ink`**；灰色只留给未设置的 `0` 占位；橙色只用于 ¥金额、滑块与滑轨悬浮数字（**恒橙，包括刚展开的 ¥0**，不再做拖动双态）、微反馈气泡。不要把主要信息做成灰色，也不要给金额画虚线下划线。
   - **密集行的信息/操作分组**（r18）：当一行里既有分类名 + 金额、又有一串按钮时，**分类名固定成列（`w-[60px]`）**，中间用两段无边框的 `flex-1` 空白把**金额列托到行中线略左**，按钮全部留在右侧并收紧间距（`gap-0.5`）。r17 把金额紧贴分类名（8px）会在中间留下整块空白，用户反馈「现在中间有点空，放到中间线的左边试试」；两段留白既填补空白又让金额列对齐成列，**按钮组位置完全不动**。不要在中间画贯穿的灰色引导虚线（r16 的虚线已被 r17 删除）。

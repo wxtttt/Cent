@@ -22,7 +22,7 @@ const NameDialogForm = ({
     const [value, setValue] = useState(edit?.value ?? "");
     const canConfirm = Boolean(value.trim());
     return (
-        <div className="px-5 pb-5 pt-5">
+        <div className="px-5 pt-5 pb-[calc(20px+var(--safe-area-inset-bottom))]">
             <div className="text-[15px] font-semibold text-ink">
                 {edit?.title}
             </div>

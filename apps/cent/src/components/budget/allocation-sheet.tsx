@@ -8,6 +8,7 @@ import {
     BTN_SECONDARY,
     BTN_TAP,
     PRESSABLE_ROW,
+    SHEET_FOOTER,
 } from "../button-styles";
 import createConfirmProvider from "../confirm";
 import { AmountInput, formatAmount } from "./amount-input";
@@ -131,23 +132,17 @@ const AllocationForm = ({
         list.find((v) => v.id === id)?.budget ?? 0;
 
     /**
-     * 该项能取的最大值：其它分类已占用之外的剩余额度，且不超过总额。
-     * 所有入口（输入 / 滑块 / ± / 长按）共用，合计永远不会超总额，
-     * 到边界点击就是「不加不减」，因此按钮不需要任何禁用态。
+     * 单项额度范围固定为 [0, 预算金额]：每个分类都可以自由改到总额，
+     * 中途允许合计超额（状态栏会标红），只在「确认」时要求合计不超额。
+     * 不再按其它分类占用动态封顶，否则一旦已经超额，下面的单项就一个都改不动了。
      */
-    const capOf = (id: string) => {
-        const others = itemsRef.current.reduce(
-            (s, v) => (v.id === id ? s : s + Math.max(0, v.budget)),
-            0,
-        );
-        return Math.max(0, Math.min(total, total - others));
-    };
+    const capOf = () => Math.max(0, total);
     const setAmount = (id: string, raw: number) => {
-        const next = Math.max(0, Math.min(Math.round(raw), capOf(id)));
+        const next = Math.max(0, Math.min(Math.round(raw), capOf()));
         const rest = itemsRef.current.filter((v) => v.id !== id);
         commit(next > 0 ? [...rest, { id, budget: next }] : rest);
     };
-    /** 吸附到最近的 100 倍数，再由 setAmount 按剩余额度封顶 */
+    /** 吸附到最近的 100 倍数，再由 setAmount 按预算总额封顶 */
     const snapTo = (v: number) => Math.round(v / SNAP_STEP) * SNAP_STEP;
     /** 拖动和点击轨道共用：先吸附再写入，状态栏实时重算 */
     const onSlide = (id: string, raw: number) => {
@@ -166,7 +161,7 @@ const AllocationForm = ({
     /** 一次加减：返回实际增量，到边界不加不减也不飘提示 */
     const step = (id: string, dir: 1 | -1, amount: number) => {
         const cur = amountOf(id);
-        const next = Math.max(0, Math.min(cur + dir * amount, capOf(id)));
+        const next = Math.max(0, Math.min(cur + dir * amount, capOf()));
         const delta = next - cur;
         if (delta === 0) return;
         const rest = itemsRef.current.filter((v) => v.id !== id);
@@ -245,7 +240,7 @@ const AllocationForm = ({
         <div data-allocation-sheet className="flex max-h-[80dvh] flex-col">
             {/* 标题 / 汇总常驻顶部，不随分类列表滚动 */}
             <div className="px-5 pt-3">
-                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-ink-secondary/40" />
+                <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-ink-secondary/40" />
                 {/* 标题独立居中；智能分配在分类卡片外面，不占白卡内部空间 */}
                 <div className="flex h-7 items-center justify-center">
                     <h2
@@ -258,7 +253,7 @@ const AllocationForm = ({
 
                 {/* 汇总去背景框：主要文字用黑色，只让 ¥金额 是品牌橙；
                     总额未设置时，提示直接落在这一行，不再单独占一条说明 */}
-                <div data-allocation-status className="mt-2.5 text-center">
+                <div data-allocation-status className="mt-2 text-center">
                     <div className="text-[11px] text-ink">
                         {t("allocated-of-total", {
                             allocated: formatAmount(allocated),
@@ -300,11 +295,11 @@ const AllocationForm = ({
                 </div>
             </div>
 
-            <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-2">
+            <div className="mt-1 min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-2">
                 {/* 智能分配放在卡片外面：卡片上方独立一行、右对齐、无背景框 */}
                 <div
                     data-smart-row
-                    className="mb-2 flex h-7 items-center justify-end pr-1"
+                    className="mb-1.5 flex h-7 items-center justify-end pr-1"
                 >
                     <button
                         data-smart-button
@@ -537,8 +532,15 @@ const AllocationForm = ({
                                                         Number(e.target.value),
                                                     )
                                                 }
+                                                /* 原生滑块中心在 0%/100% 会内缩半个滑块宽，
+                                                   渐变轨道只画在 [THUMB/2, 宽-THUMB/2] 区间，
+                                                   两端与首末刻度严格对齐，不再左右各凸出一截 */
                                                 style={{
-                                                    background: `linear-gradient(to right, var(--color-brand) ${pct}%, var(--dp-color-ground-muted) ${pct}%)`,
+                                                    backgroundImage: `linear-gradient(to right, var(--color-brand) ${pct}%, var(--dp-color-ground-muted) ${pct}%)`,
+                                                    backgroundSize: `calc(100% - ${THUMB}px) 100%`,
+                                                    backgroundPosition: `${THUMB / 2}px 0`,
+                                                    backgroundRepeat:
+                                                        "no-repeat",
                                                 }}
                                                 className="absolute inset-0 z-10 block h-1 w-full cursor-pointer appearance-none rounded-full outline-none [&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-brand [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-brand [&::-webkit-slider-thumb]:shadow-[0_1px_4px_rgba(0,0,0,0.25)] [&:focus-visible::-moz-range-thumb]:ring-2 [&:focus-visible::-moz-range-thumb]:ring-brand/40 [&:focus-visible::-webkit-slider-thumb]:ring-2 [&:focus-visible::-webkit-slider-thumb]:ring-brand/40"
                                             />
@@ -571,7 +573,7 @@ const AllocationForm = ({
                 </div>
             </div>
 
-            <div className="border-t border-rule/70 bg-ground px-5 pt-2.5 pb-5">
+            <div className={SHEET_FOOTER}>
                 <div className="flex gap-2.5">
                     <button
                         type="button"
@@ -582,6 +584,7 @@ const AllocationForm = ({
                     </button>
                     <button
                         type="button"
+                        disabled={over > 0}
                         onClick={() => onConfirm?.(items)}
                         className={cn(BTN_PRIMARY, "flex-1")}
                     >

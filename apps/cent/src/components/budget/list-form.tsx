@@ -5,6 +5,7 @@ export const [BudgetProvider, showBudget] = createConfirmProvider(
     BudgetListForm,
     {
         dialogTitle: "Budget",
+        routePath: "/budget",
         dialogModalClose: true,
         contentClassName:
             "h-full w-full max-h-full max-w-full rounded-none bg-ground sm:rounded-md sm:max-h-[min(520px,calc(100vh-32px))] sm:w-[90vw] sm:max-w-[500px]",

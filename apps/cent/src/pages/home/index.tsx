@@ -12,7 +12,6 @@ import {
 } from "@/components/budget/util";
 import { showScheduled } from "@/components/scheduled";
 import TicketCard from "@/components/ticket-card";
-import WidgetPreview from "@/components/widget/preview";
 import { useBudget } from "@/hooks/use-budget";
 import useCategory from "@/hooks/use-category";
 import { useCreators } from "@/hooks/use-creator";
@@ -23,7 +22,6 @@ import {
     scheduledEndCap,
     useScheduled,
 } from "@/hooks/use-scheduled";
-import { useWidget } from "@/hooks/use-widget";
 import { amountToNumber } from "@/ledger/bill";
 import { useIntl, useLocale } from "@/locale";
 import { showStat } from "@/pages/stat";
@@ -60,7 +58,6 @@ export default function Page() {
     const creators = useCreators();
     const { budgets, startDay } = useBudget();
     const { scheduleds } = useScheduled();
-    const { homeWidgets } = useWidget();
     const { baseCurrency } = useCurrency();
 
     const now = useMemo(() => dayjs(), []);
@@ -329,7 +326,7 @@ export default function Page() {
     const avatars = creators.slice(0, 2);
 
     return (
-        <div className="h-full overflow-y-auto page-show dp-home-surface">
+        <div className="page-show dp-home-surface h-full overflow-y-auto overscroll-contain">
             <div className="mx-auto w-full max-w-[720px] px-[18px] pb-32">
                 {/* 家小满折叠态问候带：灰米 / 浅黄双色斜切 + 中间上拱的浅弧下缘。
                     1080×2340 实拍折到 393 宽后逐列量得：左端 37、中部 24、右端 40，
@@ -652,24 +649,6 @@ export default function Page() {
                         )}
                     </div>
                 </section>
-
-                {homeWidgets.length > 0 && (
-                    <section className="mt-5">
-                        <h2 className="dp-text-medium text-[15px]">
-                            {t("widgets")}
-                        </h2>
-                        <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto scrollbar-hidden">
-                            {homeWidgets.map((widget) => (
-                                <div
-                                    key={widget.id}
-                                    className="w-[85%] flex-shrink-0 snap-start overflow-hidden rounded-card border border-rule bg-panel shadow-card"
-                                >
-                                    <WidgetPreview widget={widget} />
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                )}
             </div>
         </div>
     );

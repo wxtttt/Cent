@@ -392,8 +392,7 @@ export default function AppChrome() {
     // 分析与筛选等二级页面，用自己的返回头部，不再叠加全局壳层
     if (
         location.pathname.startsWith("/stat") ||
-        location.pathname.startsWith("/search") ||
-        location.pathname.startsWith("/vehicle")
+        location.pathname.startsWith("/search")
     ) {
         return null;
     }

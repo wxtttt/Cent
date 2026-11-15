@@ -23,3 +23,13 @@
 
 - 左栏标题固定 `month-expense` =「本月支出」，**后面不带任何日期 / 周期范围**；不要改回「本期支出」。
 - 金额按「当前日所在记账周期」统计：优先读覆盖今天的普通预算记录冻结边界，回落 `periodContaining(now, clampStartDay(startDay))`。周期本身的生成规则见 `docs/agents/budget.md`。
+
+## iOS 下拉回弹与左侧抽屉日历（r20）
+
+- **首页禁止整页下拉**：`index.css` 锁死 `html`（`position: fixed` + `overflow: hidden` + `overscroll-behavior: none`）与 `body`（`overscroll-behavior: none`），首页根滚动容器 `h-full overflow-y-auto` 追加 `overscroll-contain`。iOS 上只有内容区滚动，搜索栏上方不会再被拉出空白。规则是全局的，其它页签同样受益。
+- **左侧抽屉日历**：`components/profile/index.tsx` 的日历格里，非当月（`!inMonth`）又有账单的日期不再用本月同款实心橙圈，改为 `bg-brand/20 text-brand/70 font-normal` 弱化；本月有账单仍是 `bg-brand text-on-brand font-medium`。今日的橙环+白环三层结构不受影响（今日必在当月）。
+- **日历数字保持原始渲染（r24 回滚 r23）**：数字直接写在按钮/内层 span 里，由 `leading-none` + flex 居中；不包 `dayLabel` 位移 span、不加 `tabular-nums`。三种渲染分支（今日橙环 / 已记录橙圆 / 普通日期）各自直接渲染 `day.date()`。r23 的光学居中改动因用户反馈「偏右、原来挺好的」已撤销，别再加回来。
+
+## 首页与左侧抽屉不再有 Widget 入口（r25）
+
+- `pages/home/index.tsx` 删除「小组件」横向滑动区（`WidgetPreview` + `useWidget().homeWidgets`）；`components/profile/index.tsx` 设置宫格删除「Widget设置」项；`components/promotion/index.tsx` 删除 `meet-widget-api` 推广位；`layouts/main-layout.tsx` 删除 `WidgetListProvider` / `WidgetEditProvider`。首页金额与预算周期、左侧抽屉日历逻辑均不受影响。

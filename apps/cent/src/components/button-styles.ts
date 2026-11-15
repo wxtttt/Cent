@@ -10,8 +10,19 @@
 const pressable =
     "transition-[transform,background-color,border-color,box-shadow,filter] duration-150 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:shadow-none";
 
-/** 40px 主操作行基础（宽度由调用方给 `flex-1`） */
-export const BTN_BASE = `inline-flex h-10 items-center justify-center rounded-[10px] text-[14px] font-semibold ${pressable}`;
+/**
+ * 底部抽屉的主操作行：48px 高 + 15px 字，指尖更好按。
+ * 之前 40px/14px 在月度预算等抽屉里显得又小又贴底，全局统一放大。
+ */
+export const BTN_BASE = `inline-flex h-12 items-center justify-center rounded-[12px] text-[15px] font-semibold ${pressable}`;
+
+/**
+ * 底部抽屉统一操作栏：上方分隔线 + 两侧 20px + 顶部 12px，
+ * 底部额外叠加 iOS home indicator 安全区，离屏幕底边始终有足够留白。
+ * 所有底部抽屉（预算 / 详细分配 / 选项 / 改名）共用，避免各写一套 padding。
+ */
+export const SHEET_FOOTER =
+    "border-t border-rule/70 bg-ground px-5 pt-3 pb-[calc(20px+var(--safe-area-inset-bottom))]";
 
 /** 确认 / 保存：品牌实心 */
 export const BTN_PRIMARY = `${BTN_BASE} bg-brand text-on-brand shadow-[0_2px_8px_rgba(255,132,53,0.28)] enabled:hover:brightness-105 enabled:active:brightness-95 disabled:bg-ground-muted disabled:text-ink-secondary/80 disabled:brightness-100`;

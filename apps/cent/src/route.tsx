@@ -1,5 +1,6 @@
-import { Suspense } from "react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { Suspense, useEffect } from "react";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router";
+import { setAppNavigator } from "@/components/confirm/navigation";
 import TabPager from "@/components/tab-pager";
 import { LoadingSkeleton } from "./components/loading";
 import MainLayout from "./layouts/main-layout";
@@ -7,9 +8,12 @@ import { lazyWithReload } from "./utils/lazy";
 
 const Search = lazyWithReload(() => import("@/pages/search"));
 
-const VehiclePage = lazyWithReload(() => import("@/pages/vehicle"));
-
 function RootRoute() {
+    const navigate = useNavigate();
+    useEffect(() => {
+        setAppNavigator(navigate);
+        return () => setAppNavigator(null);
+    }, [navigate]);
     return (
         <Routes>
             <Route element={<MainLayout />}>
@@ -27,14 +31,9 @@ function RootRoute() {
                         </Suspense>
                     }
                 />
-                <Route
-                    path="/vehicle"
-                    element={
-                        <Suspense fallback={<LoadingSkeleton />}>
-                            <VehiclePage />
-                        </Suspense>
-                    }
-                />
+                {/* 二级路由页（FromRight 右滑）由各自的 Provider 覆盖在 TabPager 之上；
+                    这里保留 TabPager 实例，返回时首页不会重新挂载 */}
+                <Route path="*" element={<TabPager />} />
             </Route>
         </Routes>
     );
