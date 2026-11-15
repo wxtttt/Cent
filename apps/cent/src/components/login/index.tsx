@@ -11,6 +11,7 @@ import { useIntl } from "@/locale";
 import { isMeasurementEnabled, measure } from "@/measurement";
 import { useIsLogin, useUserStore } from "@/store/user";
 import { cn } from "@/utils";
+import { popCanvasSurface, pushCanvasSurface } from "@/utils/viewport";
 import { WelcomeHero } from "./welcome-hero";
 
 const loaded = import("@/api/storage");
@@ -207,6 +208,13 @@ export default function Login() {
                 }
             })
             .catch(() => {});
+    }, [isLogin]);
+    // iOS 26 PWA 底部 home 条区域露出的是 html 画布底色，登录页是灰面，
+    // 打开期间把画布同步成抽屉灰，条带才不会在页面下露出一截暖米
+    useEffect(() => {
+        if (isLogin) return;
+        pushCanvasSurface();
+        return popCanvasSurface;
     }, [isLogin]);
 
     if (isLogin) {

@@ -216,6 +216,16 @@ html {
 	inset: 0;
 	overflow: hidden;
 	overscroll-behavior: none;
+	/* iOS 26 PWA 的可视区不含底部 home 指示条区域（16 Pro 实测少 62pt），
+	   那段只能由 html 画布底色填充。默认涂 ground 与页面无缝；
+   全屏灰面打开时切 dp-canvas-surface，条带才不会在抽屉下露出暖米断层。 */
+	background-color: var(--dp-color-ground);
+}
+
+/* 全屏中性灰面（个人抽屉 / 底部抽屉 / 登录页 / 引导页 / 二级路由页）打开期间，
+   由 utils/canvas-surface.ts 在 html 上挂此类；深色下灰面就是暗色 ground，无需切换 */
+html:not(.dark).dp-canvas-surface {
+	background-color: #f4f4f4;
 }
 
 body {

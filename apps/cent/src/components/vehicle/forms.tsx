@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { DatePicker } from "@/components/date-picker";
 import { createDeleteConfirm } from "@/components/delete-confirm";
 import {
@@ -11,6 +11,7 @@ import {
 import PopupLayout from "@/layouts/popup-layout";
 import { intl, useIntl } from "@/locale";
 import { cn } from "@/utils";
+import { useScrollableX } from "@/utils/viewport";
 import { tripInfo } from "@/vehicle/stats";
 import type {
     Vehicle,
@@ -324,6 +325,9 @@ export function VehicleRecordForm({
         "";
     const [vehicleId, setVehicleId] = useState(initialVehicleId);
     const [type, setType] = useState<VehicleRecordType>(initialType);
+    // iOS 对 overflow-x-auto 容器内容不溢出也允许横向拖动回弹，段控行只在真实溢出才可滚
+    const typeTabRef = useRef<HTMLDivElement>(null);
+    const typeTabScrollable = useScrollableX(typeTabRef);
     const [time, setTime] = useState<number>(record?.time ?? Date.now());
     const [odometerText, setOdometerText] = useState(
         record?.odometer === undefined ? "" : String(record.odometer),
@@ -439,7 +443,15 @@ export function VehicleRecordForm({
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-2 pt-1">
                 {/* 类型 tab 与记账「记一笔」的支出/收入段控同款：白底胶囊容器，选中项浅灰底黑字 */}
                 <div className="flex justify-center">
-                    <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-panel p-1 shadow-[0_2px_10px_rgba(92,62,30,0.08)] ring-1 ring-rule/50">
+                    <div
+                        ref={typeTabRef}
+                        className={cn(
+                            "flex max-w-full items-center gap-1 rounded-full bg-panel p-1 shadow-[0_2px_10px_rgba(92,62,30,0.08)] ring-1 ring-rule/50",
+                            typeTabScrollable
+                                ? "overflow-x-auto"
+                                : "overflow-hidden",
+                        )}
+                    >
                         {ALL_TYPES.map(({ value, label }) => {
                             const noCar =
                                 isEnergyRecord(value) &&

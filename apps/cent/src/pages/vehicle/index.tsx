@@ -1,10 +1,11 @@
 import dayjs from "dayjs";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { showVehicleForm, showVehicleRecord } from "@/components/vehicle";
 import { useVehicle } from "@/hooks/use-vehicle";
 import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
+import { useScrollableX } from "@/utils/viewport";
 import {
     computeVehicleStats,
     groupRecordsByMonth,
@@ -114,6 +115,10 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
         removeRecord,
     } = useVehicle();
     const [vehicleFilter, setVehicleFilter] = useState("__all");
+    // 车辆不多时胶囊条内容装得下：iOS 对 overflow-x-auto 容器内容不溢出也允许
+    // 横向拖动回弹，所以只有真实溢出才可滚，其余时候锁死
+    const pillsRef = useRef<HTMLDivElement>(null);
+    const pillsScrollable = useScrollableX(pillsRef);
 
     const activeVehicle = vehicles.find((v) => v.id === vehicleFilter);
     const visibleRecords = useMemo(
@@ -199,7 +204,15 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                     ) : (
                         <>
                             {/* 车辆切换胶囊在最上面，与 APK 一致；「全部」是第一个选项 */}
-                            <div className="-mx-3 flex flex-shrink-0 gap-2 overflow-x-auto px-3 pb-1 pt-1">
+                            <div
+                                ref={pillsRef}
+                                className={cn(
+                                    "-mx-3 flex flex-shrink-0 gap-2 px-3 pb-1 pt-1",
+                                    pillsScrollable
+                                        ? "overflow-x-auto"
+                                        : "overflow-hidden",
+                                )}
+                            >
                                 <VehiclePill
                                     active={vehicleFilter === "__all"}
                                     label={t("vehicle-all")}

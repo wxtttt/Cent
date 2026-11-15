@@ -40,7 +40,10 @@
 - 深色模式通过 `.dark` 下的同名令牌覆盖实现，新增颜色必须同时考虑两套值。
 
 - 安全区统一用 `var(--safe-area-inset-*)` 或项目封装变量，不要在业务组件里直接写 `env(safe-area-inset-*)`。弹层经 Radix Portal 挂到 `body`，拿不到 `#root` 的 padding，必须自带安全区——统一由 `SHEET_FOOTER` 提供。
+- **底部 inset 视口缺口校准（2026-11-16 00:07）**：部分 iOS 主屏幕 PWA 把底部 home 指示条区域从可视区里扣掉（实测 16 Pro 可视区 812pt、屏高 874pt），但 `env(safe-area-inset-bottom)` 仍按整屏报 34pt——dock / #root / SHEET_FOOTER 的留白被双重补偿，dock 悬空 96pt（用户报「AI 框被挤上去」）。`utils/safe-area.ts` 的 `calibrateSafeAreaInsets()` 在 `main.tsx` 渲染前调用：仅 iOS 主屏幕模式（`navigator.standalone`）且缺口 `screen.height - innerHeight` ∈ (0, 120] 时，探针读出 env 实际值并把 `--safe-area-inset-bottom` 内联改为 `max(reported - strip, 0)px`；桌面 / 非独立模式 / 视口正常的设备全部 no-op，缺口过大视为 iPad 分屏不校准。底部锚定一律继续走 `--safe-area-inset-bottom`，不要绕过这个变量直接写 env。
 - **根滚动锁定（r20）**：iOS Safari 会把页面内 `overflow` 容器滚到边界后的回弹继续传给 document，表现为整页被下拉、搜索栏上方露出空白。`index.css` 里 `html { position: fixed; inset: 0; overflow: hidden; overscroll-behavior: none }` + `body { overscroll-behavior: none }`，各页面的滚动容器再加 `overscroll-contain`（首页已加）。**不要再放开 html/body 的滚动**。
+
+- **html 画布底色与 iOS 底部不可绘制条带（2026-11-15 23:52 口径）**：主屏幕 PWA 在近年 iOS 上会把底部 home 指示条区域从网页可视区里扣掉（用户 iPhone 实测：402×874pt 的屏，遮罩/抽屉这些 fixed 层只能铺到 812pt，底部 62pt 画不到，只能由 html 画布色填充）。因此 `html` 必须显式涂 `background-color: var(--dp-color-ground)`（深色自动跟随暗 ground）——否则该条带露白，或被用户自定义 CSS 的 body 底色随机决定。**全屏中性灰面打开期间**，由 `utils/canvas-surface.ts`（引用计数 push/popCanvasSurface，多面叠开最后一个关闭才还原）在 html 上挂 `dp-canvas-surface`，`html:not(.dark)` 下涂抽屉灰 `#f4f4f4`，条带与灰面无缝衔接。挂点：`confirm/index.tsx` 的 Dialog 分支（仅 `from: "left"` / `"bottom"` 的全屏抽屉）与二级路由页分支、`login/index.tsx`、`book/form.tsx`（引导页）；**居中小对话框（modal.prompt 等无 `from` 的弹层）不切**，保持页面底色。注意这不是抽屉布局 bug、CSS 画不进那段区域；桌面 WebKit 实验证明 `html{position:fixed}` 不改变 fixed 后代的几何，不要为了这个条带去动 r20 的根滚动锁定。
 
 - 页面是移动优先，主内容最大宽度约 960px；底部操作栏/键盘需处理 `--safe-area-inset-bottom`。
 

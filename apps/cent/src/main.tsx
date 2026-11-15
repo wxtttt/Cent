@@ -12,7 +12,9 @@ import { usePreferenceStore } from "./store/preference";
 import { register as registerLaunchQueue } from "./utils/launch-queue";
 import { lazyWithReload } from "./utils/lazy";
 import { registerPWAUpdates } from "./utils/pwa";
+import { installViewportCompat } from "./utils/viewport";
 
+installViewportCompat();
 registerPWAUpdates();
 
 const Rooot = lazyWithReload(() => import("./route"));

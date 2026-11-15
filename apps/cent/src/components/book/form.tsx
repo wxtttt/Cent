@@ -8,6 +8,7 @@ import { useBookStore } from "@/store/book";
 import { useIsLogin } from "@/store/user";
 import { logoutWithConfirm } from "@/utils/logout";
 import { CUSTOM_CSS_STORAGE_KEY } from "@/utils/preset";
+import { popCanvasSurface, pushCanvasSurface } from "@/utils/viewport";
 import Loading from "../loading";
 import modal from "../modal";
 
@@ -90,6 +91,12 @@ export function BookForm({ onCancel }: { onCancel?: () => void } = {}) {
 
     useEffect(() => {
         useBookStore.getState().updateBookList();
+    }, []);
+
+    // iOS 26 PWA 底部 home 条区域露出的是 html 画布底色，引导页是灰面，挂载期间同步涂灰
+    useEffect(() => {
+        pushCanvasSurface();
+        return popCanvasSurface;
     }, []);
 
     // 身份候选 = 自己（账号名回退）+ 账本别名，只在需要选身份时拉取
