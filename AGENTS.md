@@ -81,6 +81,8 @@
 
 **2026-11-15 23:02 口径变更登记**（**选择账本页补返回按钮**，用户问「选择账本为什么没有返回按钮」，细节 → `docs/agents/ui-login.md`）：合并引导页（`book/form.tsx`）的左上角圆形返回**改为始终显示**——从个人页等入口进入（`onCancel` 有值）仍是关页返回；**登录后的首次引导返回 = 退出登录回登录页**（登录是流程的一环，要允许反悔换一种登录方式；不能只隐藏登录层，因为登录层仅在未登录时渲染），走新增的 `utils/logout.ts` `logoutWithConfirm`（与设置页 `toLogOut` 共用同一套：`logout-warning` prompt 确认，取消静默留在原地 → beforeLogout 快照 → 端点 logout → 清空本地存储 → afterLogout 恢复上次连接信息 → reload；WebDAV / S3 的连接信息由快照保留，重填成本低）。`verify-login.js` 补断言：返回 → 弹「退出登录」确认 → 确认后回到登录页。
 
+**2026-11-15 23:10 提交与发布登记**（用户明确「push 并合到 next 然后发布」，worktree `feat-login-261115`）：把登录提交（b26e3b2）、next 同步合并（b78bbdc）与返回按钮修复（ecdb17a）push 到 `origin/feat-login-261115`，再 `--no-ff` 合入 `release/next` 并 push；随后按 `docs/agents/deployment.md` 口径用 wrangler 发布 Cloudflare Pages（`cent-test` / `--branch main`，本部署为用户本轮明确要求）。登录工作自此进入 next，`feat-login-261115` 与 `release/next` 在合并点树内容一致。
+
 ## 1. 项目速览
 
 - 名称：**胖记**（用户明确：没有英文名，界面与 PWA 清单里不出现 Cent / 日计；仓库名、包名、上游链接仍是 Cent，不要改）。纯前端 PWA 记账应用，数据存在用户自己的 GitHub / Gitee / WebDAV / S3 仓库或本地离线库中，没有业务后端。
