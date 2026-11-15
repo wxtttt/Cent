@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
-import { createDeleteConfirm } from "@/components/delete-confirm";
 import { showVehicleForm, showVehicleRecord } from "@/components/vehicle";
 import { useVehicle } from "@/hooks/use-vehicle";
 import PopupLayout from "@/layouts/popup-layout";
@@ -43,9 +42,6 @@ const ENERGY_LABEL_KEY: Record<VehicleEnergyType, string> = {
 
 const CARD =
     "divide-y divide-rule/70 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]";
-
-/** 与「删除特殊预算」同款二次确认；车辆页内独立实例 */
-const [VehicleDeleteProvider, showVehicleDelete] = createDeleteConfirm();
 
 const money = (n: number) => `¥${Math.round(n).toLocaleString("zh-CN")}`;
 const km = (n: number) => `${Math.round(n).toLocaleString("zh-CN")} km`;
@@ -141,7 +137,16 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
     );
 
     const openVehicleForm = async (edit?: Vehicle) => {
-        const v = await showVehicleForm(edit).catch(() => undefined);
+        const v = await showVehicleForm({
+            vehicle: edit,
+            // 删除入口在编辑抽屉「保存」下面，二次确认由抽屉自己弹
+            onDelete: edit
+                ? () => {
+                      void removeVehicle(edit.id);
+                      if (vehicleFilter === edit.id) setVehicleFilter("__all");
+                  }
+                : undefined,
+        }).catch(() => undefined);
         if (!v) return;
         if (edit) await updateVehicle({ ...edit, ...v });
         else await addVehicle(v);
@@ -154,31 +159,15 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
             record,
             defaultVehicleId:
                 vehicleFilter === "__all" ? undefined : vehicleFilter,
+            onDelete: record
+                ? () => {
+                      void removeRecord(record.id);
+                  }
+                : undefined,
         }).catch(() => undefined);
         if (!v) return;
         if (record) await updateRecord({ ...record, ...v });
         else await addRecord(v);
-    };
-
-    const confirmDeleteVehicle = async (vehicle: Vehicle) => {
-        const ok = await showVehicleDelete({
-            title: t("vehicle-delete-title"),
-            description: t("vehicle-delete-vehicle-confirm", {
-                name: vehicle.name,
-            }),
-        }).catch(() => false);
-        if (!ok) return;
-        await removeVehicle(vehicle.id);
-        if (vehicleFilter === vehicle.id) setVehicleFilter("__all");
-    };
-
-    const confirmDeleteRecord = async (record: VehicleRecord) => {
-        const ok = await showVehicleDelete({
-            title: t("vehicle-delete-record-title"),
-            description: t("vehicle-delete-record-confirm"),
-        }).catch(() => false);
-        if (!ok) return;
-        await removeRecord(record.id);
     };
 
     return (
@@ -244,14 +233,6 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                                               )
                                         : undefined
                                 }
-                                onDelete={
-                                    activeVehicle
-                                        ? () =>
-                                              void confirmDeleteVehicle(
-                                                  activeVehicle,
-                                              )
-                                        : undefined
-                                }
                             />
 
                             <GroupTitle>
@@ -292,6 +273,7 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                                                     trip={tripInfo(
                                                         records,
                                                         record,
+                                                        record.type,
                                                     )}
                                                     vehicleName={
                                                         vehicles.find(
@@ -302,11 +284,6 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                                                     }
                                                     onEdit={() =>
                                                         void openRecordForm(
-                                                            record,
-                                                        )
-                                                    }
-                                                    onDelete={() =>
-                                                        void confirmDeleteRecord(
                                                             record,
                                                         )
                                                     }
@@ -333,7 +310,6 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                     </div>
                 )}
             </PopupLayout>
-            <VehicleDeleteProvider />
         </div>
     );
 }
@@ -367,15 +343,25 @@ function ConsumptionBlock({
     label,
     value,
     unitLabel,
+    estimated,
 }: {
     label: string;
     value?: number;
     unitLabel: string;
+    estimated?: boolean;
 }) {
     return (
         <div className="min-w-0">
             <div className="text-[11px] text-ink-secondary">{label}</div>
             <div className="mt-1 flex items-baseline gap-1">
+                {estimated && (
+                    <span
+                        className="text-[16px] font-medium leading-none text-brand"
+                        data-estimated="true"
+                    >
+                        ≈
+                    </span>
+                )}
                 <span className="text-[26px] font-semibold leading-none tabular-nums text-brand">
                     {value === undefined ? "—" : fixed(value)}
                 </span>
@@ -387,19 +373,38 @@ function ConsumptionBlock({
     );
 }
 
+/**
+ * 单车态只有一组能耗，左侧大字右边会空出一块；用三行紧凑事实把右侧填实，
+ * 与左栏形成「一个主指标 + 一组辅助读数」的视觉平衡，不再靠照片占位撑空间。
+ */
+function SideFacts({ rows }: { rows: { label: string; value: string }[] }) {
+    return (
+        <div className="flex min-w-[108px] flex-col items-end gap-1 pt-1">
+            {rows.map(({ label, value }) => (
+                <div key={label} className="flex items-baseline gap-1">
+                    <span className="text-[10px] text-ink-secondary">
+                        {label}
+                    </span>
+                    <span className="text-[12px] font-medium tabular-nums text-ink">
+                        {value}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 /** 一张卡同时承载车辆信息与能耗概览；混动车显示油 / 电双栏 */
 function OverviewCard({
     vehicle,
     vehicleCount,
     stats,
     onEdit,
-    onDelete,
 }: {
     vehicle?: Vehicle;
     vehicleCount: number;
     stats: Stats;
     onEdit?: () => void;
-    onDelete?: () => void;
 }) {
     const t = useIntl();
     // 只看筛选范围内实际有哪些车：没有油车不显示油耗，没有电车不显示电耗
@@ -411,13 +416,55 @@ function OverviewCard({
         ? stats.gasConsumption
         : stats.electricConsumption;
     const hasValue = shownValue !== undefined;
+    // 估算值带 ≈：这台车一直没凑齐两次加满，用的是累计加注量 ÷ 累计里程
+    const mainEstimated = showGas
+        ? stats.gasEstimated
+        : stats.electricEstimated;
+    const hasEstimate =
+        (showGas && stats.gasEstimated) ||
+        (showElectric && stats.electricEstimated);
     const priceUnit = showGas ? "L" : "kWh";
+    const price = gasOnly
+        ? stats.avgPriceGas
+        : showGas
+          ? (stats.avgPriceGas ?? stats.avgPriceElectric)
+          : stats.avgPriceElectric;
     const anchor = gasOnly
         ? stats.lastFuelAnchor
         : showGas
           ? (stats.lastFuelAnchor ?? stats.lastChargeAnchor)
           : stats.lastChargeAnchor;
     const anchorIsCharge = !!anchor && !stats.lastFuelAnchor;
+    // 未结算的油量 / 电量按能源各显示一行，双栏视图也不再吞掉；
+    // 估算段已经把这些量算进去了，就不再提示「下次补满后计入」
+    const pendingRows = [
+        {
+            key: "gas",
+            n: stats.pendingGasVolume,
+            unit: "L",
+            show: showGas && !stats.gasEstimated,
+        },
+        {
+            key: "electric",
+            n: stats.pendingElectricVolume,
+            unit: "kWh",
+            show: showElectric && !stats.electricEstimated,
+        },
+    ].filter((row) => row.show && row.n > 0);
+    const sideRows = [
+        {
+            label: t("vehicle-fact-last"),
+            value:
+                stats.lastConsumption === undefined
+                    ? "--"
+                    : fixed(stats.lastConsumption),
+        },
+        {
+            label: t("vehicle-fact-price"),
+            value: price === undefined ? "--" : `¥${fixed(price)}/${priceUnit}`,
+        },
+        { label: t("vehicle-fact-month"), value: money(stats.monthCost) },
+    ];
 
     return (
         <div className="mt-3 rounded-2xl bg-panel px-4 py-3 shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
@@ -448,69 +495,85 @@ function OverviewCard({
                     </div>
                 </div>
                 {vehicle && (
-                    <div className="flex flex-shrink-0 items-center gap-1">
-                        <button
-                            type="button"
-                            aria-label={t("vehicle-edit")}
-                            className="flex size-7 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted hover:text-brand"
-                            onClick={onEdit}
-                        >
-                            <i className="icon-[lucide--pencil] size-3.5" />
-                        </button>
-                        <button
-                            type="button"
-                            aria-label={t("delete")}
-                            className="flex size-7 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted hover:text-red-500"
-                            onClick={onDelete}
-                        >
-                            <i className="icon-[lucide--trash-2] size-3.5" />
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        aria-label={t("vehicle-edit")}
+                        className="flex size-7 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ground-muted hover:text-brand"
+                        onClick={onEdit}
+                    >
+                        <i className="icon-[lucide--pencil] size-3.5" />
+                    </button>
                 )}
             </div>
 
-            {/* 有油车显示油耗、有电车显示电耗；两者都有时左右双栏 */}
+            {/* 双能源时左右双栏；单能源时右侧补三行辅助读数，消掉大片留白 */}
             <div className="mt-3">
                 {both ? (
-                    <div className="grid grid-cols-2 gap-3">
-                        <ConsumptionBlock
-                            label={t("vehicle-stat-consumption-gas")}
-                            value={stats.gasConsumption}
-                            unitLabel="L/100km"
-                        />
-                        <ConsumptionBlock
-                            label={t("vehicle-stat-consumption-electric")}
-                            value={stats.electricConsumption}
-                            unitLabel="kWh/100km"
-                        />
+                    <>
+                        <div className="grid grid-cols-2 gap-3">
+                            <ConsumptionBlock
+                                label={t("vehicle-stat-consumption-gas")}
+                                value={stats.gasConsumption}
+                                unitLabel="L/100km"
+                                estimated={stats.gasEstimated}
+                            />
+                            <ConsumptionBlock
+                                label={t("vehicle-stat-consumption-electric")}
+                                value={stats.electricConsumption}
+                                unitLabel="kWh/100km"
+                                estimated={stats.electricEstimated}
+                            />
+                        </div>
+                        <div className="mt-1.5 truncate text-[11px] tabular-nums text-ink-secondary">
+                            {hasEstimate
+                                ? t("vehicle-estimate-hint")
+                                : hasValue
+                                  ? t("vehicle-last-avg", {
+                                        last: fixed(shownValue),
+                                        price: fixed(price),
+                                        unit: priceUnit,
+                                    })
+                                  : t("vehicle-need-two-full")}
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex items-start justify-between gap-3">
+                        {showGas ? (
+                            <ConsumptionBlock
+                                label={t("vehicle-stat-consumption-gas")}
+                                value={stats.gasConsumption}
+                                unitLabel="L/100km"
+                                estimated={stats.gasEstimated}
+                            />
+                        ) : showElectric ? (
+                            <ConsumptionBlock
+                                label={t("vehicle-stat-consumption-electric")}
+                                value={stats.electricConsumption}
+                                unitLabel="kWh/100km"
+                                estimated={stats.electricEstimated}
+                            />
+                        ) : (
+                            <span />
+                        )}
+                        <SideFacts rows={sideRows} />
                     </div>
-                ) : showGas ? (
-                    <ConsumptionBlock
-                        label={t("vehicle-stat-consumption-gas")}
-                        value={stats.gasConsumption}
-                        unitLabel="L/100km"
-                    />
-                ) : showElectric ? (
-                    <ConsumptionBlock
-                        label={t("vehicle-stat-consumption-electric")}
-                        value={stats.electricConsumption}
-                        unitLabel="kWh/100km"
-                    />
-                ) : null}
-                <div className="mt-1.5 truncate text-[11px] tabular-nums text-ink-secondary">
-                    {hasValue
-                        ? t("vehicle-last-avg", {
-                              last: fixed(shownValue),
-                              price: fixed(stats.avgPrice),
-                              unit: priceUnit,
-                          })
-                        : t(
-                              gasOnly
-                                  ? "vehicle-need-two-full"
-                                  : "vehicle-need-two-charge",
-                          )}
-                </div>
-                {hasValue && anchor && (
+                )}
+                {!both && !hasValue && (
+                    <div className="mt-1.5 truncate text-[11px] text-ink-secondary">
+                        {t(
+                            gasOnly
+                                ? "vehicle-need-two-full"
+                                : "vehicle-need-two-charge",
+                        )}
+                    </div>
+                )}
+                {!both && hasEstimate && (
+                    <div className="mt-1.5 truncate text-[11px] text-ink-secondary">
+                        {t("vehicle-estimate-hint")}
+                    </div>
+                )}
+                {/* 油电混合口径下（一栏精确一栏估算）只显示估算说明，避免两行提示互相打架 */}
+                {hasValue && anchor && !mainEstimated && !hasEstimate && (
                     <div className="mt-0.5 truncate text-[11px] tabular-nums text-ink-secondary">
                         {t(
                             anchorIsCharge
@@ -525,6 +588,17 @@ function OverviewCard({
                         )}
                     </div>
                 )}
+                {pendingRows.map((row) => (
+                    <div
+                        key={row.key}
+                        className="mt-0.5 truncate text-[11px] tabular-nums text-ink-secondary"
+                    >
+                        {t("vehicle-pending-volume", {
+                            n: fixed(row.n, 1),
+                            unit: row.unit,
+                        })}
+                    </div>
+                ))}
             </div>
 
             <div className="mt-3 grid grid-cols-3 divide-x divide-rule/70 border-t border-rule/70 pt-3">
@@ -623,13 +697,11 @@ function RecordRow({
     trip,
     vehicleName,
     onEdit,
-    onDelete,
 }: {
     record: VehicleRecord;
     trip: ReturnType<typeof tripInfo>;
     vehicleName: string;
     onEdit: () => void;
-    onDelete: () => void;
 }) {
     const t = useIntl();
     const typeLabel = t(TYPE_LABEL_KEY[record.type]);
@@ -641,9 +713,10 @@ function RecordRow({
         if (!trip.prev) return t("vehicle-first-record");
         if (trip.inverted) return t("vehicle-check-odometer");
         if (trip.distance === undefined) return t("vehicle-first-record");
-        return t("vehicle-since-last", {
+        return t("vehicle-since-last-days", {
             type: typeLabel,
             n: Math.round(trip.distance).toLocaleString("zh-CN"),
+            d: trip.days ?? 0,
         });
     })();
     const sinceTone = trip.prev && !trip.inverted;
@@ -701,14 +774,6 @@ function RecordRow({
             <span className="pointer-events-none relative z-[1] flex-shrink-0 text-[14px] font-semibold tabular-nums text-ink">
                 {record.cost === undefined ? "--" : money(record.cost)}
             </span>
-            <button
-                type="button"
-                aria-label={t("delete")}
-                className="relative z-10 flex size-7 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-secondary/70 transition-colors hover:bg-ground-muted hover:text-red-500"
-                onClick={onDelete}
-            >
-                <i className="icon-[lucide--trash-2] size-3.5" />
-            </button>
         </div>
     );
 }

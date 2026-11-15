@@ -1302,12 +1302,20 @@
   "vehicle-fuel-grade": "Grade",
   "vehicle-full": "Full tank",
   "vehicle-full-charge": "Fully charged",
-  "vehicle-full-hint": "Two full tanks are needed to calculate fuel consumption; partial fills still count",
-  "vehicle-full-hint-charge": "Two full charges are needed to calculate consumption; partial charges still count",
+  "vehicle-full-hint": "Two full tanks give exact consumption; partial fills use an estimate",
+  "vehicle-full-hint-charge": "Two full charges give exact consumption; partial charges use an estimate",
   "vehicle-no-fuel-car": "No vehicle that takes fuel",
   "vehicle-no-charge-car": "No vehicle that takes charge",
   "vehicle-full-anchor": "Since last fill-up · {date} {km} km",
   "vehicle-full-anchor-charge": "Since last full charge · {date} {km} km",
   "vehicle-delete-title": "Delete Vehicle",
-  "vehicle-delete-record-title": "Delete Record"
+  "vehicle-delete-record-title": "Delete Record",
+  "vehicle-since-last-days": "Since last {type} {n} km · {d} d",
+  "vehicle-fact-last": "Last",
+  "vehicle-fact-price": "Avg",
+  "vehicle-fact-month": "Month",
+  "vehicle-delete-record": "Delete record",
+  "vehicle-delete-vehicle": "Delete vehicle",
+  "vehicle-pending-volume": "{n} {unit} pending · counted after next full refill",
+  "vehicle-estimate-hint": "Estimated from total refills · 2 full refills for exact"
 }

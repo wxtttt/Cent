@@ -301,6 +301,8 @@ type VehicleSeed = {
     cost: number;
     volume?: number;
     fuelGrade?: VehicleRecord["fuelGrade"];
+    /** 不传视为加满；false 用来演示「油箱还剩很多、只补一点」的未结算分段 */
+    isFull?: boolean;
     remark?: string;
 };
 
@@ -386,7 +388,30 @@ const VEHICLE_SEEDS: VehicleSeed[] = [
         fuelGrade: "98",
         remark: "中石油",
     },
-    // 小蓝（纯电）：每月充满一次
+    {
+        // 第二笔维修，让记录行能显示「距上次维修 X km · Y 天」
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 0,
+        day: 10,
+        type: "repair",
+        odometer: 35020,
+        cost: 260,
+        remark: "补胎",
+    },
+    {
+        // 油箱还剩大半，只补了一点：这段油量要等下次加满才计入能耗
+        vehicleId: "sample-vehicle-gas",
+        monthsAgo: 0,
+        day: 12,
+        type: "fuel",
+        odometer: 35120,
+        cost: 120,
+        volume: 15.0,
+        fuelGrade: "92",
+        isFull: false,
+        remark: "没加满，只补了一点",
+    },
+    // 小蓝（纯电）：家充每次只补到 80%，从没「充满」——用来演示没有两次满电锚点时的累计量估算
     {
         vehicleId: "sample-vehicle-ev",
         monthsAgo: 5,
@@ -395,6 +420,7 @@ const VEHICLE_SEEDS: VehicleSeed[] = [
         odometer: 10500,
         cost: 58,
         volume: 48.2,
+        isFull: false,
         remark: "家充桩",
     },
     {
@@ -405,6 +431,7 @@ const VEHICLE_SEEDS: VehicleSeed[] = [
         odometer: 10840,
         cost: 57,
         volume: 47.6,
+        isFull: false,
     },
     {
         vehicleId: "sample-vehicle-ev",
@@ -414,6 +441,7 @@ const VEHICLE_SEEDS: VehicleSeed[] = [
         odometer: 11190,
         cost: 59,
         volume: 49.0,
+        isFull: false,
         remark: "商场快充",
     },
     {
@@ -424,6 +452,7 @@ const VEHICLE_SEEDS: VehicleSeed[] = [
         odometer: 11540,
         cost: 58,
         volume: 48.3,
+        isFull: false,
     },
     {
         vehicleId: "sample-vehicle-ev",
@@ -442,6 +471,7 @@ const VEHICLE_SEEDS: VehicleSeed[] = [
         odometer: 11880,
         cost: 57,
         volume: 47.6,
+        isFull: false,
     },
     {
         vehicleId: "sample-vehicle-ev",
@@ -451,6 +481,7 @@ const VEHICLE_SEEDS: VehicleSeed[] = [
         odometer: 12220,
         cost: 57,
         volume: 47.6,
+        isFull: false,
         remark: "家充桩",
     },
     // 小闪（混动）：加油与充电交替，覆盖抽屉里的「加油 / 充电」切换
@@ -570,7 +601,10 @@ const createVehicleSampleEntries = (anchor: Date) => {
             cost: s.cost,
             volume: s.volume,
             fuelGrade: s.fuelGrade,
-            isFull: s.type === "fuel" || s.type === "charge" ? true : undefined,
+            isFull:
+                s.type === "fuel" || s.type === "charge"
+                    ? (s.isFull ?? true)
+                    : undefined,
             remark: s.remark,
             sample: true,
             __create_at: time,
