@@ -1308,12 +1308,20 @@
   "vehicle-fuel-grade": "油号",
   "vehicle-full": "加满了",
   "vehicle-full-charge": "充满了",
-  "vehicle-full-hint": "两次加满之间才能算出油耗，没加满也照常记",
-  "vehicle-full-hint-charge": "两次充满之间才能算出电耗，没充满也照常记",
+  "vehicle-full-hint": "两次加满之间算精确油耗，没加满按累计量估算",
+  "vehicle-full-hint-charge": "两次充满之间算精确电耗，没充满按累计量估算",
   "vehicle-no-fuel-car": "没有可加油的车辆",
   "vehicle-no-charge-car": "没有可充电的车辆",
   "vehicle-full-anchor": "按上次加满计算 · {date} {km} km",
   "vehicle-full-anchor-charge": "按上次充满计算 · {date} {km} km",
   "vehicle-delete-title": "删除车辆",
-  "vehicle-delete-record-title": "删除记录"
+  "vehicle-delete-record-title": "删除记录",
+  "vehicle-since-last-days": "距上次{type} {n} km · {d} 天",
+  "vehicle-fact-last": "最近一次",
+  "vehicle-fact-price": "均价",
+  "vehicle-fact-month": "本月",
+  "vehicle-delete-record": "删除记录",
+  "vehicle-delete-vehicle": "删除车辆",
+  "vehicle-pending-volume": "本段已累计 {n} {unit}，下次补满后计入",
+  "vehicle-estimate-hint": "按累计补能量估算 · 补满两次后转精确"
 }
