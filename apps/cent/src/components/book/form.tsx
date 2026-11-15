@@ -6,6 +6,7 @@ import { useIntl } from "@/locale";
 import { measure } from "@/measurement";
 import { useBookStore } from "@/store/book";
 import { useIsLogin } from "@/store/user";
+import { logoutWithConfirm } from "@/utils/logout";
 import { CUSTOM_CSS_STORAGE_KEY } from "@/utils/preset";
 import Loading from "../loading";
 import modal from "../modal";
@@ -59,8 +60,9 @@ const writeUserIdentity = (name: string) => {
  * 56px 品牌图标 + 居中标题，账本 / 用户各一张白卡（灰组标签 + 细分隔线，选中行
  * 打品牌色勾，卡内「+ 新建」行弹 prompt），底部只留一颗 54px 确认按钮统一生效。
  * 点按只改本地选中态，确认时一次性落盘：改账本走 switchToBook（reload），
- * WebDAV / S3 还需先写身份再切换（见 writeUserIdentity）。从个人页等入口进入时
- * 提供左上角返回（onCancel），登录后的首次引导不给返回，必须完成选择。
+ * WebDAV / S3 还需先写身份再切换（见 writeUserIdentity）。左上角返回始终显示：
+ * 从个人页等入口进入（onCancel）= 关页返回；登录后的首次引导 = 退出登录回登录页
+ * （WebDAV / S3 的连接信息由 beforeLogout 快照保留，重填成本低）。
  */
 export function BookForm({ onCancel }: { onCancel?: () => void } = {}) {
     const t = useIntl();
@@ -247,16 +249,22 @@ export function BookForm({ onCancel }: { onCancel?: () => void } = {}) {
             data-book-guide
             className="dp-drawer-surface fixed inset-0 z-[3] flex flex-col overflow-y-auto overscroll-contain bg-ground text-ink"
         >
-            {onCancel && (
-                <button
-                    type="button"
-                    aria-label={t("back")}
-                    onClick={onCancel}
-                    className="fixed left-4 top-[calc(var(--safe-area-inset-top)+12px)] z-10 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)]"
-                >
-                    <i className="icon-[lucide--chevron-left] size-5" />
-                </button>
-            )}
+            <button
+                type="button"
+                aria-label={t("back")}
+                onClick={() => {
+                    // 切换账本入口（onCancel）= 关页返回；登录后的首次引导 =
+                    // 退出登录回登录页，让用户能反悔换一种登录方式
+                    if (onCancel) {
+                        onCancel();
+                        return;
+                    }
+                    void logoutWithConfirm(t("logout-warning"));
+                }}
+                className="fixed left-4 top-[calc(var(--safe-area-inset-top)+12px)] z-10 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)]"
+            >
+                <i className="icon-[lucide--chevron-left] size-5" />
+            </button>
             <div className="mx-auto flex min-h-full w-full max-w-[420px] flex-col px-3 pt-[calc(var(--safe-area-inset-top)+64px)] pb-[calc(var(--safe-area-inset-bottom)+20px)]">
                 <div className="my-auto flex flex-col">
                     <div className="flex flex-col items-center">

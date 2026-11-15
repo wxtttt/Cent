@@ -79,6 +79,8 @@
 
 **2026-11-15 22:45 合并登记**（登录分支同步 next 最新，worktree `feat-login-261115`）：把 `origin/release/next` 最新（`bc4ed99`，含车辆能耗 r31~r33 与币种抽屉搜索 r34）merge 进登录分支；唯一内容冲突落在 `docs/agents/verification.md`（双方都在文档尾部追加各自验证段），取并集保留两侧；AGENTS.md 与 zh/en 语言包由 git 自动合并（并集校验通过：`login-finish-setup` / `login-section-books` / `login-section-users` / `please-input-user-name` 与币种键俱在、JSON 合法）；车辆 / 货币组件与登录组件零文件重叠，仅全量 bundle 一起变更——合并后按口径重跑 lint、构建与登录双引擎回归。**本轮只做分支内合并提交，未 push、未改动 release/next**。
 
+**2026-11-15 23:02 口径变更登记**（**选择账本页补返回按钮**，用户问「选择账本为什么没有返回按钮」，细节 → `docs/agents/ui-login.md`）：合并引导页（`book/form.tsx`）的左上角圆形返回**改为始终显示**——从个人页等入口进入（`onCancel` 有值）仍是关页返回；**登录后的首次引导返回 = 退出登录回登录页**（登录是流程的一环，要允许反悔换一种登录方式；不能只隐藏登录层，因为登录层仅在未登录时渲染），走新增的 `utils/logout.ts` `logoutWithConfirm`（与设置页 `toLogOut` 共用同一套：`logout-warning` prompt 确认，取消静默留在原地 → beforeLogout 快照 → 端点 logout → 清空本地存储 → afterLogout 恢复上次连接信息 → reload；WebDAV / S3 的连接信息由快照保留，重填成本低）。`verify-login.js` 补断言：返回 → 弹「退出登录」确认 → 确认后回到登录页。
+
 ## 1. 项目速览
 
 - 名称：**胖记**（用户明确：没有英文名，界面与 PWA 清单里不出现 Cent / 日计；仓库名、包名、上游链接仍是 Cent，不要改）。纯前端 PWA 记账应用，数据存在用户自己的 GitHub / Gitee / WebDAV / S3 仓库或本地离线库中，没有业务后端。
