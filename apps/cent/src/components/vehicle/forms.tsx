@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { useState } from "react";
 import { DatePicker } from "@/components/date-picker";
+import { createDeleteConfirm } from "@/components/delete-confirm";
 import {
     FormCard,
     FormRow,
@@ -31,22 +32,32 @@ const ENERGY_TYPES = [
  * APK「添加车辆」抽屉：拖拽条 + 居中标题、无返回 / 无右上确认，
  * 一张白卡四行（名称 / 车牌号 / 能源类型 / 起始里程），底部全宽橙色胶囊「保存」。
  */
+export type VehicleFormEdit = {
+    vehicle?: Vehicle;
+    /** 由页面注入：确认后删除这台车及其记录 */
+    onDelete?: () => void;
+};
+
 export function VehicleForm({
     edit,
+    onCancel,
     onConfirm,
 }: {
-    edit?: Vehicle;
+    edit?: VehicleFormEdit;
     onCancel?: () => void;
     onConfirm?: (v: VehicleValue) => void;
 }) {
     const t = useIntl();
-    const [name, setName] = useState(edit?.name ?? "");
-    const [plate, setPlate] = useState(edit?.plate ?? "");
+    const vehicle = edit?.vehicle;
+    const [name, setName] = useState(vehicle?.name ?? "");
+    const [plate, setPlate] = useState(vehicle?.plate ?? "");
     const [energyType, setEnergyType] = useState<VehicleEnergyType>(
-        edit?.energyType ?? "gas",
+        vehicle?.energyType ?? "gas",
     );
     const [initialText, setInitialText] = useState(
-        edit?.initialOdometer === undefined ? "" : String(edit.initialOdometer),
+        vehicle?.initialOdometer === undefined
+            ? ""
+            : String(vehicle.initialOdometer),
     );
 
     const valid = name.trim().length > 0;
@@ -62,11 +73,22 @@ export function VehicleForm({
         });
     };
 
+    const remove = async () => {
+        const ok = await showVehicleFormDelete({
+            title: t("vehicle-delete-title"),
+            description: t("vehicle-delete-vehicle-confirm", {
+                name: vehicle?.name ?? "",
+            }),
+            onDelete: edit?.onDelete,
+        }).catch(() => false);
+        if (ok) onCancel?.();
+    };
+
     return (
         <PopupLayout
             title={
                 <span className="text-[18px] font-semibold text-ink">
-                    {edit ? t("vehicle-edit") : t("vehicle-add")}
+                    {vehicle ? t("vehicle-edit") : t("vehicle-add")}
                 </span>
             }
             hideBack
@@ -130,7 +152,17 @@ export function VehicleForm({
                 >
                     {t("vehicle-save")}
                 </button>
+                {vehicle && edit?.onDelete && (
+                    <button
+                        type="button"
+                        onClick={() => void remove()}
+                        className="mt-2 h-10 w-full cursor-pointer text-[14px] font-medium text-red-500"
+                    >
+                        {t("vehicle-delete-vehicle")}
+                    </button>
+                )}
             </div>
+            <VehicleFormDeleteProvider />
         </PopupLayout>
     );
 }
@@ -149,6 +181,11 @@ const ALL_TYPES: { value: VehicleRecordType; label: string }[] = [
 ];
 
 const FUEL_GRADES = ["92", "95", "98"] as const;
+
+/** 两个编辑抽屉各自挂一份删除二次确认，与「删除特殊预算」同款白卡 */
+const [VehicleFormDeleteProvider, showVehicleFormDelete] =
+    createDeleteConfirm();
+const [RecordFormDeleteProvider, showRecordFormDelete] = createDeleteConfirm();
 
 /**
  * 顶部 tab 固定五项（加油 / 充电都在）。选中哪个 tab，车辆行就只列能加
@@ -236,6 +273,7 @@ function Toggle({
  */
 export function VehicleRecordForm({
     edit,
+    onCancel,
     onConfirm,
 }: {
     /** vehicles 为车辆列表，records 用于算「本次行驶」，defaultVehicleId 为页面当前筛选的车 */
@@ -244,6 +282,8 @@ export function VehicleRecordForm({
         records?: VehicleRecord[];
         record?: VehicleRecord;
         defaultVehicleId?: string;
+        /** 由页面注入：确认后删除这条记录 */
+        onDelete?: () => void;
     };
     onCancel?: () => void;
     onConfirm?: (v: VehicleRecordValue) => void;
@@ -252,7 +292,7 @@ export function VehicleRecordForm({
     const record = edit?.record;
     const vehicles = edit?.vehicles ?? [];
     const allRecords = edit?.records ?? [];
-    /** 同类型上一次记录：带出油号 / 加满 / 车辆这些每次都一样的「有价值的选项」 */
+    /** 同类型上一次记录：带出油号 / 车辆这些每次都一样的「有价值的选项」；加满状态不继承 */
     const lastOf = (typ: VehicleRecordType) =>
         [...allRecords]
             .filter((r) => r.type === typ && r.id !== record?.id)
@@ -298,11 +338,12 @@ export function VehicleRecordForm({
         record?.fuelGrade ??
             (initialType === "fuel" ? lastFuel?.fuelGrade : undefined),
     );
-    const [isFull, setIsFull] = useState(
-        record?.isFull ??
-            (initialType === "fuel" ? lastFuel?.isFull : lastCharge?.isFull) ??
-            true,
-    );
+    /**
+     * 新增时默认「没加满」：把没加满误标成加满会算出错误油耗，
+     * 反过来只是结算延后（r32 起还有 ≈ 估算兜底），所以默认取保守的一侧。
+     * 编辑已有记录时沿用记录本身的值；旧数据没有 isFull 字段也按未加满处理。
+     */
+    const [isFull, setIsFull] = useState(record?.isFull ?? false);
     const [remark, setRemark] = useState(record?.remark ?? "");
 
     const allowedVehicles = vehiclesFor(type, vehicles);
@@ -333,9 +374,19 @@ export function VehicleRecordForm({
     const typeLabelKey =
         ALL_TYPES.find((x) => x.value === type)?.label ?? "vehicle-type-fuel";
     const typedTrip = tripInfo(
-        allRecords.filter((r) => r.type === type),
+        allRecords,
         { id: record?.id, vehicleId, time, odometer },
+        type,
     );
+
+    const remove = async () => {
+        const ok = await showRecordFormDelete({
+            title: t("vehicle-delete-record-title"),
+            description: t("vehicle-delete-record-confirm"),
+            onDelete: edit?.onDelete,
+        }).catch(() => false);
+        if (ok) onCancel?.();
+    };
 
     /** 切 tab：车辆行换成能加该能源的车，并带出该类型上一次的选项 */
     const onPickType = (next: VehicleRecordType) => {
@@ -347,7 +398,7 @@ export function VehicleRecordForm({
         if (next === "fuel" || next === "charge") {
             const last = next === "fuel" ? lastFuel : lastCharge;
             setFuelGrade(next === "fuel" ? last?.fuelGrade : undefined);
-            setIsFull(last?.isFull ?? true);
+            setIsFull(false);
         }
     };
 
@@ -386,9 +437,9 @@ export function VehicleRecordForm({
             handle
         >
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pb-2 pt-1">
-                {/* 类型 tab：加油 / 充电都在，选中后车辆行只列能加该能源的车 */}
+                {/* 类型 tab 与记账「记一笔」的支出/收入段控同款：白底胶囊容器，选中项浅灰底黑字 */}
                 <div className="flex justify-center">
-                    <div className="flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full bg-panel p-1 shadow-[0_1px_6px_rgba(92,62,30,0.08)]">
+                    <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-full bg-panel p-1 shadow-[0_2px_10px_rgba(92,62,30,0.08)] ring-1 ring-rule/50">
                         {ALL_TYPES.map(({ value, label }) => {
                             const noCar =
                                 isEnergyRecord(value) &&
@@ -400,10 +451,10 @@ export function VehicleRecordForm({
                                     aria-label={t(label)}
                                     disabled={noCar}
                                     className={cn(
-                                        "flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full px-3.5 py-[5px] text-[13px] font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40",
+                                        "h-9 min-w-[56px] flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors duration-[var(--dp-motion-interaction)] ease-[var(--dp-motion-easing)] disabled:cursor-not-allowed disabled:opacity-40",
                                         type === value
-                                            ? "bg-panel font-semibold text-ink shadow-[0_1px_5px_rgba(92,62,30,0.14)] ring-1 ring-rule/70"
-                                            : "text-ink/65",
+                                            ? "bg-ground-muted text-ink"
+                                            : "text-ink-secondary",
                                     )}
                                     onClick={() => onPickType(value)}
                                 >
@@ -622,7 +673,17 @@ export function VehicleRecordForm({
                 >
                     {t("vehicle-save")}
                 </button>
+                {record && edit?.onDelete && (
+                    <button
+                        type="button"
+                        onClick={() => void remove()}
+                        className="mt-2 h-10 w-full cursor-pointer text-[14px] font-medium text-red-500"
+                    >
+                        {t("vehicle-delete-record")}
+                    </button>
+                )}
             </div>
+            <RecordFormDeleteProvider />
         </PopupLayout>
     );
 }
