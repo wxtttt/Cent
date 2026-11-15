@@ -16,6 +16,8 @@ export type OptionSheetValue = {
     empty?: string;
     options: OptionItem[];
     selected: string[];
+    /** 选项很多时显示搜索框（本位币 / 快捷币种这类 30+ 选项的抽屉用） */
+    searchable?: boolean;
 };
 
 const OptionSheetForm = ({
@@ -29,10 +31,21 @@ const OptionSheetForm = ({
 }) => {
     const t = useIntl();
     const [selected, setSelected] = useState<string[]>(edit?.selected ?? []);
+    const [query, setQuery] = useState("");
+    const keyword = query.trim().toLowerCase();
     const toggle = (id: string) =>
         setSelected((prev) =>
             prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
         );
+    // 搜索只过滤可见项，selected 不受影响，确认仍返回完整勾选结果
+    const visibleOptions =
+        edit && keyword
+            ? edit.options.filter(
+                  (o) =>
+                      o.label.toLowerCase().includes(keyword) ||
+                      o.id.toLowerCase().includes(keyword),
+              )
+            : (edit?.options ?? []);
     return (
         <div className="flex max-h-[80dvh] flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3">
@@ -45,42 +58,70 @@ const OptionSheetForm = ({
                         {edit.hint}
                     </p>
                 )}
+                {edit?.searchable && (
+                    <div className="mt-3 flex h-9 items-center gap-2 rounded-full bg-panel px-3.5 text-ink-secondary shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+                        <i className="icon-[lucide--search] size-4 shrink-0" />
+                        <input
+                            type="search"
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            placeholder={t("search")}
+                            aria-label={t("search")}
+                            className="w-full min-w-0 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-secondary/70 [&::-webkit-search-cancel-button]:hidden"
+                        />
+                        {query && (
+                            <button
+                                type="button"
+                                aria-label={t("clear")}
+                                onClick={() => setQuery("")}
+                                className="flex size-4 shrink-0 items-center justify-center"
+                            >
+                                <i className="icon-[lucide--x] size-3" />
+                            </button>
+                        )}
+                    </div>
+                )}
                 <div className="mt-5 mb-2 divide-y divide-rule/60 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
-                    {edit?.options.length === 0 && (
+                    {keyword && visibleOptions.length === 0 ? (
+                        <div className="px-4 py-5 text-center text-[13px] text-ink-secondary">
+                            {t("search-empty-results")}
+                        </div>
+                    ) : !keyword && edit && edit.options.length === 0 ? (
                         <div className="px-4 py-5 text-center text-[13px] text-ink-secondary">
                             {edit.empty ?? t("no-options")}
                         </div>
-                    )}
-                    {edit?.options.map((option) => {
-                        const on = selected.includes(option.id);
-                        return (
-                            <button
-                                key={option.id}
-                                type="button"
-                                onClick={() => toggle(option.id)}
-                                className={cn(
-                                    "flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2 text-left",
-                                    PRESSABLE_ROW,
-                                )}
-                            >
-                                <span className="min-w-0 truncate text-[14px] text-ink">
-                                    {option.label}
-                                </span>
-                                <span
+                    ) : (
+                        visibleOptions.map((option) => {
+                            const on = selected.includes(option.id);
+                            return (
+                                <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => toggle(option.id)}
                                     className={cn(
-                                        "flex size-[18px] flex-shrink-0 items-center justify-center rounded-full border",
-                                        on
-                                            ? "border-brand bg-brand text-on-brand"
-                                            : "border-rule bg-panel",
+                                        "flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2 text-left",
+                                        PRESSABLE_ROW,
                                     )}
                                 >
-                                    {on && (
-                                        <i className="icon-[lucide--check] size-3.5" />
-                                    )}
-                                </span>
-                            </button>
-                        );
-                    })}
+                                    <span className="min-w-0 truncate text-[14px] text-ink">
+                                        {option.label}
+                                    </span>
+                                    <span
+                                        className={cn(
+                                            "flex size-[18px] flex-shrink-0 items-center justify-center rounded-full border",
+                                            on
+                                                ? "border-brand bg-brand text-on-brand"
+                                                : "border-rule bg-panel",
+                                        )}
+                                    >
+                                        {on && (
+                                            <i className="icon-[lucide--check] size-3.5" />
+                                        )}
+                                    </span>
+                                </button>
+                            );
+                        })
+                    )}
                 </div>
             </div>
             <div className={SHEET_FOOTER}>

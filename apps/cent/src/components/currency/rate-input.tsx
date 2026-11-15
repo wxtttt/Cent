@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // 假设你使用的是 shadcn/ui
 import { useIntl } from "@/locale";
+import { BTN_TAP } from "../button-styles";
 
 interface RateInputProps {
     baseCurrencyLabel: string;
@@ -74,41 +73,32 @@ const RateInput = ({
 
     return (
         <div className="space-y-2">
-            <div className="flex items-center gap-3 px-1 py-3">
-                {/* 左侧文字 */}
-                <div className="text-sm text-muted-foreground whitespace-nowrap">
+            <div className="flex items-center gap-2 py-1">
+                <span className="whitespace-nowrap text-[14px] text-ink-secondary">
                     1 {isInverted ? targetCurrencyLabel : baseCurrencyLabel} =
-                </div>
-
-                {/* 输入框 */}
-                <Input
-                    type="number"
-                    className="flex-1 text-end"
+                </span>
+                <input
+                    type="text"
+                    inputMode="decimal"
+                    className="min-w-0 flex-1 bg-transparent text-right text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
                     value={displayValue}
                     onChange={(e) => handleInputChange(e.target.value)}
                     placeholder="0.00"
                 />
-
-                {/* 右侧文字 */}
-                <div className="text-sm text-muted-foreground whitespace-nowrap">
+                <span className="whitespace-nowrap text-[14px] text-ink-secondary">
                     {isInverted ? baseCurrencyLabel : targetCurrencyLabel}
-                </div>
-
-                {/* 反转切换按钮 */}
-                <Button
+                </span>
+                <button
                     type="button"
-                    variant="outline"
-                    size="sm"
                     onClick={toggleInvert}
-                    className="ml-auto flex gap-1 items-center"
-                    title="切换基准货币"
+                    title={t("rate-invert")}
+                    className={BTN_TAP}
                 >
-                    <i className="icon-[lucide--arrow-left-right] h-4 w-4" />
-                </Button>
+                    <i className="icon-[lucide--arrow-left-right] size-3.5" />
+                </button>
             </div>
 
-            {/* 提示信息 */}
-            <p className="text-[12px] text-muted-foreground italic">
+            <p className="text-[11px] text-ink-secondary">
                 * {t("rate-hint")} 1 {baseCurrencyLabel} ={" "}
                 {value != null ? value : "—"} {targetCurrencyLabel}
             </p>
