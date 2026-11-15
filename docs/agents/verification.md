@@ -184,3 +184,22 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 5. **内存红线**：机器剩 0.4 GB 空闲时 WebKit 启动即崩，等回落到 ~1 GB 才能跑；跑完立即 close，并用 `Get-CimInstance` 复核无残留 `WebKit|MiniBrowser|headless` 进程。
 6. **Chromium 首轮 35/37 的两个失败均为脚本误报**：默认币种实际 31 个（排除本位币 30 行，不是 29）；`Failed to fetch` 是 kurrency / 登录探测的既有噪声，需进过滤名单。
 7. **并发会话会实时重建挤端口**：本轮 5173 / 5174 的入口哈希在验证期间两次变化（其他会话在重建自己的 dist），本会话 preview 也会被挤到下一端口，每次构建/验证前都要重新核对 BASE 端口与哈希。
+
+## 2026-11-15 23:52 iOS 底部条带诊断 + html 画布跟随灰面验证（worktree feat-login-261115）
+
+- **背景**：用户 iPhone 截图（1206×2622 = iPhone 16 Pro 402×874pt）报「底部有块框没有用上」。逐像素采样（PowerShell GetPixel 列扫描）实测：黑色遮罩与抽屉面板都正确从 y=0 铺到 y=812pt 截止，底部 62pt 是**未被遮罩压暗的 `#FBF7EF`**——html 画布底色。结论：系统把底部 home 指示条区域从主屏幕 PWA 的可视区里扣掉，内容画不进去；「以前还是好的」是因为全屏面过去全是暖米色无缝可藏，登录页/抽屉改灰后才显形。外部佐证：iOS 26 Liquid Glass 时代同类报告大量存在（r/Frontend、Ionic #12948、WebKit Bugzilla #297779）。
+- **排除项（最小实验）**：`E:\code\_shots\cb-test.html`（html{position:fixed;inset:0} + body{height:calc(100vh - 62px)} + fixed probe）在桌面 WebKit 实测 probe 恒等于视口 874、html 盒也是 874——**html{position:fixed}（r20 ⑥）不改变 fixed 后代的几何**，不是条带成因，不要去动根滚动锁定。
+- **修复**：见 ui-tokens.md「html 画布底色」条目（html 默认涂 ground + `dp-canvas-surface` 灰面引用计数切换）。
+- **验证脚本**：`.playwright-cli/probe-canvas.js`（`run-code --filename` 调用，**run-code 直接传文件路径会按代码解析报 SyntaxError，必须加 `--filename`**）。流程：清存储 → 登录页断言 canvas → 离线登录 → 引导页断言 → prompt 新建账本 testbook2026 → 引导确认进首页 → 断言还原 → 开个人抽屉断言涂灰 → 抽屉进车辆路由页断言 → 返回首页断言还原。判定：html.className 含/不含 `dp-canvas-surface` + `getComputedStyle(html).backgroundColor` 在 `rgb(244, 244, 244)` / `rgb(251, 247, 239)` 之间切换。**WebKit 与 Chromium 双引擎全绿、errors: []**（pageErrors 的 `token not found` / `currentBookId not found` 为离线预览既有噪声）。截图仅 Chromium（`E:\code\_shots\canvas-home.png` / `canvas-drawer.png`）。
+
+## 2026-11-16 00:07 首页 AI dock 悬空诊断 + 安全区视口缺口校准验证（同 worktree）
+
+- **第二张截图逐像素实测**（`E:\code\_shots\scan_dock.ps1` 列扫描）：dock 白胶囊 y 2172..2333dev = **724..778pt**，底边 778 = 812（可视区底） − 34（env 仍按整屏报告的经典 inset）→ dock 的 `pb-[max(12px,var(--safe-area-inset-bottom))]` 为已在系统扣掉区外的 home 指示条再留一次白，**双重补偿悬空 96pt**（778 → 874）。home 指示条实测 861..866pt，完整落在系统扣掉的条带内。`useVisualViewport` 消费方排查：只有 `confirm/index.tsx`（底部抽屉限高），dock 不用它——排除幻影键盘偏移嫌疑。
+- **修复**：`utils/safe-area.ts` `calibrateSafeAreaInsets()`（main.tsx 渲染前、启动一次）：iOS 主屏幕模式且缺口 `screen.height - innerHeight` ∈ (0, 120] 时，探针元素读 env 实际值，内联 `--safe-area-inset-bottom = max(reported - strip, 0)px`。用户设备预期：inset 34 → 0，dock 底边 778 → 800，视觉悬空 96 → 74pt（12pt 最小留白 + 62pt 系统条带）。
+- **桌面回归**：probe-canvas.js 增加 dock 断言（`.dp-dock-surface` 容器 `bottom = innerH = 874`）——**WebKit / Chromium 双引擎全绿**，证明 shim 在桌面（`navigator.standalone` 为 false）完全 no-op。真机效果（inset 校准 + dock 回落）需发布后在用户 iPhone 上验证。
+
+## 2026-11-16 00:40 车辆管理页横向拖动锁死 + 视口兼容层全局化验证（同 worktree）
+
+- **假回归教训（重要）**：probe 打到 5174 上**别的会话的服务**，出现「canvas 特征全部消失」的假回归（html 类与背景全没了）——并发会话挤端口后本会话 preview 实际绑 5175/5176 漂移，**BASE 必须以 preview 日志为准**。另：用 PowerShell `Get-Content`（无 -Encoding）+ `Set-Content` 改写 UTF-8 探针会把中文选择器按 GBK 解码成乱码、脚本报语法错误——改脚本走 Write 工具或 `System.IO.File` 显式 UTF-8。
+- **横向拖动排查**：`probe-overflow.js` 扫 9 个页面（登录/引导/首页/记账/归医/知物/抽屉/车辆/汇率）——`scrollWidth` 全部等于视口宽，**整页无横向溢出**；TabPager 相邻滑片是有意放在视口外的（容器裁剪）。用户指认的是车辆管理页的**胶囊条 / 段控行**：iOS 对 `overflow-x-auto` 容器内容不溢出也允许横向拖动回弹。修复 = `utils/viewport.ts` 新增 `useScrollableX(ref)`，两处条件切换 `overflow-x-auto`/`overflow-hidden`；期间误改 TabPager 首尾页橡皮筋阻尼，已还原。
+- **probe-canvas.js 增强**：车辆路由页空态 → 点「添加车辆」→ 名称填「小白」→「保存」→ 断言胶囊条 `overflowX = hidden` 且 `scrollW = clientW = 402`（装得下即锁死）。**WebKit / Chromium 双引擎全绿、errors: []**。

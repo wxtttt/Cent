@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 import { useVisualViewport } from "@/hooks/use-visual-viewport";
 import { cn } from "@/utils";
+import { popCanvasSurface, pushCanvasSurface } from "@/utils/viewport";
 import {
     Dialog,
     DialogContent,
@@ -73,6 +74,19 @@ export default function createConfirmProvider<Value, Returned = Value>(
         useEffect(() => {
             return () => useGlobalConfirmStore.getState().remove(instanceId);
         }, []);
+        // iOS 26 PWA 底部 home 条区域画布色跟随：全屏抽屉（左侧/底部）与二级路由页
+        // 打开期间把 html 画布涂成抽屉灰，条带才不会在灰面下露出暖米断层
+        useEffect(() => {
+            if (!state?.visible) return;
+            if (from !== "left" && from !== "bottom") return;
+            pushCanvasSurface();
+            return popCanvasSurface;
+        }, [state?.visible, from]);
+        useEffect(() => {
+            if (!(routePath && routePage.active)) return;
+            pushCanvasSurface();
+            return popCanvasSurface;
+        }, [routePath, routePage.active]);
         // 二级路由页：由 URL 驱动、无遮罩、右侧滑入；关闭先播右滑出场动画再回退
         if (routePath && routePage.active) {
             return (
