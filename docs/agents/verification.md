@@ -129,6 +129,7 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 6. **内存紧张下 WebKit 连续截图会拖崩浏览器**：当时可用物理内存约 1.6 GB，9 张 402×874 截图把 WebKit 打崩、日志只有半行。给 `shot()` 加 `if (tag === "webkit") return;` 跳过截图后 WebKit 46/46 全过；Chromium 保留截图供概览图使用。用户明确要求控制内存，**双引擎一律串行、跑完立即 close**。
 7. **验证脚本的断言写法**：`placeholder` 不进 `innerText`；「全部」态默认车可能是混动，段控同时有加油 / 充电是正确行为；「距上次」要先显式切到目标类型再断言。
 8. `.playwright-cli/make-r30-overview.py`：9 张改动后截图整合，纯 Pillow CPU 操作，不开浏览器、不跑构建，避免再吃内存。
+
 ## 2026-11-15 16:51 登录页与登录方式页验证（worktree `feat-login-261115`；登录提交已 rebase 到 r29/r30（48b7866）之上复验）
 
 - **worktree 验证口径**：本轮所有验证针对 `E:\code\_cent_login` 的构建，preview 起在该 worktree（5173 被其他会话的旧 dev 占用时落到 **5174**，哈希核对以「preview 端口与 worktree `dist/index.html` 一致」为准，本轮最终 `index-yQW8DRJN.js`）。**worktree 里构建与 preview 并存时 vite build 会变慢（37s → 1m48s）但能完成**，不是卡死；真正卡死的两次是 cmd 的 `;` 不是命令分隔符、整段被 pnpm 当参数（CACError: Unknown option），一律用 `&&`。**执行约束（用户 2026-11-15）**：安装走国内镜像；每次构建 / 验证前扫进程确认无其他会话并发，lint / build / 双引擎严格串行。
@@ -147,3 +148,39 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - `verify-login-responsive.js` 新增：360×640 下 WebDAV / S3 路由页无横向溢出、字段列 300 居中（left=30）、确认存在（S3 内容超一屏随内容滚动属预期）；**深色下路由页背景回落 `rgb(23,19,15)`**（既非浅灰也非暖米）。`errors: []`。
 - **合并引导页两态截图**：`shot-book-guide.js`（offline + 无账本 → 空态卡 + 「+ 新建账本」加行 + 禁用确认）与 `shot-select-user.js`（注入 webdav 配置 + 已选账本 + 无 customUserName → 「完成设置」标题 + 账本/用户两分组、选中行对勾）→ `login-book-guide-chromium.png` / `login-select-user-chromium.png`；探针注入假 WebDAV 配置会打真实坚果云地址，控制台 24 条 CORS `Failed to fetch` 属预期噪声（别名读取失败按设计退化为只有自己）。`shot-s3-clean.js` 重截干净态 S3（主脚本里 S3 截图发生在空表单确认报错之后，带一排红字）。
 - **执行约束沿用**：构建 / 验证前扫进程（本轮 5173 被其他会话 `_cent_currency` 的 preview 占用，preview 落 5174）；rebuild 前先 taskkill 自己的 preview 进程树（Windows 下 dist 文件被占用会让 build 中途失败）。
+
+## r31 验证（2026-11-15，段控 / 主卡 / 删除入口 / 记录行 / 统计算法）
+
+- `.playwright-cli/verify-r31.js`：**一个脚本串行跑双引擎**，34 项断言。初始化与 r30 同（`__r31_boot` + 离线账本 + 主动载入示例数据 + 轮询写入稳定）；断言：全部态油电双栏且 `span.text-brand` 数值都在 `(0, 40)` 且无 `NaN/Infinity`（抓跨车混算 bug）、单车态右侧「最近一次 / 均价 / 本月」三行且 label 的 `x > 190`、燃油 `¥x/L` 与纯电 `¥x/kWh`、未加满的「本段已累计 15.0 L，下次补满后计入」、记录行 `/距上次.{0,8}?[\d,]+ km · \d+ 天/` 且含「距上次维修」、页面 `[aria-label="删除"]` 计数为 0、段控 5 项且**恰好 1 项** `bg-ground-muted`、按钮高 36px、容器含 `ring-1`、两个编辑抽屉里删除按钮的 `top >= 保存.bottom - 2`、删除确认白卡宽 320px、语言键泄漏、横向溢出、pageerror。截图 `r31-{vehicle-all,vehicle-gas,vehicle-ev,record-list,record-sheet,record-edit,delete-confirm,vehicle-edit}-chromium.png`。
+- 结果：`pnpm lint` 通过（368 files）、`--no-emptyOutDir` 重建 `index-DWVHjFDc.js`、5173 与 dist 对齐、HTTP 200；**WebKit 34/34 + Chromium 34/34、零 pageerror**。能耗实测全部态 `5.81 L/100km` / `10.23 kWh/100km`（跨车混算时不可用）。`.playwright-cli/make-r31-overview.py` → `r31-vehicle-overview.png`（8 格，只含改动后）。
+
+**本轮踩坑**：
+
+1. **改完示例数据必须重新构建**：`sample-data.ts` 在第一次 `vite build` 之后才补了「未加满加油」与「第二笔维修」，若沿用旧 bundle，pending 提示与「距上次维修」断言必然失败。5173 是 `dist` 预览，判据仍是 `curl ... | grep -o 'assets/index-*.js'`。
+2. **选中态断言不能靠字重**：r30 脚本用 `font-semibold` 找激活 tab，r31 段控改成记账同款后激活项是 `bg-ground-muted` + `font-medium`，要按 class 判断，否则 `activeType()` 永远返回空。
+3. **示例数据要能演示边界场景**：原 19 笔补能全是 `isFull: true`，pending 分支没有任何数据能触发；补一笔 `isFull: false` 与一笔第二笔 `repair` 后，「下次补满后计入」和「距上次维修 X km · Y 天」才在 UI 里真实可见。`VehicleSeed` 增 `isFull?: boolean`，落库时用 `s.isFull ?? true`。
+4. **抽屉内挂确认 Provider**：删除入口搬进抽屉后，`createDeleteConfirm()` 实例必须渲染在抽屉 JSX 里；页面级 Provider 已删除。按钮位置用 `getBoundingClientRect()` 比较 `保存.bottom` 与 `删除.top`，比文字顺序断言可靠。
+5. **DOM 直接 click 绕开 WebKit stability**：车辆页胶囊、铅笔、记录行整行按钮在 WebKit 上偶尔被判 "not stable"，脚本统一用 `page.evaluate(() => btn.click())`；不要据此改业务代码。
+6. **控内存**：两个引擎拆成两条独立 Bash 命令、各自 `open → run-code → close`；WebKit 由 `shot()` 跳过截图，Chromium 单独产出 8 张图。预览 precache 因连续 `--no-emptyOutDir` 累积到 331 entries（约 9.9 MB），部署前若要清干净需先停 5173 预览再移走 `dist`。
+
+## r32 / r33 验证（2026-11-15，估算兜底 / 默认不勾加满）
+
+- `.playwright-cli/verify-r32.js`（37 项）+ `make-r32-overview.py`：一次构建 `index-2f9dqOqO.js`，`pnpm lint` 368 files 通过，5173 与 dist 哈希一致、HTTP 200；**WebKit 37/37 + Chromium 37/37、零 pageerror**，双引擎串行、跑完即关。截图只在 Chromium 出，5 格概览图由纯 Pillow 拼成。实测：全部态 `5.81 L/100km` 精确 + `≈ 10.23 kWh/100km` 含估算；小蓝 `≈ 13.96 kWh/100km`；小白 `6.60 L/100km` 精确且 15.0 L 待结算可见；小闪双栏都精确。
+- **r33 只改 `forms.tsx` 的 `isFull` 默认值与「记住上次」逻辑，用户明确「改动后不用验证了」，未跑 lint / 构建 / 浏览器验证**；因此 5173 的 dist 仍停留在 r32 的 bundle，下次要验 UI 必须先 `vite build`。
+- 教训：把「一次构建 + 双引擎 + 拼图」塞进**一条** Bash 命令会超过单次执行上限（构建约 1 分 35 秒），在 WebKit 中途被掐断；构建别重来，把两个引擎拆成两条命令续跑即可。Chromium 偶发「`open` 成功但页面已被回收」，在同一条命令里加一次 `close → open → run-code` 自愈重试即可恢复。
+
+## r34 验证（2026-11-15，币种抽屉搜索 + 汇率与货币页重构；worktree `E:\code\_cent_currency`）
+
+> r34b 复审后（自定义币种段上移到汇率之前、新增按钮挪到页面右上角、本位币/快捷币种选项抽屉加 `searchable`）断言扩到 **42 项**，重建 `index-u17uuQN6.js`；最终 **Chromium 42/42 + WebKit 42/42、errors: []**。
+
+- `.playwright-cli/verify-r31.js`：**一个脚本双引擎**（UA 判定），`pass/total/failed/errors` 精简输出。BASE **不写死 5173**——本轮 5173 / 5174 被并发会话占用，本会话 preview 绑 **5175**，端口以 preview 日志或 `.playwright-cli/check-port.cjs`（比对 dist 入口哈希与各端口返回）为准。流程：注入离线账本 → 左侧抽屉「汇率与货币」宫格 → `/currency` 路由页四段结构（自定义币种段序 + 右上角按钮 + 31 币种 − 本位币 = 30 汇率行）→ 本位币选项抽屉开/关不改值 → 快捷币种抽屉搜索过滤 → 勾「美元、日元」回写摘要 → 手动汇率设 0.5 出「手动」徽标 → 清空恢复 → 右上角新增自定义币种/编辑/删除二次确认 → 返回首页 → 记一笔币种抽屉搜索（名称「美」单命中 / 代码「USD」/ 空态 / 清空恢复 / 结果直选切 `$`）→ 横向溢出 + pageerror。截图仅 Chromium（WebKit 内存紧跳截图）。
+
+**本轮新增踩坑（按重要性）**：
+
+1. **WebKit 行点击间歇吞掉**（r34b 新坑）：点行后弹层没开是偶发的，`dispatchEvent` 兜底也可能不打进被覆盖的元素。所有「点行 → 开抽屉」统一走 `openSheet(loc, needle, key)` 辅助——点完确认弹层真出现了，没出现再点（最多 3 次）；**抽屉没开时下一步的 `locator.fill` 会干等 30s 把整个 run 打死**，输入框操作前必须 `count()` 守卫并短路（失败项显式置 false）。
+2. **WebKit 下 personal meta 写入慢于固定 sleep**：手动汇率确认后 IndexedDB 写入在负载高时超过 900ms，徽标晚到导致 set / clear 两个断言都误报（首轮 35/37 的根因）。所有「操作后立刻断言 DOM 状态」的等待一律改 `page.waitForFunction(..., { timeout: 8000 })` 轮询，不要 `waitForTimeout(900)` 猜。
+3. **kurrency 汇率源离线重试风暴**：应用会持续抓 `raw.githubusercontent.com/glink25/kurrency/main/data/latest.json`，离线预览下 WebKit 一次跑出 **483~535 次 `Failed to fetch`**（Chromium 仅 2 次），循环失败本身又会拖慢页面、最终把内存紧张的 WebKit 拖崩（一次 run 中途 `browser has been closed`）。解法：脚本里 `page.route("**/raw.githubusercontent.com/**", r => r.fulfill({...}))` 直接 fulfill 一个 `{date, base:"EUR", rates:{全 31 币种}}` 的合法响应，store 一次成功即停；只 `abort` 不够（失败更快反而重试更多）。该噪声按 verification.md r15 口径过滤，**不是 UI 缺陷**。
+4. **`playwright-cli open` 输出不能接 findstr 管道**（与 r30 的 head 坑同源）：`open ... | findstr` 管道关闭会带走刚启动的 WebKit，后续 run-code 全部 `Browser 'default' is not open`。open 输出重定向到文件或 NUL 都可以。
+5. **内存红线**：机器剩 0.4 GB 空闲时 WebKit 启动即崩，等回落到 ~1 GB 才能跑；跑完立即 close，并用 `Get-CimInstance` 复核无残留 `WebKit|MiniBrowser|headless` 进程。
+6. **Chromium 首轮 35/37 的两个失败均为脚本误报**：默认币种实际 31 个（排除本位币 30 行，不是 29）；`Failed to fetch` 是 kurrency / 登录探测的既有噪声，需进过滤名单。
+7. **并发会话会实时重建挤端口**：本轮 5173 / 5174 的入口哈希在验证期间两次变化（其他会话在重建自己的 dist），本会话 preview 也会被挤到下一端口，每次构建/验证前都要重新核对 BASE 端口与哈希。
