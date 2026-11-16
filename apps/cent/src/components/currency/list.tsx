@@ -170,7 +170,7 @@ export default function CurrencyListForm({
                     data-currency-add
                     onClick={() => void toUpdateCurrency()}
                     aria-label={t("add-new-currency")}
-                    className="-mr-1 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                    className="flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
                 >
                     <i className="icon-[lucide--plus] size-5" />
                 </button>

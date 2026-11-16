@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
 import { RowChevron } from "../form-rows";
-import type { LoanDraft, LoanMode, LoanType } from "./model";
+import {
+    downRatioOf,
+    downWanOf,
+    type LoanDraft,
+    type LoanMode,
+    type LoanType,
+} from "./model";
+import { MonthField } from "./month-field";
 import {
     GROUP_TITLE,
     LOAN_CARD,
@@ -10,7 +17,6 @@ import {
     PICK_ON,
     ROW,
     ROW_LEFT,
-    ROW_MUTED,
     ROW_VALUE,
     SEG_GROUP,
     SEG_ITEM,
@@ -164,24 +170,19 @@ export function AmountSection({
     draft,
     derived,
     edit,
+    onOpenDown,
 }: {
     draft: LoanDraft;
     derived: { commercialWan: number; totalWan: number };
     edit: (patch: Partial<LoanDraft>) => void;
+    /** 首付一行点开抽屉，口径（比例 / 金额）在抽屉里选 */
+    onOpenDown: () => void;
 }) {
     const t = useIntl();
     const isCombo = draft.loanType === "combo";
     const fundClamped = isCombo && draft.fundAmount > derived.totalWan + 1e-9;
-    const downWan =
-        draft.downMode === "amount"
-            ? draft.downAmount
-            : Math.round(draft.housePrice * draft.downRatio * 100) / 100;
-    const downRatio =
-        draft.downMode === "ratio"
-            ? draft.downRatio
-            : draft.housePrice > 0
-              ? draft.downAmount / draft.housePrice
-              : 0;
+    const downWan = downWanOf(draft);
+    const downRatio = downRatioOf(draft);
 
     return (
         <div className={cn("divide-y divide-rule/60", LOAN_CARD)}>
@@ -212,94 +213,25 @@ export function AmountSection({
                             suffix="万"
                         />
                     </div>
-                    {/* 首付：口径切换独占一行，数值与换算值在下面对齐，
-                        避免「比例 / 金额」胶囊把 6 位数字挤到行尾 */}
-                    <div className="px-4 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                            <span className={ROW_LEFT}>
-                                {t("loan-down-payment")}
+                    {/* 首付：点整行开抽屉，比例与金额两个口径都在抽屉里切；
+                        行上同时给出金额和比例，不再放口径切换按钮 */}
+                    <button
+                        type="button"
+                        data-loan-row="down"
+                        className={cn(ROW, "cursor-pointer text-left")}
+                        onClick={onOpenDown}
+                    >
+                        <span className={ROW_LEFT}>
+                            {t("loan-down-payment")}
+                        </span>
+                        <div className="flex min-w-0 items-center justify-end gap-1.5">
+                            <span className={ROW_VALUE}>
+                                {fmtWan(downWan)} 万 ·{" "}
+                                {Math.round(downRatio * 10000) / 100}%
                             </span>
-                            <Segmented
-                                className="flex-shrink-0"
-                                value={draft.downMode}
-                                options={[
-                                    {
-                                        value: "ratio" as const,
-                                        label: t("loan-down-by-ratio"),
-                                    },
-                                    {
-                                        value: "amount" as const,
-                                        label: t("loan-down-by-amount"),
-                                    },
-                                ]}
-                                onChange={(downMode) => {
-                                    // 切换口径时把当前值换成另一口径的等价数值，
-                                    // 避免「比例 30%」切到金额后仍显示 30 万
-                                    if (downMode === "ratio") {
-                                        edit({
-                                            downMode,
-                                            downRatio:
-                                                draft.housePrice > 0
-                                                    ? Math.round(
-                                                          (draft.downAmount /
-                                                              draft.housePrice) *
-                                                              10000,
-                                                      ) / 10000
-                                                    : 0,
-                                        });
-                                    } else {
-                                        edit({
-                                            downMode,
-                                            downAmount:
-                                                Math.round(downWan * 100) / 100,
-                                        });
-                                    }
-                                }}
-                            />
+                            <RowChevron />
                         </div>
-                        <div className="mt-2 flex items-baseline justify-end gap-2">
-                            <NumberCell
-                                ariaLabel={t("loan-down-payment")}
-                                className="max-w-28"
-                                value={
-                                    draft.downMode === "ratio"
-                                        ? Math.round(downRatio * 10000) / 100
-                                        : downWan
-                                }
-                                max={
-                                    draft.downMode === "ratio" ? 100 : undefined
-                                }
-                                onCommit={(n) => {
-                                    if (draft.downMode === "ratio") {
-                                        const ratio = n / 100;
-                                        edit({
-                                            downRatio: ratio,
-                                            downAmount:
-                                                Math.round(
-                                                    draft.housePrice *
-                                                        ratio *
-                                                        100,
-                                                ) / 100,
-                                        });
-                                    } else {
-                                        edit({
-                                            downAmount: n,
-                                            downRatio:
-                                                draft.housePrice > 0
-                                                    ? n / draft.housePrice
-                                                    : 0,
-                                        });
-                                    }
-                                }}
-                                suffix={draft.downMode === "ratio" ? "%" : "万"}
-                            />
-                            <span className={cn(ROW_MUTED, "w-16 text-right")}>
-                                {draft.downMode === "ratio"
-                                    ? `${fmtWan(downWan)} 万`
-                                    : `${Math.round(downRatio * 10000) / 100}%`}
-                            </span>
-                        </div>
-                    </div>
+                    </button>
                 </>
             ) : (
                 <div className={ROW}>
@@ -360,7 +292,6 @@ export function TermsSection({
     onOpenSheet: (kind: "term" | "rateCommercial" | "rateFund") => void;
 }) {
     const t = useIntl();
-    const monthValue = `${draft.firstPay.year}-${`${draft.firstPay.month}`.padStart(2, "0")}`;
     return (
         <div className={cn("divide-y divide-rule/60", LOAN_CARD)}>
             <button
@@ -370,13 +301,17 @@ export function TermsSection({
                 onClick={() => onOpenSheet("term")}
             >
                 <span className={ROW_LEFT}>{t("loan-term")}</span>
+                {/* 灰字（期数）与主值（年限）字号不同，必须按基线对齐，
+                    否则 items-center 会让「360 期」比「30 年」高出一截 */}
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                    <span className={ROW_MUTED}>
-                        {t("loan-period-n", { n: derived.months })}
-                    </span>
-                    <span className={ROW_VALUE}>
-                        {t("loan-years-n", { n: draft.termYears })}
-                    </span>
+                    <div className="flex items-baseline gap-1.5">
+                        <span className="text-xs text-ink-secondary tabular-nums">
+                            {t("loan-period-n", { n: derived.months })}
+                        </span>
+                        <span className={ROW_VALUE}>
+                            {t("loan-years-n", { n: draft.termYears })}
+                        </span>
+                    </div>
                     <RowChevron />
                 </div>
             </button>
@@ -431,21 +366,15 @@ export function TermsSection({
             )}
             <div className={ROW}>
                 <span className={ROW_LEFT}>{t("loan-first-pay")}</span>
-                {/* 首期还款只要年月，系统 month 控件在 iOS / Android 都是原生滚轮；
-                    隐藏 webkit 日历图标，整行仍可点开 */}
-                <input
-                    type="month"
-                    aria-label={t("loan-first-pay")}
-                    value={monthValue}
-                    onChange={(e) => {
-                        const [year, month] = e.target.value
-                            .split("-")
-                            .map(Number);
-                        if (year && month) {
-                            edit({ firstPay: { year, month } });
-                        }
-                    }}
-                    className="min-w-0 cursor-pointer bg-transparent text-right text-[15px] dp-text-medium text-ink tabular-nums outline-none [color-scheme:light] [&::-webkit-calendar-picker-indicator]:hidden"
+                {/* 首次还款走全站默认的年月滚轮，不再用系统 month 控件 */}
+                <MonthField
+                    value={draft.firstPay}
+                    onChange={(firstPay) => edit({ firstPay })}
+                    title={t("loan-first-pay")}
+                    years={[
+                        new Date().getFullYear() - 25,
+                        new Date().getFullYear() + 5,
+                    ]}
                 />
             </div>
             <div className={ROW}>

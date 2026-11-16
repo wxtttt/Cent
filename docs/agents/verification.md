@@ -303,3 +303,16 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - **深色**：hero `rgb(31,25,19)` / 文字 `rgb(247,240,230)` / 页面底 `rgb(23,19,15)`，橙色数字与图表柱对比度正常（`dark-detail.png`）。
 - **分类管理页**：`[data-route-path='/category']` 实测 `backgroundColor rgb(244,244,244)`、`--dp-color-ground #f4f4f4`（修前退回 `#fbf7ef`，用户描述「看着偏黄」）。根因：`createConfirmProvider` 的路由页分支未拼 `contentClassName`，`category/list-form.tsx` 的 `dp-category-surface` 丢失；新增 `routeClassName` 并改传。
 - **探针坑**：`getByText("记一笔房贷")` 会命中说明段落（子串匹配），必须 `getByRole("button", { name, exact: true })`；保存后的 toast 会盖住左上返回按钮，点击前先 `document.querySelectorAll("[data-sonner-toast]").forEach(e => e.remove())`。
+
+## 2026-11-16 17:1x 贷款管理（去列表页 / 全抽屉化 / 还款计划联动）（worktree `feat-loan-261115`）
+
+探针 `.playwright-cli/probe-loan3-{entry,main,full,b,c,d}.js`（390×844，Chromium；离线模式 + 新建账本后从宫格进「贷款管理」）。
+
+- **入口**：无方案时直接落在编辑页（`[data-loan-save]` = 1），首付行 `90 万 · 30%`、年限行 `360 期 30 年`（`items-baseline` 后两者同基线）、首次还款 `2026年12月` 带 chevron。
+- **抽屉宽度**：首付 / 商贷利率两个抽屉的卡片与确认按钮左右边界都是 `[21, 369]`（修前按钮 `px-5` 而内容 `px-4`，窄 8px）；确认按钮底边 824 < 视口 844。
+- **详情页**：`data-loan-more` 右距边 16px、返回按钮左 16px（对称）；`data-loan-prepay-cta` y=784 h=48 → 完整可见（修前 `h-full` 把顶栏高度算进 100%，底栏被顶出屏幕）。
+- **还款计划**：30 列、横轴 `第 1 年 / 第 15 年 / 第 30 年`；点第 10 列 → `data-loan-year-row="10"` 高亮且列表 `scrollTop` 458（容器高 286 / 内容高 1896）；点第 20 年 → 第 20 列 `opacity 1`、其余 ≤0.4。
+- **提前还款**：抽屉内「还款时间 / 第 1 期 / 2026年12月」同一张卡，时间点开全站滚轮并保留抽屉；确认 20 万缩年限后省息 `¥265,819`、缩短 52 个月，计划 30 年 → 26 年（轴 1/13/26）；点条目进编辑抽屉、底栏「删除 + 确认」，删完回到空态且计划回到 1/15/30。
+- **利率调整**：抽屉「生效时间 / 第 2 期起 / 2027年1月」，确认后轨迹卡出现 `2027.01 / 第 2 期起 / 3.05%`。
+- **方案管理**：⋯ → 编辑贷款（分析卡点等额本金 → 还款方式同步切到等额本金、`data-loan-seg="principal"` 选中）；⋯ → 删除方案 → 确认后回新建态（hero 消失、`data-loan-save` 出现）；方案抽屉 1 条 → 新增第二笔 → 2 条且勾选当前。
+- **探针坑**：① 本模块抽屉是 z-40/z-50，全局删除确认层是 z-4，两层叠着时确认按钮永远点不到（Playwright 报 overlay intercepts pointer events）——代码里改成「先收抽屉再弹确认」；② 删除确认弹层与抽屉里都有「删除」按钮，必须 `locator('[role="dialog"]').filter({ hasText: "删除提前还款" })` 再点；③ `playwright-cli` 的 session 只在单次 bash 调用里存活，多步验证要写进同一个 `run-code` 脚本。

@@ -3,7 +3,12 @@ import type { SavedLoanPrepay } from "@/ledger/extra-type";
 import { simulatePrepay } from "@/ledger/loan";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import { BTN_PRIMARY, BTN_TAP, SHEET_FOOTER } from "../button-styles";
+import {
+    BTN_DANGER,
+    BTN_PRIMARY,
+    BTN_TAP,
+    SHEET_FOOTER,
+} from "../button-styles";
 import {
     Dialog,
     DialogContent,
@@ -13,13 +18,18 @@ import {
     DialogTitle,
 } from "../ui/dialog";
 import {
+    type DownMode,
     deriveLoan,
+    downRatioOf,
+    downWanOf,
     FUND_SUITE_RATES,
     LATEST_LPR,
     type LoanDraft,
     periodOfYm,
     tracksOf,
 } from "./model";
+import { MonthField } from "./month-field";
+import { Segmented } from "./sections";
 import { PICK_OFF, PICK_ON, SHEET_ACTION, SHEET_SURFACE } from "./styles";
 
 // 家小满式滚轮：行高约等于选中胶囊高度，窗口露出 5 行，上下边缘渐隐
@@ -40,8 +50,7 @@ const fmt2 = (v: number) =>
         maximumFractionDigits: 2,
     });
 const pad = (n: number) => `${n}`.padStart(2, "0");
-const monthValue = (v: { year: number; month: number }) =>
-    `${v.year}-${pad(v.month)}`;
+const round2 = (v: number) => Math.round(v * 100) / 100;
 
 function SheetHead({ title }: { title: string }) {
     return (
@@ -161,7 +170,7 @@ export function TermSheet({
                         <DialogDescription className="sr-only">
                             {t("loan-term")}
                         </DialogDescription>
-                        <div className="relative flex items-center justify-between px-4 pb-2 pt-3">
+                        <div className="relative flex items-center justify-between px-5 pb-2 pt-3">
                             <div className="absolute inset-x-0 top-1.5 mx-auto h-1 w-10 rounded-full bg-black/15" />
                             <button
                                 type="button"
@@ -177,7 +186,7 @@ export function TermSheet({
                             </span>
                             <div className="size-9" />
                         </div>
-                        <div className="flex items-stretch gap-2 px-4 py-2 [&>*]:flex-1">
+                        <div className="flex items-stretch gap-2 px-5 py-2 [&>*]:flex-1">
                             <WheelColumn
                                 items={TERM_YEARS.map((y) =>
                                     t("loan-term-option", {
@@ -256,7 +265,7 @@ export function CommercialRateSheet({
                             {t("loan-commercial-rate")}
                         </DialogDescription>
                         <SheetHead title={t("loan-commercial-rate")} />
-                        <div className="px-4 pt-3 text-center">
+                        <div className="px-5 pt-3 text-center">
                             <div className="font-display text-4xl font-bold text-brand tabular-nums">
                                 {rate !== undefined
                                     ? `${trimRate(rate)}%`
@@ -268,7 +277,7 @@ export function CommercialRateSheet({
                                 {Math.abs(bp)} BP
                             </div>
                         </div>
-                        <div className="mx-4 mt-4 rounded-2xl bg-panel px-4">
+                        <div className="mx-5 mt-4 rounded-2xl bg-panel px-4">
                             <div className="flex min-h-13 items-center gap-2 border-b border-rule py-2">
                                 <span className="text-[15px] text-ink">
                                     LPR
@@ -326,7 +335,7 @@ export function CommercialRateSheet({
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-2 px-4 pt-3">
+                        <div className="flex gap-2 px-5 pt-3">
                             {BP_PRESETS.map((p) => (
                                 <button
                                     key={p}
@@ -342,7 +351,7 @@ export function CommercialRateSheet({
                                 </button>
                             ))}
                         </div>
-                        <p className="px-4 pt-3 text-xs leading-relaxed text-ink-secondary">
+                        <p className="px-5 pt-3 text-xs leading-relaxed text-ink-secondary">
                             {isCustom
                                 ? t("loan-rate-note-custom", {
                                       lpr: trimRate(lprNumber),
@@ -412,7 +421,7 @@ export function FundRateSheet({
                             {t("loan-fund-rate")}
                         </DialogDescription>
                         <SheetHead title={t("loan-fund-rate")} />
-                        <div className="flex gap-2 px-4 pt-3">
+                        <div className="flex gap-2 px-5 pt-3">
                             {(["first", "second"] as const).map((s) => (
                                 <button
                                     key={s}
@@ -435,7 +444,7 @@ export function FundRateSheet({
                                 </button>
                             ))}
                         </div>
-                        <div className="mx-4 mt-3 flex min-h-13 items-center rounded-2xl bg-panel px-4">
+                        <div className="mx-5 mt-3 flex min-h-13 items-center rounded-2xl bg-panel px-4">
                             <span className="text-[15px] text-ink">
                                 {t("loan-fund-rate-input")}
                             </span>
@@ -455,7 +464,7 @@ export function FundRateSheet({
                                 </span>
                             </div>
                         </div>
-                        <p className="px-4 pt-3 text-xs leading-relaxed text-ink-secondary">
+                        <p className="px-5 pt-3 text-xs leading-relaxed text-ink-secondary">
                             {t("loan-fund-rate-note")}
                         </p>
                         <div className={SHEET_FOOTER}>
@@ -481,17 +490,11 @@ export function FundRateSheet({
     );
 }
 
-const PREPAY_MODES: { key: SavedLoanPrepay["mode"]; label: string }[] = [
-    { key: "shorten", label: "loan-prepay-mode-shorten" },
-    { key: "reduceMonthly", label: "loan-prepay-mode-reduce" },
-    { key: "payoff", label: "loan-prepay-mode-payoff" },
-];
-
 /**
- * 提前还款抽屉：时间走系统 month 控件，金额与还款后方式在这里定，
- * 结果（省息 / 缩短期数 / 新月供）当场给一个估算。
+ * 首付抽屉：比例 / 金额两种口径在这里切，编辑页只显示结果。
+ * 切换口径时把当前值换成等价数值，避免「30%」切到金额后仍是 30 万。
  */
-export function PrepaySheet({
+export function DownPaymentSheet({
     open,
     onOpenChange,
     draft,
@@ -500,16 +503,184 @@ export function PrepaySheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     draft: LoanDraft;
+    onConfirm: (
+        patch: Pick<LoanDraft, "downMode" | "downRatio" | "downAmount">,
+    ) => void;
+}) {
+    const t = useIntl();
+    const [mode, setMode] = useState<DownMode>(draft.downMode);
+    const [text, setText] = useState("");
+    // biome-ignore lint/correctness/useExhaustiveDependencies: 只跟随首付三个字段重同步
+    useEffect(() => {
+        if (!open) return;
+        setMode(draft.downMode);
+        setText(
+            `${draft.downMode === "ratio" ? round2(downRatioOf(draft) * 100) : downWanOf(draft)}`,
+        );
+    }, [
+        open,
+        draft.downMode,
+        draft.housePrice,
+        draft.downRatio,
+        draft.downAmount,
+    ]);
+
+    const n = Math.max(0, Number(text) || 0);
+    const ratio =
+        mode === "ratio"
+            ? Math.min(1, Math.max(0, n / 100))
+            : draft.housePrice > 0
+              ? Math.min(1, n / draft.housePrice)
+              : 0;
+    const amount = round2(
+        mode === "ratio"
+            ? draft.housePrice * ratio
+            : Math.min(n, draft.housePrice),
+    );
+
+    const switchMode = (next: DownMode) => {
+        if (next === mode) return;
+        setMode(next);
+        setText(`${next === "ratio" ? round2(ratio * 100) : round2(amount)}`);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogPortal>
+                <DialogOverlay className="fixed inset-0 z-40 bg-black/50" />
+                <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
+                    <DialogContent
+                        from="bottom"
+                        data-loan-sheet="down"
+                        className={SHEET_SURFACE}
+                    >
+                        <DialogTitle className="sr-only">
+                            {t("loan-down-payment")}
+                        </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            {t("loan-down-payment")}
+                        </DialogDescription>
+                        <SheetHead title={t("loan-down-payment")} />
+                        <div className="mx-5 mt-3 rounded-2xl bg-panel px-4">
+                            <div className="flex min-h-13 items-center justify-between gap-3 border-b border-rule/60">
+                                <span className="flex-shrink-0 text-[15px] text-ink">
+                                    {t("loan-down-mode-label")}
+                                </span>
+                                <Segmented<DownMode>
+                                    value={mode}
+                                    options={[
+                                        {
+                                            value: "ratio",
+                                            label: t("loan-down-by-ratio"),
+                                        },
+                                        {
+                                            value: "amount",
+                                            label: t("loan-down-by-amount"),
+                                        },
+                                    ]}
+                                    onChange={switchMode}
+                                />
+                            </div>
+                            <div className="flex min-h-14 items-center justify-between gap-3 py-2">
+                                <span className="flex-shrink-0 text-[15px] text-ink">
+                                    {mode === "ratio"
+                                        ? t("loan-down-by-ratio")
+                                        : t("loan-down-by-amount")}
+                                </span>
+                                <div className="flex min-w-0 items-baseline gap-1">
+                                    <input
+                                        aria-label={
+                                            mode === "ratio"
+                                                ? t("loan-down-by-ratio")
+                                                : t("loan-down-by-amount")
+                                        }
+                                        inputMode="decimal"
+                                        value={text}
+                                        onFocus={(e) =>
+                                            e.currentTarget.select()
+                                        }
+                                        onChange={(e) =>
+                                            setText(
+                                                e.target.value.replace(
+                                                    /[^\d.]/g,
+                                                    "",
+                                                ),
+                                            )
+                                        }
+                                        className="w-32 cursor-text bg-transparent text-right text-[20px] font-semibold text-ink tabular-nums outline-none"
+                                    />
+                                    <span className="text-sm text-ink-secondary">
+                                        {mode === "ratio" ? "%" : t("loan-wan")}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="px-5 pt-3 text-xs leading-relaxed text-ink-secondary tabular-nums">
+                            {mode === "ratio"
+                                ? t("loan-down-equiv-amount", {
+                                      amount: `${round2(amount)}`,
+                                  })
+                                : t("loan-down-equiv-ratio", {
+                                      ratio: `${round2(ratio * 100)}`,
+                                  })}
+                        </p>
+                        <div className={SHEET_FOOTER}>
+                            <button
+                                type="button"
+                                className={cn(BTN_PRIMARY, SHEET_ACTION)}
+                                disabled={n <= 0}
+                                onClick={() => {
+                                    onConfirm({
+                                        downMode: mode,
+                                        downRatio: ratio,
+                                        downAmount: amount,
+                                    });
+                                    onOpenChange(false);
+                                }}
+                            >
+                                {t("confirm")}
+                            </button>
+                        </div>
+                    </DialogContent>
+                </div>
+            </DialogPortal>
+        </Dialog>
+    );
+}
+
+const PREPAY_MODES: { key: SavedLoanPrepay["mode"]; label: string }[] = [
+    { key: "shorten", label: "loan-prepay-mode-shorten" },
+    { key: "reduceMonthly", label: "loan-prepay-mode-reduce" },
+    { key: "payoff", label: "loan-prepay-mode-payoff" },
+];
+
+/**
+ * 提前还款抽屉：时间 / 金额 / 还款后方式同在一张卡里，
+ * 时间走全站滚轮选择器；已有记录时从底部可以直接删除。
+ */
+export function PrepaySheet({
+    open,
+    onOpenChange,
+    draft,
+    initial,
+    onConfirm,
+    onDelete,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    draft: LoanDraft;
+    /** 编辑已有记录时带入 */
+    initial?: SavedLoanPrepay;
     onConfirm: (v: {
         year: number;
         month: number;
         amountWan: number;
         mode: SavedLoanPrepay["mode"];
     }) => void;
+    onDelete?: () => void;
 }) {
     const t = useIntl();
-    const next = draft.firstPay;
-    const [ym, setYm] = useState(monthValue(next));
+    const [ym, setYm] = useState(draft.firstPay);
     const [amountText, setAmountText] = useState("20");
     const [mode, setMode] = useState<SavedLoanPrepay["mode"]>("shorten");
 
@@ -523,13 +694,18 @@ export function PrepaySheet({
 
     useEffect(() => {
         if (!open) return;
+        if (initial) {
+            setYm({ year: initial.year, month: initial.month });
+            setAmountText(`${round2(initial.amount / 10000)}`);
+            setMode(initial.mode);
+            return;
+        }
         const [y, m] = defaultYmKey.split("-").map(Number);
-        setYm(`${y}-${pad(m)}`);
+        setYm({ year: y, month: m });
         setAmountText("20");
         setMode("shorten");
-    }, [open, defaultYmKey]);
+    }, [open, defaultYmKey, initial]);
 
-    const [year, month] = ym.split("-").map(Number);
     const { commercialInput, fundInput } = tracksOf(draft);
     const track =
         draft.loanType === "fund"
@@ -538,7 +714,7 @@ export function PrepaySheet({
     const startPeriod = Math.max(
         1,
         Math.min(
-            periodOfYm(draft.firstPay, { year, month }),
+            periodOfYm(draft.firstPay, ym),
             Math.max(1, derived.months - 1),
         ),
     );
@@ -569,24 +745,24 @@ export function PrepaySheet({
                             {t("loan-prepay-add")}
                         </DialogDescription>
                         <SheetHead title={t("loan-prepay-add")} />
-                        <div className="mx-4 mt-3 divide-y divide-rule/60 rounded-2xl bg-panel">
-                            <div className="flex min-h-13 items-center gap-3 px-4 py-2">
-                                <div className="flex-shrink-0">
-                                    <div className="text-[15px] text-ink">
-                                        {t("loan-prepay-date")}
-                                    </div>
-                                    <div className="mt-0.5 text-[11px] text-ink-secondary tabular-nums">
-                                        {t("loan-prepay-period", {
-                                            n: startPeriod,
-                                        })}
-                                    </div>
-                                </div>
-                                <input
-                                    type="month"
-                                    aria-label={t("loan-prepay-date")}
+                        <div className="mx-5 mt-3 divide-y divide-rule/60 rounded-2xl bg-panel">
+                            <div className="flex min-h-13 items-center gap-2 px-4 py-2">
+                                <span className="flex-shrink-0 text-[15px] text-ink">
+                                    {t("loan-prepay-date")}
+                                </span>
+                                <span className="ml-auto text-[12px] text-ink-secondary tabular-nums">
+                                    {t("loan-prepay-period", {
+                                        n: startPeriod,
+                                    })}
+                                </span>
+                                <MonthField
                                     value={ym}
-                                    onChange={(e) => setYm(e.target.value)}
-                                    className="ml-auto cursor-pointer bg-transparent text-right text-[15px] dp-text-medium text-ink tabular-nums outline-none"
+                                    onChange={setYm}
+                                    title={t("loan-prepay-date")}
+                                    years={[
+                                        draft.firstPay.year - 1,
+                                        derived.firstPay.year + draft.termYears,
+                                    ]}
                                 />
                             </div>
                             <div className="flex min-h-13 items-center gap-3 px-4 py-2">
@@ -625,38 +801,39 @@ export function PrepaySheet({
                                             className="w-20 cursor-text bg-transparent text-right text-[17px] dp-text-medium text-ink tabular-nums outline-none"
                                         />
                                         <span className="text-sm text-ink-secondary">
-                                            万
+                                            {t("loan-wan")}
                                         </span>
                                     </div>
                                 )}
                             </div>
-                        </div>
-
-                        <div className="px-4 pt-4">
-                            <div className="text-[13px] text-ink-secondary">
-                                {t("loan-prepay-after")}
-                            </div>
-                            <div className="mt-2 grid grid-cols-3 gap-2">
-                                {PREPAY_MODES.map((m) => (
-                                    <button
-                                        key={m.key}
-                                        type="button"
-                                        data-loan-prepay-mode={m.key}
-                                        className={cn(
-                                            "cursor-pointer rounded-full border py-2 text-center text-[13px] transition-colors",
-                                            mode === m.key ? PICK_ON : PICK_OFF,
-                                        )}
-                                        onClick={() => setMode(m.key)}
-                                    >
-                                        {t(m.label)}
-                                    </button>
-                                ))}
+                            <div className="flex min-h-13 items-center gap-3 px-4 py-2">
+                                <span className="flex-shrink-0 text-[15px] text-ink">
+                                    {t("loan-prepay-after")}
+                                </span>
+                                <div className="ml-auto flex gap-1.5">
+                                    {PREPAY_MODES.map((m) => (
+                                        <button
+                                            key={m.key}
+                                            type="button"
+                                            data-loan-prepay-mode={m.key}
+                                            className={cn(
+                                                "cursor-pointer rounded-full border px-2.5 py-1 text-[12px] transition-colors",
+                                                mode === m.key
+                                                    ? PICK_ON
+                                                    : PICK_OFF,
+                                            )}
+                                            onClick={() => setMode(m.key)}
+                                        >
+                                            {t(m.label)}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
                         <div
                             data-loan-prepay-preview
-                            className="mx-4 mt-4 rounded-2xl bg-[#e8f3ea] px-4 py-2.5 text-[13px] leading-relaxed text-[#1a7f37]"
+                            className="mx-5 mt-3 rounded-2xl bg-[#e8f3ea] px-4 py-2.5 text-[13px] leading-relaxed text-[#1a7f37]"
                         >
                             {mode === "payoff"
                                 ? t("loan-prepay-preview-payoff", {
@@ -679,27 +856,44 @@ export function PrepaySheet({
                                     amount: `¥${fmt2(preview.newMonthly)}`,
                                 })}`}
                         </div>
-                        <p className="px-4 pt-2 text-[11px] leading-relaxed text-ink-secondary">
+                        <p className="px-5 pt-2 text-[11px] leading-relaxed text-ink-secondary">
                             {t("loan-prepay-note")}
                         </p>
 
                         <div className={SHEET_FOOTER}>
-                            <button
-                                type="button"
-                                className={cn(BTN_PRIMARY, SHEET_ACTION)}
-                                disabled={mode !== "payoff" && amountWan <= 0}
-                                onClick={() => {
-                                    onConfirm({
-                                        year,
-                                        month,
-                                        amountWan,
-                                        mode,
-                                    });
-                                    onOpenChange(false);
-                                }}
-                            >
-                                {t("confirm")}
-                            </button>
+                            <div className="flex gap-2.5">
+                                {onDelete && (
+                                    <button
+                                        type="button"
+                                        data-loan-prepay-delete
+                                        className={cn(BTN_DANGER, "flex-1")}
+                                        onClick={onDelete}
+                                    >
+                                        {t("delete")}
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        BTN_PRIMARY,
+                                        onDelete ? "flex-[2]" : SHEET_ACTION,
+                                    )}
+                                    disabled={
+                                        mode !== "payoff" && amountWan <= 0
+                                    }
+                                    onClick={() => {
+                                        onConfirm({
+                                            year: ym.year,
+                                            month: ym.month,
+                                            amountWan,
+                                            mode,
+                                        });
+                                        onOpenChange(false);
+                                    }}
+                                >
+                                    {t("confirm")}
+                                </button>
+                            </div>
                         </div>
                     </DialogContent>
                 </div>
@@ -713,41 +907,58 @@ export function RateChangeSheet({
     open,
     onOpenChange,
     draft,
+    initial,
     onConfirm,
+    onDelete,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     draft: LoanDraft;
+    initial?: {
+        year: number;
+        month: number;
+        commercialRate: number;
+        fundRate?: number;
+    };
     onConfirm: (v: {
         year: number;
         month: number;
         commercialRate: number;
         fundRate?: number;
     }) => void;
+    onDelete?: () => void;
 }) {
     const t = useIntl();
-    const [ym, setYm] = useState(
-        monthValue({ year: draft.firstPay.year + 1, month: 1 }),
-    );
+    const [ym, setYm] = useState({
+        year: draft.firstPay.year + 1,
+        month: 1,
+    });
     const [rateText, setRateText] = useState(`${draft.lpr + draft.bp / 100}`);
     const [fundText, setFundText] = useState(`${draft.fundRate}`);
 
     useEffect(() => {
         if (!open) return;
-        setYm(
-            monthValue({
-                year: Math.max(
-                    draft.firstPay.year + 1,
-                    new Date().getFullYear(),
-                ),
-                month: 1,
-            }),
-        );
+        if (initial) {
+            setYm({ year: initial.year, month: initial.month });
+            setRateText(`${initial.commercialRate}`);
+            setFundText(`${initial.fundRate ?? draft.fundRate}`);
+            return;
+        }
+        setYm({
+            year: Math.max(draft.firstPay.year + 1, new Date().getFullYear()),
+            month: 1,
+        });
         setRateText(`${Math.round((draft.lpr + draft.bp / 100) * 100) / 100}`);
         setFundText(`${draft.fundRate}`);
-    }, [open, draft.firstPay.year, draft.lpr, draft.bp, draft.fundRate]);
+    }, [
+        open,
+        draft.firstPay.year,
+        draft.lpr,
+        draft.bp,
+        draft.fundRate,
+        initial,
+    ]);
 
-    const [year, month] = ym.split("-").map(Number);
     const commercialRate = Number(rateText);
     const fundRate = Number(fundText);
     const valid =
@@ -757,15 +968,15 @@ export function RateChangeSheet({
         (draft.loanType === "commercial" ||
             (Number.isFinite(fundRate) && fundRate > 0 && fundRate < 20));
 
-    const period = Math.max(1, periodOfYm(draft.firstPay, { year, month }));
+    const period = Math.max(1, periodOfYm(draft.firstPay, ym));
     const previewDraft: LoanDraft = {
         ...draft,
         rateChanges: [
             ...draft.rateChanges,
             {
                 id: "__preview",
-                year,
-                month,
+                year: ym.year,
+                month: ym.month,
                 commercialRate,
                 fundRate:
                     draft.loanType === "commercial" ? undefined : fundRate,
@@ -787,23 +998,34 @@ export function RateChangeSheet({
                         className={SHEET_SURFACE}
                     >
                         <DialogTitle className="sr-only">
-                            {t("loan-rate-add")}
+                            {initial ? t("loan-rate-edit") : t("loan-rate-add")}
                         </DialogTitle>
                         <DialogDescription className="sr-only">
-                            {t("loan-rate-add")}
+                            {initial ? t("loan-rate-edit") : t("loan-rate-add")}
                         </DialogDescription>
-                        <SheetHead title={t("loan-rate-add")} />
-                        <div className="mx-4 mt-3 divide-y divide-rule/60 rounded-2xl bg-panel">
-                            <div className="flex min-h-13 items-center gap-3 px-4 py-2">
+                        <SheetHead
+                            title={
+                                initial
+                                    ? t("loan-rate-edit")
+                                    : t("loan-rate-add")
+                            }
+                        />
+                        <div className="mx-5 mt-3 divide-y divide-rule/60 rounded-2xl bg-panel">
+                            <div className="flex min-h-13 items-center gap-2 px-4 py-2">
                                 <span className="flex-shrink-0 text-[15px] text-ink">
                                     {t("loan-rate-change-from")}
                                 </span>
-                                <input
-                                    type="month"
-                                    aria-label={t("loan-rate-change-from")}
+                                <span className="ml-auto text-[12px] text-ink-secondary tabular-nums">
+                                    {t("loan-rate-item-period", { n: period })}
+                                </span>
+                                <MonthField
                                     value={ym}
-                                    onChange={(e) => setYm(e.target.value)}
-                                    className="ml-auto cursor-pointer bg-transparent text-right text-[15px] dp-text-medium text-ink tabular-nums outline-none"
+                                    onChange={setYm}
+                                    title={t("loan-rate-change-from")}
+                                    years={[
+                                        draft.firstPay.year - 1,
+                                        draft.firstPay.year + draft.termYears,
+                                    ]}
                                 />
                             </div>
                             <div className="flex min-h-13 items-center gap-3 px-4 py-2">
@@ -855,7 +1077,7 @@ export function RateChangeSheet({
                                 </div>
                             )}
                         </div>
-                        <div className="mx-4 mt-3 rounded-2xl bg-[#e8f3ea] px-4 py-2.5 text-[13px] leading-relaxed text-[#1a7f37]">
+                        <div className="mx-5 mt-3 rounded-2xl bg-[#e8f3ea] px-4 py-2.5 text-[13px] leading-relaxed text-[#1a7f37]">
                             {previewRow
                                 ? t("loan-rate-change-preview", {
                                       period,
@@ -863,29 +1085,44 @@ export function RateChangeSheet({
                                   })
                                 : t("loan-rate-change-invalid")}
                         </div>
-                        <p className="px-4 pt-2 text-[11px] leading-relaxed text-ink-secondary">
+                        <p className="px-5 pt-2 text-[11px] leading-relaxed text-ink-secondary">
                             {t("loan-rate-change-note")}
                         </p>
                         <div className={SHEET_FOOTER}>
-                            <button
-                                type="button"
-                                className={cn(BTN_PRIMARY, SHEET_ACTION)}
-                                disabled={!valid}
-                                onClick={() => {
-                                    onConfirm({
-                                        year,
-                                        month,
-                                        commercialRate,
-                                        fundRate:
-                                            draft.loanType === "commercial"
-                                                ? undefined
-                                                : fundRate,
-                                    });
-                                    onOpenChange(false);
-                                }}
-                            >
-                                {t("confirm")}
-                            </button>
+                            <div className="flex gap-2.5">
+                                {onDelete && (
+                                    <button
+                                        type="button"
+                                        data-loan-rate-delete
+                                        className={cn(BTN_DANGER, "flex-1")}
+                                        onClick={onDelete}
+                                    >
+                                        {t("delete")}
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        BTN_PRIMARY,
+                                        onDelete ? "flex-[2]" : SHEET_ACTION,
+                                    )}
+                                    disabled={!valid}
+                                    onClick={() => {
+                                        onConfirm({
+                                            year: ym.year,
+                                            month: ym.month,
+                                            commercialRate,
+                                            fundRate:
+                                                draft.loanType === "commercial"
+                                                    ? undefined
+                                                    : fundRate,
+                                        });
+                                        onOpenChange(false);
+                                    }}
+                                >
+                                    {t("confirm")}
+                                </button>
+                            </div>
                         </div>
                     </DialogContent>
                 </div>

@@ -1,9 +1,16 @@
-import type { SavedLoanPrepay } from "@/ledger/extra-type";
+import type { SavedLoanPlan, SavedLoanPrepay } from "@/ledger/extra-type";
+import { simulatePrepay } from "@/ledger/loan";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import type { DerivedLoan, LoanDraft } from "./model";
-import { CompareCard, fmtMoney, fmtMoneyInt, ScheduleCard } from "./results";
-import { GROUP_TITLE, LOAN_CARD, PAGE_FOOTER } from "./styles";
+import { planIconSrc } from "./icons";
+import {
+    type DerivedLoan,
+    type LoanDraft,
+    periodOfYm,
+    tracksOf,
+} from "./model";
+import { fmtMoney, fmtMoneyInt, ScheduleCard } from "./results";
+import { LOAN_CARD, PAGE_FOOTER } from "./styles";
 
 const fmtWan = (v: number) =>
     v.toLocaleString("en-US", {
@@ -21,21 +28,38 @@ function modeLabelKey(mode: SavedLoanPrepay["mode"]) {
           : "loan-prepay-mode-shorten";
 }
 
-/** 详情页：只回答三个问题——还到哪了、接下来怎么还、提前还款/利率变过什么 */
+/**
+ * 详情页：只回答三个问题——还到哪了、接下来怎么还、提前还款/利率变过什么。
+ * 参数编辑在标题右侧的笔里，还款分析只在编辑页出现。
+ */
 export function LoanDetail({
+    plan,
+    plans,
     draft,
     derived,
+    onPickPlan,
+    onRename,
     onAddPrepay,
-    onRemovePrepay,
+    onEditPrepay,
     onAddRate,
-    onRemoveRate,
+    onEditRate,
 }: {
+    plan?: SavedLoanPlan;
+    plans: SavedLoanPlan[];
     draft: LoanDraft;
     derived: DerivedLoan;
+    onPickPlan: () => void;
+    onRename: () => void;
     onAddPrepay: () => void;
-    onRemovePrepay: (id: string) => void;
+    onEditPrepay: (item: SavedLoanPrepay) => void;
     onAddRate: () => void;
-    onRemoveRate: (id: string) => void;
+    onEditRate: (item: {
+        id: string;
+        year: number;
+        month: number;
+        commercialRate: number;
+        fundRate?: number;
+    }) => void;
 }) {
     const t = useIntl();
     const paidPrincipal = Math.max(
@@ -54,9 +78,69 @@ export function LoanDetail({
             ? rateChanges[rateChanges.length - 1].commercialRate
             : derived.commercialRate;
 
+    const prepayEffect = (p: SavedLoanPrepay) => {
+        if (p.mode === "payoff") return t("loan-prepay-mode-payoff");
+        const { commercialInput, fundInput } = tracksOf(draft);
+        const track =
+            draft.loanType === "fund"
+                ? (fundInput ?? commercialInput)
+                : commercialInput;
+        const start = Math.max(
+            1,
+            Math.min(
+                periodOfYm(draft.firstPay, p),
+                Math.max(1, derived.months - 1),
+            ),
+        );
+        const r = simulatePrepay(track, draft.method, {
+            mode: p.mode,
+            extraAmount: p.amount,
+            startMonth: start,
+        });
+        return p.mode === "reduceMonthly"
+            ? t("loan-prepay-new-monthly", {
+                  amount: `¥${fmtMoney(r.newMonthly ?? 0)}`,
+              })
+            : t("loan-prepay-shortened", { n: r.monthsShortened });
+    };
+
     return (
-        <div className="flex h-full flex-col">
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-3 pb-4 [&>*]:shrink-0">
+        <div className="flex min-h-0 flex-1 flex-col">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-3 pb-4 [&>*]:shrink-0">
+                {/* 方案名：靠左，点名字切方案，笔管图标与名称 */}
+                <div
+                    data-loan-plan-head
+                    className="flex items-center justify-between gap-2 px-1"
+                >
+                    {/* 只有一笔也允许点开：抽屉里还挂着「新增贷款方案」 */}
+                    <button
+                        type="button"
+                        data-loan-plan-switch
+                        className="flex min-w-0 cursor-pointer items-center gap-1.5 text-left"
+                        onClick={onPickPlan}
+                    >
+                        <img
+                            src={planIconSrc(plan?.icon, draft.loanType)}
+                            alt=""
+                            aria-hidden
+                            className="size-8 flex-shrink-0 object-contain"
+                        />
+                        <span className="truncate text-[20px] font-semibold text-ink">
+                            {plan?.name ?? t("loan-list-empty-title")}
+                        </span>
+                        <i className="icon-[lucide--chevron-down] size-4 flex-shrink-0 text-ink-secondary" />
+                    </button>
+                    <button
+                        type="button"
+                        data-loan-plan-rename
+                        aria-label={t("loan-manage-rename")}
+                        className="flex size-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                        onClick={onRename}
+                    >
+                        <i className="icon-[lucide--pencil] size-4" />
+                    </button>
+                </div>
+
                 {/* 进度：剩余本金 + 已还比例 */}
                 <div data-loan-detail-hero className={cn(LOAN_CARD, "p-4")}>
                     <div className="flex items-center justify-between">
@@ -160,15 +244,6 @@ export function LoanDetail({
                     </div>
                 </div>
 
-                <ScheduleCard derived={derived} />
-
-                <div>
-                    <div className={GROUP_TITLE}>
-                        {t("loan-analysis-title")}
-                    </div>
-                    <CompareCard draft={draft} />
-                </div>
-
                 {/* 提前还款 */}
                 <div data-loan-prepay className={cn(LOAN_CARD, "p-4")}>
                     <div className="flex items-center justify-between">
@@ -198,36 +273,45 @@ export function LoanDetail({
                             </div>
                             <div className="mt-2 divide-y divide-rule/60">
                                 {prepays.map((p) => (
-                                    <div
+                                    <button
                                         key={p.id}
+                                        type="button"
                                         data-loan-prepay-item={p.id}
-                                        className="flex items-center justify-between gap-2 py-2.5"
+                                        className="flex w-full cursor-pointer items-center justify-between gap-2 py-2.5 text-left"
+                                        onClick={() => onEditPrepay(p)}
                                     >
                                         <div className="min-w-0">
                                             <div className="text-[14px] text-ink tabular-nums">
-                                                {t("loan-prepay-item", {
-                                                    ym: ymLabel(p),
-                                                    amount: `${fmtWan(p.amount / 10000)} 万`,
-                                                })}
+                                                {ymLabel(p)}
                                             </div>
                                             <div className="mt-0.5 text-[11px] text-ink-secondary">
-                                                {t(modeLabelKey(p.mode))}
+                                                {t(modeLabelKey(p.mode))} ·{" "}
+                                                {t("loan-prepay-period", {
+                                                    n: Math.max(
+                                                        1,
+                                                        periodOfYm(
+                                                            draft.firstPay,
+                                                            p,
+                                                        ),
+                                                    ),
+                                                })}
                                             </div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            aria-label={t("delete")}
-                                            className="flex size-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-secondary hover:bg-ground-muted hover:text-[#ef4444]"
-                                            onClick={() => onRemovePrepay(p.id)}
-                                        >
-                                            <i className="icon-[lucide--trash-2] size-4" />
-                                        </button>
-                                    </div>
+                                        <div className="flex flex-shrink-0 items-center gap-1.5">
+                                            <div className="text-right">
+                                                <div className="text-[14px] dp-text-medium text-ink tabular-nums">
+                                                    {fmtWan(p.amount / 10000)}{" "}
+                                                    {t("loan-wan")}
+                                                </div>
+                                                <div className="mt-0.5 text-[11px] text-ink-secondary tabular-nums">
+                                                    {prepayEffect(p)}
+                                                </div>
+                                            </div>
+                                            <i className="icon-[lucide--chevron-right] size-4 text-ink-secondary" />
+                                        </div>
+                                    </button>
                                 ))}
                             </div>
-                            <p className="mt-2 text-[11px] leading-relaxed text-ink-secondary">
-                                {t("loan-prepay-locked-hint")}
-                            </p>
                         </>
                     )}
                 </div>
@@ -265,47 +349,52 @@ export function LoanDetail({
                     ) : (
                         <div className="mt-2 divide-y divide-rule/60">
                             {rateChanges.map((r) => (
-                                <div
+                                <button
                                     key={r.id}
+                                    type="button"
                                     data-loan-rate-item={r.id}
-                                    className="flex items-center justify-between gap-2 py-2.5"
+                                    className="flex w-full cursor-pointer items-center justify-between gap-2 py-2.5 text-left"
+                                    onClick={() => onEditRate(r)}
                                 >
                                     <div className="min-w-0">
                                         <div className="text-[14px] text-ink tabular-nums">
-                                            {t("loan-rate-item", {
-                                                ym: ymLabel(r),
-                                                rate: fmtWan(r.commercialRate),
-                                            })}
+                                            {ymLabel(r)}
                                         </div>
                                         <div className="mt-0.5 text-[11px] text-ink-secondary tabular-nums">
                                             {t("loan-rate-item-period", {
-                                                n:
-                                                    (r.year -
-                                                        draft.firstPay.year) *
-                                                        12 +
-                                                    (r.month -
-                                                        draft.firstPay.month) +
+                                                n: Math.max(
                                                     1,
+                                                    periodOfYm(
+                                                        draft.firstPay,
+                                                        r,
+                                                    ),
+                                                ),
                                             })}
-                                            {r.fundRate !== undefined &&
-                                                draft.loanType !==
-                                                    "commercial" &&
-                                                ` · ${t("loan-fund-rate")} ${fmtWan(r.fundRate)}%`}
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        aria-label={t("delete")}
-                                        className="flex size-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-secondary hover:bg-ground-muted hover:text-[#ef4444]"
-                                        onClick={() => onRemoveRate(r.id)}
-                                    >
-                                        <i className="icon-[lucide--trash-2] size-4" />
-                                    </button>
-                                </div>
+                                    <div className="flex flex-shrink-0 items-center gap-1.5">
+                                        <div className="text-right">
+                                            <div className="text-[14px] dp-text-medium text-ink tabular-nums">
+                                                {fmtWan(r.commercialRate)}%
+                                            </div>
+                                            {r.fundRate !== undefined &&
+                                                draft.loanType !==
+                                                    "commercial" && (
+                                                    <div className="mt-0.5 text-[11px] text-ink-secondary tabular-nums">
+                                                        {t("loan-fund-rate")}{" "}
+                                                        {fmtWan(r.fundRate)}%
+                                                    </div>
+                                                )}
+                                        </div>
+                                        <i className="icon-[lucide--chevron-right] size-4 text-ink-secondary" />
+                                    </div>
+                                </button>
                             ))}
                         </div>
                     )}
                 </div>
+
+                <ScheduleCard derived={derived} />
 
                 <p className="px-1 pb-2 text-[11px] leading-relaxed text-ink-secondary">
                     {t("loan-page-disclaimer")}

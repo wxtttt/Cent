@@ -67,7 +67,17 @@ export default function PopupLayout({
                         {backStyle !== "circle" && t("back")}
                     </button>
                 )}
-                {right && <div className="absolute right-0 pr-1">{right}</div>}
+                {/* 圆形返回按钮距边 16px，右侧动作也必须同距，否则左右不对称 */}
+                {right && (
+                    <div
+                        className={cn(
+                            "absolute",
+                            backStyle === "circle" ? "right-4" : "right-0 pr-1",
+                        )}
+                    >
+                        {right}
+                    </div>
+                )}
                 <div className="min-h-4 w-full flex justify-center items-center">
                     {title}
                 </div>
