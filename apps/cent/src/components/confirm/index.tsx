@@ -96,7 +96,8 @@ export default function createConfirmProvider<Value, Returned = Value>(
                     onAnimationEnd={routePage.onExitAnimationEnd}
                     className={cn(
                         // 内容块用 min-h-full + my-auto 居中（登录页同款），长表单靠这里滚动
-                        "fixed inset-0 z-[3] flex flex-col overflow-y-auto overscroll-contain bg-ground",
+                        // 二级路由页是全屏面：按 --viewport-bottom-gap 往下延伸，铺满系统底
+                        "dp-screen-fill-inset fixed inset-0 z-[3] flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain bg-ground",
                         routePage.closing
                             ? "dp-route-to-right"
                             : "dp-route-from-right",
@@ -139,7 +140,9 @@ export default function createConfirmProvider<Value, Returned = Value>(
                     />
                     <div
                         className={cn(
-                            "fixed top-0 left-0 w-full h-full flex justify-center items-center pointer-events-none",
+                            // 宿主壳按 --viewport-bottom-gap 下探：左侧抽屉 / 底部抽屉 /
+                            // 居中弹层都要能铺到 iOS 主屏幕 PWA 的系统底那一条
+                            "dp-screen-fill fixed top-0 left-0 w-full h-full flex justify-center items-center pointer-events-none",
                             from === "left" &&
                                 "justify-start items-stretch sm:items-center sm:pl-4",
                             from === "bottom" && "items-end sm:items-center",

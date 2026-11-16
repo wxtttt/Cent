@@ -203,3 +203,19 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - **假回归教训（重要）**：probe 打到 5174 上**别的会话的服务**，出现「canvas 特征全部消失」的假回归（html 类与背景全没了）——并发会话挤端口后本会话 preview 实际绑 5175/5176 漂移，**BASE 必须以 preview 日志为准**。另：用 PowerShell `Get-Content`（无 -Encoding）+ `Set-Content` 改写 UTF-8 探针会把中文选择器按 GBK 解码成乱码、脚本报语法错误——改脚本走 Write 工具或 `System.IO.File` 显式 UTF-8。
 - **横向拖动排查**：`probe-overflow.js` 扫 9 个页面（登录/引导/首页/记账/归医/知物/抽屉/车辆/汇率）——`scrollWidth` 全部等于视口宽，**整页无横向溢出**；TabPager 相邻滑片是有意放在视口外的（容器裁剪）。用户指认的是车辆管理页的**胶囊条 / 段控行**：iOS 对 `overflow-x-auto` 容器内容不溢出也允许横向拖动回弹。修复 = `utils/viewport.ts` 新增 `useScrollableX(ref)`，两处条件切换 `overflow-x-auto`/`overflow-hidden`；期间误改 TabPager 首尾页橡皮筋阻尼，已还原。
 - **probe-canvas.js 增强**：车辆路由页空态 → 点「添加车辆」→ 名称填「小白」→「保存」→ 断言胶囊条 `overflowX = hidden` 且 `scrollW = clientW = 402`（装得下即锁死）。**WebKit / Chromium 双引擎全绿、errors: []**。
+
+## 2026-11-16 00:54 键盘视口守卫回归修复验证（同 worktree，704ee09 发布后用户报「卡片滑不上去」）
+
+- **根因**：00:19 版守卫常驻监听 visualViewport 并在「无焦点且 offsetTop > 0」时 scrollTo(0,0)——用户设备静息 offsetTop 非零（视口被系统扣过一截），正常滚动被守卫持续拉回原点 → 整页滑不动、顶部卡片常驻。**教训：iOS 视口补偿不能依赖「静息状态恒为某值」的假设；常驻监听 + 主动 scrollTo 会吃掉用户滚动。**
+- **修复**：守卫改为 focus-gated——focusin 命中可编辑元素记 `keyboardSeen`，focusout + 250ms 且确认无焦点后复位一次；**删除全部 visualViewport 常驻监听**。
+- **回归断言**：probe-canvas.js 新增滚动保持步骤——向首页 `.page-show` 注入 1200px 临时节点强制可滚、`scrollTop = 300`、400ms 后应仍为 300（直接测「滚动不被复位」）。**WebKit / Chromium 双引擎全绿**；WebKit 前两次因机器空闲内存仅 1.37GB 中途崩溃，释放到 2.1GB 后第三次跑通——内存红线口径不变。
+
+## 2026-11-16 11:05 底部条带下探 + 纵向滚动容器裁横向验证（worktree `feat-login-261115`）
+
+- **dev server 语义**：本轮 5173 由 `pnpm --filter cent dev`（vite dev）提供，**改完源码不用重新 build 就能被探针看到**；历史文档里「5173 = `dist` 预览、必须 `vite build` 才生效」的口径仅在由 `pnpm preview` 起时成立，验证前先 `curl` 确认端口上跑的是 dev 还是 preview。
+- **新探针 `probe-vehicle-xpan.js`**（`.playwright-cli/`，402×874）：离线模式 → 新建账本 → 首页 → 抽屉 → 车辆记录 → 连造三辆车（小闪/小白/小蓝）。四组值：
+  - `homeScroll`：向首页 `.page-show` 注入 1200px 临时节点、`scrollTop = 300`，400ms 后仍为 300（键盘守卫不再吃滚动），`overflowX = hidden`；
+  - `geometry`：`[data-route-page]` 与 `[data-vehicle-page] .overflow-y-auto` 均 `overflowX = hidden`、`scrollW = clientW = 402`，胶囊条 `overflowX = hidden`，`documentElement.scrollWidth = clientWidth = 402`；
+  - `clamp`：两个容器的 `scrollLeft` 依次设 −90 / +90，读回**全部为 0**（横向不再可拖）；
+  - `gap`：桌面 `standalone=false` 缺口恒 0，手动把 `--viewport-bottom-gap` 注入成 `62px` 后，`[data-route-page]` 底边 874 → 936、`#root` 高度 874 → 936、左侧抽屉面板底边 874 → 936——证明真机上 812+62 = 874 会正好铺到屏幕物理底边。
+- **真机截图残影判读方法**（省来回的关键）：直接解 PNG 取像素，`bd=8 / ct=2` 与 `bd=16 / ct=2` 两种都要支持（用户在 iOS 18 上截的那张车辆页是 16 位 RGB，按 8 位解会得到满屏噪点，别误判成「图片损坏」）。判据：① 抽屉灰 `244,244,244` 与系统底暖米 `251,247,239` 的分界线落在 **y=2432px = 810.7pt**，即布局视口底 = 812pt、缺口 62pt；② 车辆页卡片左缘在 89pt（正常应为 12pt）、右缘越过 402pt 屏幕边，而头部返回钮仍在 16pt 原位——据此判定「被拖走的是内层滚动容器，不是整页、也不是胶囊条」。
