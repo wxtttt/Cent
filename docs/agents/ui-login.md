@@ -22,7 +22,9 @@
 | Token 胶囊 | 「现有 Token」胶囊叠在 Gitee / GitHub 按钮内**右缘**（`absolute right-3 top-1/2 -translate-y-1/2 z-10`）：主按钮上 `bg-white/90 text-brand`，次按钮上 `bg-brand/10 text-brand`。胶囊是主按钮的**兄弟节点**绝对定位，不构成 button 嵌套 button |
 | 登录方式页入口 | WebDAV / S3 大按钮点击 → `loginWith` → endpoint `login()` → **二级路由页**（`/login/webdav`、`/login/s3`，见「登录方式二级路由页」段） |
 | 图标 | GitHub 用官方 Octocat 实心 SVG、Gitee 用品牌实心 SVG（统一 `viewBox 0 0 24 24`，`[&>svg]:size-[20px]` 控制尺寸，组件内常量 `GITHUB_ICON` / `GITEE_ICON`）；离线 / WebDAV / S3 用 Lucide 细线 `hard-drive` / `cloud` / `database`。**不要用 `icon-[lucide--github]`**——那是猫头轮廓，小尺寸下像竖拇指、认不出品牌 |
-| 底部 | 页脚钉在页面最底部（核心内容居中，见「定位与挂载」），自上而下：**PWA 安装提示（info 图标 + 11px 灰字，保持在下载 / 查看介绍按钮的上面——用户明确纠正过顺序）**→ App 下载圆钮 + 「查看介绍」→ 协议文案（仅 `isMeasurementEnabled()` 时显示） |
+| 底部 | 页脚钉在页面最底部（核心内容居中，见「定位与挂载」），自上而下：**PWA 安装提示（info 图标 + 11px 灰字，保持在下载按钮上面——用户明确纠正过顺序）**→ App 下载圆钮（iOS / Android 两个，居中）→ 协议文案（仅 `isMeasurementEnabled()` 时显示） |
+
+**「查看介绍」外链已删（2026-11-16 12:20 用户口径）**：页脚原来在下载圆钮右侧还有一条「查看介绍」跳到作者博客，与「说明类内容都进抽屉、不跳出应用」的口径冲突，直接去掉（连带那条 `size-1` 分隔点与语言键 `see-introduce`）。页脚现在只剩安装提示 + 下载圆钮 + 协议。**不要在下载图标旁边再加文字链接**，那是刚被删掉的东西。 |
 
 - `AppDownloadIcons` 的默认 `buttonClassName` 是**深色品牌区专用**（`bg-white/5 text-white/80`），浅底必须显式传浅色圆钮样式，否则图标看不清。
 - 「无需账号」是离线模式**大按钮**右缘的展示右值（`value` 槽位），用来呼应预算页右值列；不要给 Gitee / GitHub 按钮也加右值，会与 Token 胶囊挤在一起。

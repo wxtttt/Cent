@@ -261,3 +261,9 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - **高度是量出来的，不是看出来的**：86dvh 时 S3 抽屉 `overflow: 22`——最后一段末行被切字（截图里几乎看不出，只看 `lastSectionVisible` 才暴露）。过程值：初版溢出 80 → 收文案到 40 → 段间距 `py-2.5→py-2` + 跨域段再收一行到 22 → `max-h` 86dvh→90dvh 后归零。**以后调说明文案都要重测 `scrollHeight - clientHeight`。**
 - **深色回归**（`verify-login-form-dark.js` 扩到 S3）：`s3Card.cardBg rgb(31,25,19)`、输入字 `rgb(247,240,230)`、问号 `rgb(181,168,154)`；`s3Sheet` 同底色、标题与小标题 `rgb(247,240,230)`、`code` 底 `rgb(23,19,15)` 字 `rgb(247,240,230)`——层级与对比度都正常。
 - `pnpm lint` 380 files 通过。
+
+## 2026-11-16 12:20 登录页页脚删「查看介绍」验证（worktree `feat-login-261115`）
+
+- **改动**：`components/login/index.tsx` 的 `LoginFooter` 去掉「查看介绍」外链与它前面的 `size-1` 分隔点；语言键 `see-introduce` 在 zh / en 同步删除（全仓已无引用）。
+- **探针判定**（Chromium 402×874，`/tmp/verify-login-footer.js` 一次性脚本）：`hasSeeIntroduce false`；页内 `<a>` 只剩两个应用商店链接（App Store / Google Play，来自 `AppDownloadIcons`），**协议两条链接因 `isMeasurementEnabled()` 为 false 未渲染**；下载图标仍居中显示（截图 `verify-login-footer.png`）。
+- `pnpm lint` 380 files 通过。

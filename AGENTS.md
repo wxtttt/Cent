@@ -101,6 +101,8 @@
 
 **2026-11-16 12:10 口径变更登记**（**说明类内容一律进抽屉 + S3 页补「?」与眼睛**，worktree `feat-login-261115`；细节 → `docs/agents/ui-login.md`，验证 → `docs/agents/verification.md`）：① 用户口径「有什么说明的地方都改成抽屉」——登录流程里解释字段怎么填的内容不再 `target="_blank"` 跳出应用，统一进底部抽屉；骨架抽到 `components/modal/help-sheet.tsx`（`HelpSheetLayout` / `HelpSection` / `HelpCode` / `HELP_SHEET_OPTIONS`），**以后新增说明面板复用这四个，不要各页各写一套**。代理抽屉里原来那个「查看完整说明」外链已删（它正是要消灭的跳转）。② S3 页此前没有任何说明入口，现于 `hint` 行右侧加 `data-s3-help` 圆钮（40×40）打开 `showS3Help()`，五段：Endpoint 怎么填（含三个示例域名）/ Region 与 Bucket / 密钥去哪拿 / 连不上时先查跨域（允许来源 `https://cent.linkai.work`）/ 高级选项；Secret Access Key 补 40×40 眼睛按钮，默认掩码。③ 抽屉上限从 `86dvh` 提到 `90dvh`：86dvh 下 S3 说明末段差 22px 露不全（会切字），90dvh 两页都恰好一屏；段间距 `py-2`。**改文案后必须重新量 `scrollHeight - clientHeight`，不能只看截图。**
 
+**2026-11-16 12:20 口径变更登记**（**登录页页脚删「查看介绍」外链**）：用户口径「登录的查看介绍删掉」——页脚原来在 App 下载圆钮右侧有一条「查看介绍」跳作者博客，与「说明类内容都进抽屉、不跳出应用」冲突。已删该 `<a>`、那条 `size-1` 分隔点与语言键 `see-introduce`（zh/en 同步移除）。页脚现存：PWA 安装提示 → iOS/Android 下载圆钮 → 协议文案（仅 `isMeasurementEnabled()`）。**不要在下图标旁边再加文字链接。**
+
 ## 1. 项目速览
 
 - 名称：**胖记**（用户明确：没有英文名，界面与 PWA 清单里不出现 Cent / 日计；仓库名、包名、上游链接仍是 Cent，不要改）。纯前端 PWA 记账应用，数据存在用户自己的 GitHub / Gitee / WebDAV / S3 仓库或本地离线库中，没有业务后端。
