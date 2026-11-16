@@ -142,7 +142,7 @@ export default function LoanCalculatorForm({
         <PopupLayout
             onBack={onCancel}
             title={t("loan-calculator")}
-            className="h-full bg-ground"
+            className="dp-drawer-surface h-full bg-ground"
             backStyle="circle"
             right={
                 selected ? (
@@ -173,10 +173,10 @@ export default function LoanCalculatorForm({
                                     type="button"
                                     data-loan-plan-chip={plan.id}
                                     className={cn(
-                                        "flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-medium transition-colors",
+                                        "flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-colors",
                                         selectedId === plan.id
-                                            ? "border-brand bg-brand/5 text-brand"
-                                            : "border-rule bg-panel text-ink",
+                                            ? "bg-brand text-on-brand dp-text-medium"
+                                            : "bg-panel text-ink shadow-[0_1px_5px_rgba(92,62,30,0.08)]",
                                     )}
                                     onClick={() => {
                                         if (suppressClickRef.current) {
@@ -209,7 +209,7 @@ export default function LoanCalculatorForm({
                             {selectedId === null && (
                                 <span
                                     data-loan-draft-chip
-                                    className="flex-shrink-0 rounded-full border border-brand bg-brand/5 px-3 py-2 text-[13px] font-medium text-brand"
+                                    className="flex-shrink-0 rounded-full bg-brand px-3 py-2 text-[13px] dp-text-medium text-on-brand"
                                 >
                                     {t("loan-plan-new")}
                                 </span>
@@ -217,7 +217,7 @@ export default function LoanCalculatorForm({
                             <button
                                 type="button"
                                 data-loan-plan-new
-                                className="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-2 text-[13px] font-medium text-ink"
+                                className="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-full bg-panel px-3 py-2 text-[13px] text-ink shadow-[0_1px_5px_rgba(92,62,30,0.08)]"
                                 onClick={() => {
                                     setSelectedId(null);
                                     setDirty(false);
@@ -232,7 +232,7 @@ export default function LoanCalculatorForm({
                     <HeroTicket draft={draft} derived={derived} />
 
                     <div>
-                        <div className="px-1 pb-2 text-[15px] font-semibold text-ink">
+                        <div className="px-1 pb-1.5 text-[12px] text-ink-secondary">
                             {t("loan-settings")}
                         </div>
                         <TypeCards
@@ -250,7 +250,7 @@ export default function LoanCalculatorForm({
                     </div>
 
                     <div>
-                        <div className="px-1 pb-2 text-[15px] font-semibold text-ink">
+                        <div className="px-1 pb-1.5 text-[12px] text-ink-secondary">
                             {t("loan-analysis-title")}
                         </div>
                         <CompareCard
@@ -294,7 +294,7 @@ export default function LoanCalculatorForm({
                         <button
                             type="button"
                             data-loan-save
-                            className={BTN_PRIMARY}
+                            className={`${BTN_PRIMARY} w-full`}
                             onClick={() => setSaveSheet({ mode: "create" })}
                         >
                             {t("loan-save-plan")}

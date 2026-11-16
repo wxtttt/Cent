@@ -8,6 +8,15 @@ import {
     type LoanDraft,
     yearRangeLabel,
 } from "./model";
+import {
+    LOAN_CARD,
+    PICK_OFF,
+    PICK_ON,
+    SEG_GROUP,
+    SEG_ITEM,
+    SEG_OFF,
+    SEG_ON,
+} from "./styles";
 
 const fmtMoney = (v: number) =>
     v.toLocaleString("en-US", {
@@ -43,9 +52,9 @@ export function CompareCard({
                   monthly: `¥${fmtMoney(cmp.firstDiff)}`,
               });
     return (
-        <div className="rounded-2xl bg-panel p-4 shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+        <div className={cn(LOAN_CARD, "p-4")}>
             <div className="flex items-center justify-between">
-                <span className="text-[15px] font-semibold text-ink">
+                <span className="text-[15px] dp-text-medium text-ink">
                     {t("loan-compare-title")}
                 </span>
                 <span className="text-xs text-ink-secondary">
@@ -64,14 +73,12 @@ export function CompareCard({
                             data-loan-compare={m}
                             className={cn(
                                 "cursor-pointer rounded-2xl border p-3 text-left transition-colors",
-                                active
-                                    ? "border-brand bg-brand/5 text-brand"
-                                    : "border-rule bg-ground-muted/60 text-ink",
+                                active ? PICK_ON : PICK_OFF,
                             )}
                             onClick={() => onSelect(m)}
                         >
                             <div className="flex items-center justify-between">
-                                <span className="text-[15px] font-semibold">
+                                <span className="text-[15px] dp-text-medium">
                                     {t(
                                         m === "installment"
                                             ? "loan-method-installment"
@@ -138,12 +145,9 @@ export function ScheduleCard({ derived }: { derived: DerivedLoan }) {
     const maxTotal = Math.max(...derived.yearly.map((y) => y.total), 1);
     const visibleYears = showAll ? derived.yearly : derived.yearly.slice(0, 5);
     return (
-        <div
-            data-loan-schedule
-            className="rounded-2xl bg-panel p-4 shadow-[0_1px_6px_rgba(92,62,30,0.05)]"
-        >
+        <div data-loan-schedule className={cn(LOAN_CARD, "p-4")}>
             <div className="flex items-center justify-between">
-                <span className="text-[15px] font-semibold text-ink">
+                <span className="text-[15px] dp-text-medium text-ink">
                     {t("loan-schedule-title")}
                 </span>
                 <span className="flex items-center gap-3 text-xs text-ink-secondary">
@@ -157,7 +161,7 @@ export function ScheduleCard({ derived }: { derived: DerivedLoan }) {
                     </span>
                 </span>
             </div>
-            <div data-loan-chart className="mt-3 flex h-36 items-end gap-[3px]">
+            <div data-loan-chart className="mt-3 flex h-36 items-end gap-[2px]">
                 {derived.yearly.map((row) => {
                     const h = (row.total / maxTotal) * 100;
                     const interestShare =
@@ -168,7 +172,7 @@ export function ScheduleCard({ derived }: { derived: DerivedLoan }) {
                             type="button"
                             aria-label={t("loan-year-n", { n: row.year })}
                             className={cn(
-                                "flex-1 cursor-pointer rounded-full transition-opacity",
+                                "flex-1 cursor-pointer rounded-[2px] transition-opacity",
                                 expanded === row.year
                                     ? "opacity-100"
                                     : "opacity-90 hover:opacity-100",
@@ -188,13 +192,13 @@ export function ScheduleCard({ derived }: { derived: DerivedLoan }) {
                             }
                         >
                             <span
-                                className="block w-full rounded-full bg-brand/30"
+                                className="block w-full rounded-[2px] bg-brand/30"
                                 style={{
                                     height: `${interestShare * 100}%`,
                                 }}
                             />
                             <span
-                                className="block w-full flex-1 rounded-full bg-brand"
+                                className="block w-full flex-1 rounded-[2px] bg-brand"
                                 style={{ minHeight: 0 }}
                             />
                         </button>
@@ -382,26 +386,22 @@ export function PrepayCard({
         startMonth: start,
     });
     return (
-        <div
-            data-loan-prepay
-            className="rounded-2xl bg-panel p-4 shadow-[0_1px_6px_rgba(92,62,30,0.05)]"
-        >
+        <div data-loan-prepay className={cn(LOAN_CARD, "p-4")}>
             <div className="flex items-center justify-between">
-                <span className="text-[15px] font-semibold text-ink">
+                <span className="text-[15px] dp-text-medium text-ink">
                     {t("loan-prepay-title")}
                 </span>
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className={cn(SEG_GROUP, "mt-3 w-full")}>
                 {PREPAY_MODES.map((m) => (
                     <button
                         key={m.key}
                         type="button"
                         data-loan-prepay-mode={m.key}
                         className={cn(
-                            "cursor-pointer rounded-full py-1.5 text-xs font-medium transition-colors",
-                            mode === m.key
-                                ? "bg-brand/10 text-brand ring-1 ring-brand/40"
-                                : "bg-ground-muted text-ink-secondary",
+                            SEG_ITEM,
+                            "flex-1",
+                            mode === m.key ? SEG_ON : SEG_OFF,
                         )}
                         onClick={() => setMode(m.key)}
                     >

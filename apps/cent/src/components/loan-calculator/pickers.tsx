@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Input } from "@/components/ui/input";
 import { intl, useIntl } from "@/locale";
 import { cn } from "@/utils";
-import { BTN_PRIMARY, SHEET_FOOTER } from "../button-styles";
+import { BTN_PRIMARY, BTN_TAP, SHEET_FOOTER } from "../button-styles";
 import {
     Dialog,
     DialogContent,
@@ -12,6 +11,7 @@ import {
     DialogTitle,
 } from "../ui/dialog";
 import { FUND_SUITE_RATES, LATEST_LPR, type LoanDraft } from "./model";
+import { PICK_OFF, PICK_ON, SHEET_ACTION, SHEET_SURFACE } from "./styles";
 
 // 家小满式滚轮：行高约等于选中胶囊高度，窗口露出 5 行，上下边缘渐隐
 const ITEM_HEIGHT = 36;
@@ -87,7 +87,7 @@ function WheelColumn({
                     className={cn(
                         "flex w-full snap-center items-center justify-center rounded-full text-[17px]",
                         i === index
-                            ? "bg-white font-medium text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)]"
+                            ? "bg-panel dp-text-medium text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)]"
                             : "text-ink-secondary",
                     )}
                     style={{ height: ITEM_HEIGHT }}
@@ -132,7 +132,7 @@ function WheelSheet({
                     <DialogContent
                         from="bottom"
                         data-loan-sheet={title}
-                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-[#f4f4f4] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                        className={SHEET_SURFACE}
                     >
                         <DialogTitle className="sr-only">{title}</DialogTitle>
                         <DialogDescription className="sr-only">
@@ -144,7 +144,7 @@ function WheelSheet({
                                 type="button"
                                 data-no-focus-ring
                                 aria-label={t("close")}
-                                className="flex size-9 items-center justify-center rounded-full bg-white text-ink shadow-[0_2px_12px_rgba(0,0,0,0.12)] focus-visible:outline-none"
+                                className="flex size-9 items-center justify-center rounded-full bg-panel text-ink shadow-[0_2px_12px_rgba(0,0,0,0.12)] focus-visible:outline-none"
                                 onClick={() => onOpenChange(false)}
                             >
                                 <i className="icon-[apk--close] size-3.5" />
@@ -154,12 +154,7 @@ function WheelSheet({
                             </span>
                             <div className="size-9" />
                         </div>
-                        <div
-                            className={cn(
-                                "flex items-stretch gap-2 px-4 py-2",
-                                columns.length > 1 && "[&>*]:flex-1",
-                            )}
-                        >
+                        <div className="flex items-stretch gap-2 px-4 py-2 [&>*]:flex-1">
                             {columns.map((col, i) => (
                                 // biome-ignore lint/suspicious/noArrayIndexKey: 滚轮列按位置定位
                                 <WheelColumn
@@ -173,7 +168,7 @@ function WheelSheet({
                         <div className={SHEET_FOOTER}>
                             <button
                                 type="button"
-                                className={BTN_PRIMARY}
+                                className={cn(BTN_PRIMARY, SHEET_ACTION)}
                                 onClick={() => {
                                     onConfirm();
                                     onOpenChange(false);
@@ -351,7 +346,10 @@ export function CommercialRateSheet({
                     <DialogContent
                         from="bottom"
                         data-loan-sheet="rate-commercial"
-                        className="pointer-events-auto max-h-[85vh] w-full overflow-y-auto rounded-t-[28px] border border-b-0 border-rule bg-[#f4f4f4] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                        className={cn(
+                            SHEET_SURFACE,
+                            "max-h-[85vh] overflow-y-auto",
+                        )}
                     >
                         <DialogTitle className="sr-only">
                             {t("loan-commercial-rate")}
@@ -377,7 +375,7 @@ export function CommercialRateSheet({
                                 {Math.abs(bp)} BP
                             </div>
                         </div>
-                        <div className="mx-4 mt-4 rounded-2xl bg-white px-4">
+                        <div className="mx-4 mt-4 rounded-2xl bg-panel px-4">
                             <div className="flex min-h-13 items-center gap-2 border-b border-rule py-2">
                                 <span className="text-[15px] font-medium">
                                     LPR
@@ -386,10 +384,15 @@ export function CommercialRateSheet({
                                     {t("loan-lpr-tenor")}
                                 </span>
                                 <div className="ml-auto flex items-center gap-1">
-                                    <Input
+                                    {/* 无边框数字输入：与贷款页金额行同一套（聚焦全选、右对齐） */}
+                                    <input
+                                        aria-label="LPR"
                                         inputMode="decimal"
-                                        className="w-24 text-right"
+                                        className="w-20 cursor-text bg-transparent text-right text-[17px] dp-text-medium text-ink tabular-nums outline-none"
                                         value={lprText}
+                                        onFocus={(e) =>
+                                            e.currentTarget.select()
+                                        }
                                         onChange={(e) =>
                                             setLprText(e.target.value)
                                         }
@@ -407,7 +410,7 @@ export function CommercialRateSheet({
                                     <button
                                         type="button"
                                         aria-label={t("loan-bp-minus")}
-                                        className="size-8 rounded-full border border-brand/40 text-brand"
+                                        className={BTN_TAP}
                                         onClick={() =>
                                             setBp((v) => Math.max(-200, v - 5))
                                         }
@@ -421,7 +424,7 @@ export function CommercialRateSheet({
                                     <button
                                         type="button"
                                         aria-label={t("loan-bp-plus")}
-                                        className="size-8 rounded-full border border-brand/40 text-brand"
+                                        className={BTN_TAP}
                                         onClick={() =>
                                             setBp((v) => Math.min(200, v + 5))
                                         }
@@ -437,10 +440,8 @@ export function CommercialRateSheet({
                                     key={p}
                                     type="button"
                                     className={cn(
-                                        "flex-1 rounded-full py-2 text-xs font-medium tabular-nums",
-                                        bp === p
-                                            ? "border border-brand bg-brand/10 text-brand"
-                                            : "bg-white text-ink-secondary",
+                                        "flex-1 rounded-full border py-2 text-[13px] tabular-nums transition-colors",
+                                        bp === p ? PICK_ON : PICK_OFF,
                                     )}
                                     onClick={() => setBp(p)}
                                 >
@@ -462,7 +463,7 @@ export function CommercialRateSheet({
                         <div className={SHEET_FOOTER}>
                             <button
                                 type="button"
-                                className={BTN_PRIMARY}
+                                className={cn(BTN_PRIMARY, SHEET_ACTION)}
                                 disabled={!lprValid}
                                 onClick={() => {
                                     onConfirm({ lpr: lprNumber, bp });
@@ -510,7 +511,7 @@ export function FundRateSheet({
                     <DialogContent
                         from="bottom"
                         data-loan-sheet="rate-fund"
-                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-[#f4f4f4] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                        className={SHEET_SURFACE}
                     >
                         <DialogTitle className="sr-only">
                             {t("loan-fund-rate")}
@@ -530,10 +531,8 @@ export function FundRateSheet({
                                     key={s}
                                     type="button"
                                     className={cn(
-                                        "flex-1 rounded-2xl border py-3 text-center text-[15px] font-semibold tabular-nums",
-                                        suite === s
-                                            ? "border-brand bg-brand/10 text-brand"
-                                            : "border-rule bg-white text-ink",
+                                        "flex-1 rounded-2xl border py-3 text-center text-[15px] dp-text-medium tabular-nums transition-colors",
+                                        suite === s ? PICK_ON : PICK_OFF,
                                     )}
                                     onClick={() => {
                                         setSuite(s);
@@ -549,15 +548,17 @@ export function FundRateSheet({
                                 </button>
                             ))}
                         </div>
-                        <div className="mx-4 mt-3 flex min-h-13 items-center rounded-2xl bg-white px-4">
+                        <div className="mx-4 mt-3 flex min-h-13 items-center rounded-2xl bg-panel px-4">
                             <span className="text-[15px] font-medium">
                                 {t("loan-fund-rate-input")}
                             </span>
                             <div className="ml-auto flex items-center gap-1">
-                                <Input
+                                <input
+                                    aria-label={t("loan-fund-rate-input")}
                                     inputMode="decimal"
-                                    className="w-24 text-right"
+                                    className="w-20 cursor-text bg-transparent text-right text-[17px] dp-text-medium text-ink tabular-nums outline-none"
                                     value={rateText}
+                                    onFocus={(e) => e.currentTarget.select()}
                                     onChange={(e) =>
                                         setRateText(e.target.value)
                                     }
@@ -573,7 +574,7 @@ export function FundRateSheet({
                         <div className={SHEET_FOOTER}>
                             <button
                                 type="button"
-                                className={BTN_PRIMARY}
+                                className={cn(BTN_PRIMARY, SHEET_ACTION)}
                                 disabled={!rateValid}
                                 onClick={() => {
                                     onConfirm({

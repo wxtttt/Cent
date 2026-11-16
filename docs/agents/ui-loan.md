@@ -64,6 +64,25 @@
 - **页脚口径**：`loan-page-disclaimer`（结果仅供参考）+ `loan-rate-note-policy` / `-custom`（改过 LPR 时显示「按自定义 LPR X% 计算」，未改显示政策日期 2026-09-20）。
 - **图标资产**：`apps/cent/public/loan/*.webp`（13 张，3D 风），`icons.ts` 做「类型默认图标 + 方案自选图标」映射。
 
+## 视觉口径（2026-11-16 13:20，用户「底色不对 / 渐变有点丑 / 按钮样式都不太一样 / 字重也不对」）
+
+- **底色只分两级**：四个一级 tab 页是暖米 `#fbf7ef`；**所有二级页（含 `/loan`）一律中性灰白**——页面根节点挂 `dp-drawer-surface`（`form.tsx` 的 `PopupLayout className="dp-drawer-surface h-full bg-ground"`），`bg-ground` 随之变 `#f4f4f4`、卡片纯白、字色 `#383230`。**不要再给贷款页单独写 `bg-[#f4f4f4]`，也不要用暖色渐变。**
+- **hero 是白卡，不是票券**：`LOAN_CARD` + `p-4`；暖色渐变、打孔缺口、虚线分隔都已删除（用户口径「这个卡片渐变有点丑，就换成白色吧」）。信息结构不变：`每月应还 / 首月应还` → 巨号橙字 → 副行 → 细分割线 → 占比条 → 三项统计。
+- **所有可点样式从 `loan-calculator/styles.ts` 取**，组件里不许再写第三种选中态：
+
+  | 常量 | 用途 |
+  | --- | --- |
+  | `LOAN_CARD` | 白卡壳（16 圆角 + 车辆页同款轻投影），内边距由使用处给 |
+  | `PICK_ON` / `PICK_OFF` | 类型三卡、对比卡、BP 快捷片、公积金套数卡（`border-brand bg-brand/10 text-brand` / `border-rule bg-panel text-ink`） |
+  | `SEG_GROUP` / `SEG_ITEM` / `SEG_ON` / `SEG_OFF` | 分段控件：计算方式（2 项）、提前还款模式（3 项）。浅灰容器 + 白色凸起胶囊，与全站 `SegmentedTabs` 同形，容器色取中性作用域里的 `ground-muted` |
+  | `SHEET_SURFACE` | 抽屉壳：`dp-sheet-surface` + `bg-ground`。**必须挂**，否则 `SHEET_FOOTER` 的 `bg-ground` 退回暖米色，变成「灰抽屉配米色底栏」 |
+  | `SHEET_ACTION` | 抽屉 / 底栏确认按钮的 `w-full`（见下条） |
+
+- **`BTN_PRIMARY` 是 `inline-flex`**：单独放时必须 `cn(BTN_PRIMARY, SHEET_ACTION)`，否则宽度退化成文字宽——修前抽屉的「确认」和页面的「保存方案」都是**两个字宽的橙色小方块**。
+- **行内微调按钮用 `BTN_TAP`**（BP 加减）；**数字输入一律无边框右对齐 + 聚焦全选**（房价 / 贷款额 / 提前还款金额 / LPR / 公积金利率），不要再引入 `ui/input` 的描边输入框。
+- **字重**：中文标签不用 `font-semibold`（Windows 上 600 落 700，整页发黑）。卡片外分组标题按车辆页 `GroupTitle` 用 `12px text-ink-secondary`；卡片标题用 `dp-text-medium`；只有**数字**（金额 / 期数 / 百分比）保留 `font-semibold` / `font-bold`。
+- **滚轮抽屉单列也要撑满**：`flex items-stretch gap-2 px-4 py-2 [&>*]:flex-1` 必须**无条件**生效（修前只在多列时加 `flex-1`，年限 / 首付的白色选中胶囊缩成内容宽、贴左边）。
+
 ### 验证（2026-11-16 12:2x，`verify-loan-page.js`，Chromium + WebKit 一致）
 
 - 首屏：`hero` = `每月应还 ¥8,910.41 / 等额本息 · 30 年 360 期 · 2056年11月还清 / 贷款本金 210.00 万 / 利息总额 110.77 万 / 还款总额 320.77 万`；`typeCount 3`、设置行 `down / term / commercial-rate / first-pay` 四行齐全、`hasCompare / hasSchedule / hasPrepay / hasSaveBar` 全 true、**`rawKeys []`**（正文无未翻译键）、页脚命中「结果仅供参考…」。

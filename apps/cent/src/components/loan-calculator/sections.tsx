@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import { RowChevron, RowInput } from "../form-rows";
+import { RowChevron } from "../form-rows";
 import { LOAN_TYPE_ICONS } from "./icons";
 import type { DerivedLoan, LoanDraft, LoanMode, LoanType } from "./model";
+import {
+    LOAN_CARD,
+    PICK_OFF,
+    PICK_ON,
+    SEG_GROUP,
+    SEG_ITEM,
+    SEG_OFF,
+    SEG_ON,
+} from "./styles";
 
 const fmtMoney = (v: number) =>
     `${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -80,24 +89,23 @@ export function HeroTicket({
                   payoff: `${derived.payoff.year}年${derived.payoff.month}月`,
               });
     return (
-        <div
-            data-loan-hero
-            className="relative overflow-hidden rounded-card bg-gradient-to-br from-[#f8eeda] via-[#f9f2e4] to-[#f0e4cd] p-5 shadow-panel"
-        >
+        // 白卡（用户口径：暖色渐变票券卡「有点丑」，直接换白底）；
+        // 原来的打孔缺口 + 虚线只在渐变票券里成立，换白卡后一并去掉
+        <div data-loan-hero className={cn(LOAN_CARD, "relative p-4")}>
             <img
                 src={LOAN_TYPE_ICONS[draft.loanType]}
                 alt=""
                 aria-hidden
-                className="absolute top-4 right-4 size-13"
+                className="absolute top-4 right-4 size-11"
             />
-            <div className="text-xs text-ink-secondary">
+            <div className="text-[13px] text-ink-secondary">
                 {isPrincipal ? t("loan-hero-first") : t("loan-hero-monthly")}
             </div>
             <div className="mt-1 font-display text-4xl leading-tight font-bold text-brand tabular-nums">
                 <span className="mr-1 text-xl">¥</span>
                 {fmtMoney(derived.firstPayment)}
             </div>
-            <div className="mt-1 text-xs text-ink-secondary tabular-nums">
+            <div className="mt-1 pr-12 text-xs text-ink-secondary tabular-nums">
                 {sub}
                 {derived.splitFirst
                     ? ` · ${t("loan-hero-split", {
@@ -106,9 +114,7 @@ export function HeroTicket({
                       })}`
                     : ""}
             </div>
-            <div className="relative mt-4 border-t border-dashed border-[#0000001f] pt-4">
-                <div className="absolute -top-2.5 -left-5 size-5 rounded-full bg-ground" />
-                <div className="absolute -top-2.5 -right-5 size-5 rounded-full bg-ground" />
+            <div className="mt-4 border-t border-rule pt-4">
                 <div className="flex h-2 overflow-hidden rounded-full bg-brand/20">
                     <div
                         className="h-full rounded-full bg-brand transition-all"
@@ -168,9 +174,7 @@ export function TypeCards({
                     data-loan-type={type}
                     className={cn(
                         "flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 transition-colors",
-                        value === type
-                            ? "border-brand bg-brand/5 text-brand"
-                            : "border-rule bg-panel text-ink",
+                        value === type ? PICK_ON : PICK_OFF,
                     )}
                     onClick={() => onChange(type)}
                 >
@@ -195,6 +199,7 @@ export function TypeCards({
     );
 }
 
+/** 计算方式 / 还款方式等二选一：全站分段控件同形（浅灰容器 + 白色凸起胶囊） */
 function ModeChip({
     active,
     label,
@@ -210,12 +215,7 @@ function ModeChip({
         <button
             type="button"
             data-loan-mode={probe}
-            className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                active
-                    ? "bg-brand/10 text-brand ring-1 ring-brand/40"
-                    : "bg-ground-muted text-ink-secondary",
-            )}
+            className={cn(SEG_ITEM, active ? SEG_ON : SEG_OFF)}
             onClick={onClick}
         >
             {label}
@@ -241,12 +241,12 @@ export function SettingsCard({
     const isCombo = draft.loanType === "combo";
     const fundClamped = isCombo && draft.fundAmount > derived.totalWan + 1e-9;
     return (
-        <div className="divide-y divide-rule/60 rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+        <div className={cn("divide-y divide-rule/60", LOAN_CARD)}>
             <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-2">
                 <span className="flex-shrink-0 text-[15px] text-ink">
                     {t("loan-mode-label")}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className={SEG_GROUP}>
                     <ModeChip
                         probe="totalPrice"
                         active={draft.mode === "totalPrice"}

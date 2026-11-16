@@ -280,3 +280,14 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - **zh.json 去重**：loan 段有 **77 行重复键**（两次跑 locale 脚本所致，两条值完全相同、`JSON.parse` 取后者所以功能无感），已删重复、保留首条；去重后 zh 1418 键 / loan 94 键，en 94 键，loan 段零差异。
 - `pnpm --filter cent lint` 383 files 通过；清理了 4 个残留构建目录（`dist-stale-*`，合计 ~16MB，未被 .gitignore 覆盖、也不该入库）。
 - **探针坑**：`page.goto` 后立刻 `page.evaluate` 会因客户端跳转报 `Execution context was destroyed`——初始化必须走 `addInitScript` + 等 2s；`[data-loan-compare]` 只命中第一张卡（属性挂在两张按钮上），要点第二张得写 `[data-loan-compare="principal"]`。
+
+## 2026-11-16 13:20 贷款页视觉统一 + OAuth 登录回跳验证（worktree `feat-loan-261115`）
+
+- **页面底色**：`[data-route-page][data-route-path="/loan"]` 首屏测到 `pageBg rgb(244,244,244)`、`heroBg none | rgb(255,255,255)`、`heroRadius 16px`、保存按钮 `h 48 / radius 12px / bg rgb(255,132,53) / weight 600 / 15px`——底色、白卡、CTA 三项都落到中性作用域口径。
+- **分组标题**：`贷款设置` / `还款分析` = `12px / weight 400 / rgb(138,132,127)`（对齐车辆页 `GroupTitle`），不再是 15px 中文 700。
+- **抽屉三态**（`after2-loan-sheet-{term,rate,save}.png`）：年限滚轮选中胶囊**整行撑满居中**（此前单列滚轮只 `[&>*]:flex-1` 于多列时生效，白色胶囊缩到内容宽、贴左边）；商贷利率的 BP ± 已换成 `BTN_TAP`（28px 白圆 + 细描边 + 黑图标）、LPR 改成无边框右对齐数字；三个抽屉的确认按钮都是**整行橙色**（修前只有「确认」两个字宽，见 `before-loan-sheet-term.png`），灰底栏与抽屉底色同为 `#f4f4f4`（修前底栏是暖米 `#fbf7ef`）。
+- **回归**：`verify-loan-page.js` 改端口到 5183 后 Chromium / WebKit 输出一致（hero/对比切换/洞察条/`rawKeys []`/`years 8` 全同），WebKit 仅剩既有的 `Load failed` 网络噪声。`pnpm lint` 389 files 通过。
+- **OAuth 登录**（`.playwright-cli/probe-login-oauth.js`，路由拦截 `/api/*-oauth/*` 后点按钮）：
+  - 修前：点「使用 Github 登录」跳到 `http://localhost:5183/undefined/api/github-oauth/authorize?...`——相对路径被 Vite 的 SPA 兜底接住、重新加载回登录页，即用户说的「闪一下就没了」。
+  - 修后：`https://oncent-backend.linkai.work/api/github-oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A5183`、Gitee 同形（`...gitee-oauth/authorize...`），`page.url()` 已离开应用。`curl -I` 该地址返回 302 → `gitee.com/oauth/authorize?...`，说明回落后端可达。
+  - 探针坑：`page.getByRole("button", { name })` 用中文无障碍名最稳（按钮内图标 + 文案，`data-*` 未挂）；拦截 oauth 请求时用 `route.fulfill` 返回 stub，避免真的把会话带去 GitHub。

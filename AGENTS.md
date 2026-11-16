@@ -107,6 +107,16 @@
 **2026-11-16 12:20 口径变更登记**（**登录页页脚删「查看介绍」外链**）：用户口径「登录的查看介绍删掉」——页脚原来在 App 下载圆钮右侧有一条「查看介绍」跳作者博客，与「说明类内容都进抽屉、不跳出应用」冲突。已删该 `<a>`、那条 `size-1` 分隔点与语言键 `see-introduce`（zh/en 同步移除）。页脚现存：PWA 安装提示 → iOS/Android 下载圆钮 → 协议文案（仅 `isMeasurementEnabled()`）。**不要在下图标旁边再加文字链接。**
 **2026-11-16 12:25 口径变更登记**（**贷款计算页按 APK 重构落地**，worktree `feat-loan-261115`；细节 → `docs/agents/ui-loan.md`「Web 实现口径」，验证 → `docs/agents/verification.md`）：r35 采集的 APK 口径已全部实现——hero 票券卡（占比条 + 三项统计 + 3D 类型图标）、商业/公积金/组合三类型、按房屋总价 ↔ 按贷款金额双口径、LPR+BP 与公积金首套二套、对比卡点选还款方式 + 视角跟随的洞察条、堆叠柱年度计划（展开月表）、三模式提前还款模拟、方案命名/图标/改名/删除/另存/保存修改。① **金额单位一律在拼文案时补**（`¥` + 千分位、「万」按量级），不写进语言包——否则英文界面也长出「万」；② **还款方式只在对比卡点选**（用户拍板），表单里不要再放这一行；③ 页面滚动列必须 `[&>*]:shrink-0`，否则 flex 会把 hero 压成 40px；④ `SavedLoanPlan` 新字段**全部可选**，旧账本按旧语义解释；⑤ 提前还款卡**组合贷款不渲染**。已在 Chromium + WebKit 双引擎验证（`verify-loan-page.js`，正文零未翻译键、`pageErrors []`）。
 
+**2026-11-16 13:20 口径变更登记**（**贷款页视觉统一 + GitHub / Gitee 登录点了闪回**，均在 worktree `feat-loan-261115`；细节 → `docs/agents/ui-loan.md`、`ui-login.md`，验证 → `docs/agents/verification.md`）：
+
+① **贷款页底色进中性作用域**：`PopupLayout` 的 className 补 `dp-drawer-surface`（`bg-ground` 随之变 #f4f4f4），与车辆记录 / 预算管理等二级页同一套；**只有四个一级 tab 页保留暖米 `#fbf7ef`**，二级页一律中性灰白（用户口径「除了最外面的 tab 页，其他页面底色统一」）。
+② **hero 票券卡换白卡**：暖色渐变 + 打孔缺口 + 虚线用户反馈「渐变有点丑」，直接换成 `LOAN_CARD`（白底 + 16 圆角 + 车辆页同款轻投影），缺口 / 虚线一并删除（它们只为票券形态服务）。
+③ **按钮统一走共享口径**：新增 `loan-calculator/styles.ts`（`LOAN_CARD` / `PICK_ON` / `PICK_OFF` / `SEG_GROUP|ITEM|ON|OFF` / `SHEET_SURFACE` / `SHEET_ACTION`）。二选一（计算方式）与三选一（提前还款模式）改用**全站分段控件同形**（浅灰容器 + 白色凸起胶囊）；可选卡 / 快捷片统一 `border + PICK_ON|OFF`（不再出现 `bg-brand/5`、`bg-brand/10`、`ring-brand/40` 三种选中态）；BP 步进 ± 改用 `BTN_TAP`；利率输入改成无边框右对齐数字（与金额行同一套「聚焦全选」）。
+④ **`BTN_PRIMARY` 是 inline-flex，单独放必须显式 `w-full`**：抽屉底部与页面底栏的确认 / 保存按钮此前都只写 `className={BTN_PRIMARY}`，宽度退化成「两个字宽」的橙色小方块（截图里就是左下角一个橙色小胶囊）——这正是用户说的「抽屉里的确认按钮」不对。统一为 `cn(BTN_PRIMARY, SHEET_ACTION)`。
+⑤ **抽屉壳统一 `dp-sheet-surface`**：贷款抽屉原来只硬编码 `bg-[#f4f4f4]`，而 `SHEET_FOOTER` 的 `bg-ground` 拿不到作用域、退回暖米色，于是「灰抽屉 + 米色底栏」两截配色；改由 `SHEET_SURFACE` 一次性带 `dp-sheet-surface` + `bg-ground`。
+⑥ **字重收紧**：卡片外分组标题按车辆页 `GroupTitle` 降到 `12px` 次级灰（原 15px `font-semibold`）；卡片标题改 `dp-text-medium`（中文 600 在 Windows 上会落到 700，显粗）。数字仍 `font-semibold` / `font-bold`，中文标签不再用 600。
+⑦ **登录点了闪一下就回登录页的真因**：`VITE_LOGIN_API_HOST` 只在 `.env.local`（未提交）里配，本机没有该文件时 `import.meta.env.VITE_LOGIN_API_HOST` 为 `undefined`，拼出的 `undefined/api/gitee-oauth/authorize?...` 被当成**相对路径**，点登录只是把当前源刷一遍 → 回到登录页。新增 `api/endpoints/oauth-host.ts` 统一取址：合法 http(s) 环境变量优先，否则**回落到线上后端 `https://oncent-backend.linkai.work`**（与线上 bundle 里烘焙的一致），dev 与线上行为一致。顺带修两处隐患：token 的 `expires_in` / `refresh_token_expires_in` 后端给的是**秒**，落库漏乘 1000（被当成 8 秒后过期，每次登录都白跑一次 refresh）；`afterLogin` 解析失败 / 后端没换到 token 时原来既不 resolve 也不提示（`getToken` 永久挂起），现在 `try/catch/finally` 保证 resolve 并 toast `login-oauth-failed`。
+
 ## 1. 项目速览
 
 - 名称：**胖记**（用户明确：没有英文名，界面与 PWA 清单里不出现 Cent / 日计；仓库名、包名、上游链接仍是 Cent，不要改）。纯前端 PWA 记账应用，数据存在用户自己的 GitHub / Gitee / WebDAV / S3 仓库或本地离线库中，没有业务后端。

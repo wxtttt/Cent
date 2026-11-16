@@ -12,6 +12,7 @@ import {
 } from "../ui/dialog";
 import { LOAN_PLAN_ICONS, planIconSrc } from "./icons";
 import { deriveLoan, type LoanDraft } from "./model";
+import { SHEET_ACTION, SHEET_SURFACE } from "./styles";
 
 const fmtMoney = (v: number) =>
     v.toLocaleString("en-US", {
@@ -68,7 +69,7 @@ export function SavePlanSheet({
                     <DialogContent
                         from="bottom"
                         data-loan-sheet={mode === "create" ? "save" : "rename"}
-                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-[#f4f4f4] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                        className={SHEET_SURFACE}
                     >
                         <DialogTitle className="sr-only">
                             {mode === "create"
@@ -106,7 +107,7 @@ export function SavePlanSheet({
                                 {fmtMoney(derived.firstPayment)}
                             </div>
                         </div>
-                        <div className="mx-4 mt-4 rounded-2xl bg-white px-4">
+                        <div className="mx-4 mt-4 rounded-2xl bg-panel px-4">
                             <div className="flex min-h-13 items-center gap-2 py-2">
                                 <span className="flex-shrink-0 text-[15px] text-ink">
                                     {t("loan-plan-name")}
@@ -133,8 +134,8 @@ export function SavePlanSheet({
                                         className={cn(
                                             "size-11 cursor-pointer rounded-2xl border p-1.5 transition-colors",
                                             icon === key
-                                                ? "border-brand bg-brand/5"
-                                                : "border-transparent bg-white",
+                                                ? "border-brand bg-brand/10"
+                                                : "border-transparent bg-panel",
                                         )}
                                         onClick={() =>
                                             setIcon((prev) =>
@@ -156,8 +157,8 @@ export function SavePlanSheet({
                                     className={cn(
                                         "size-11 cursor-pointer rounded-2xl border p-1.5 transition-colors",
                                         icon === undefined
-                                            ? "border-brand bg-brand/5"
-                                            : "border-transparent bg-white",
+                                            ? "border-brand bg-brand/10"
+                                            : "border-transparent bg-panel",
                                     )}
                                     onClick={() => setIcon(undefined)}
                                 >
@@ -176,7 +177,7 @@ export function SavePlanSheet({
                         <div className={SHEET_FOOTER}>
                             <button
                                 type="button"
-                                className={BTN_PRIMARY}
+                                className={cn(BTN_PRIMARY, SHEET_ACTION)}
                                 disabled={!name.trim()}
                                 onClick={() => {
                                     onConfirm(name.trim(), icon);
@@ -218,7 +219,7 @@ export function ManageMenu({
                     <DialogContent
                         from="bottom"
                         data-loan-sheet="manage"
-                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-[#f4f4f4] pb-safe shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                        className={cn(SHEET_SURFACE, "pb-safe")}
                     >
                         <DialogTitle className="sr-only">
                             {planName}
@@ -236,7 +237,7 @@ export function ManageMenu({
                             <button
                                 type="button"
                                 data-loan-manage="rename"
-                                className="flex min-h-[52px] w-full cursor-pointer items-center justify-center rounded-2xl bg-white text-[15px] font-medium text-ink"
+                                className="flex min-h-[52px] w-full cursor-pointer items-center justify-center rounded-2xl bg-panel text-[15px] dp-text-medium text-ink shadow-[0_1px_5px_rgba(92,62,30,0.06)]"
                                 onClick={() => {
                                     onClose();
                                     onRename();
@@ -247,7 +248,7 @@ export function ManageMenu({
                             <button
                                 type="button"
                                 data-loan-manage="delete"
-                                className="mt-2 flex min-h-[52px] w-full cursor-pointer items-center justify-center rounded-2xl bg-[#fcdada] text-[15px] font-medium text-[#ef4444]"
+                                className="mt-2 flex min-h-[52px] w-full cursor-pointer items-center justify-center rounded-2xl bg-[#fcdada] text-[15px] dp-text-medium text-[#ef4444]"
                                 onClick={() => {
                                     onClose();
                                     onDelete();
