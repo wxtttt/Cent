@@ -347,3 +347,11 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - 探针：`.playwright-cli/probe-spacing.js`（分类 / 币种）、`probe-drawers.js`（分类抽屉）、`probe-vehicle4.js`（车辆抽屉）、`probe-tags.js`（标签页）。
 - 类型 / 构建：`npx tsc -b` 无错，`npx vite build --emptyOutDir=false` 通过。
 
+
+## 2026-11-16 22:4x 合入 `release/next` 并发布 cent-test
+
+- 提交链：`b710bae`（二级页与抽屉全量接入 `sheet-kit`）→ `d4c13ae`（语言包去 BOM）→ 合并 `2ad2818` / `8d10ccb`。
+- 发布：`pnpm build` 后在仓库根执行 `npx wrangler@3.114.17 pages deploy dist --project-name cent-test --branch main --commit-dirty=true`（前置清空代理），两次部署：`85ffe153`、`18297b17`。
+- 线上核对（原始字节 md5）：`index.html` `a47af6e7…`、`assets/index-BZJzV4c5.js` `117bcac8…`、`assets/zh-D7rro7Zg.js` `9d004779…`，三者与本地 `dist/` 完全一致；中文分片内可 grep 到「还没有特殊预算。旅行、装修这类开支可以单独设一条额度…」新文案。
+- 踩坑：`https://cent-test.pages.dev/index.html` 会 308 跳到 `/`（body 为空，`curl` 存下来是 0 字节），核对首页要直接取 `/`。
+- 语言包 `zh.json` / `en.json` 曾被编辑器写入 UTF-8 BOM，已单独提交清掉；仓库其余 JSON 均无 BOM，后续改动这两个文件需复查首 3 字节。
