@@ -56,6 +56,14 @@
 - **S3 页补「?」与眼睛**：`hint` 行右侧 `data-s3-help` 圆钮（40×40，图标 14px）打开 `showS3Help()`，五段——Endpoint 怎么填（三个示例域名）/ Region 与 Bucket / 密钥去哪拿 / 连不上时先查跨域（`https://cent.linkai.work` 作允许来源）/ 高级选项。Secret Access Key 补同款眼睛按钮，默认掩码。
 - **抽屉高度 `max-h-[90dvh]`**：86dvh 时 S3 说明的末段还差 22px（`overflow: 22`，最后一行被切），90dvh 下两页都恰好一屏（S3 高 774 / overflow 0，代理面板仍 731 由内容撑开）。段间距用 `py-2`（不是 2.5），这是为了多段文案也能一屏放下。**调文案长度后要重新量 `scrollHeight - clientHeight`**，别只看截图。
 
+## GitHub / Gitee 快捷登录（2026-11-16 13:20：点了「闪一下就没了」）
+
+- **后端地址统一从 `api/endpoints/oauth-host.ts` 取**（`LOGIN_API_HOST`）：`VITE_LOGIN_API_HOST` 合法（absolute http/https）就用它，否则**回落到线上后端 `https://oncent-backend.linkai.work`**（与线上 bundle 里烘焙的地址一致）。`github/login.ts` 与 `gitee/login.ts` 不要再各自 `import.meta.env` 取址。
+- **为什么必须有兜底**：环境变量只写在 `.env.local`（未提交），本机没有这个文件时 `import.meta.env.VITE_LOGIN_API_HOST` 是 `undefined`，拼出来的 `undefined/api/gitee-oauth/authorize?redirect_uri=...` 会被浏览器当成**相对路径**，于是「点登录 = 刷一下当前页」，用户看到的就是「闪一下就没了，没法登录」。`window.open(url, "_self")` 不会报错，所以这个坑在控制台里也是静默的。
+- **回跳解析必须保证 `loginFinished` 一定 resolve**：`index.html` 把带 `github_authorized` / `gitee_authorized` 的完整地址存进 `localStorage._oauth_res`，`afterLogin()` 再解析落库。解析失败、`type` 不匹配、后端没换到 token 这三种情况原来要么直接 `return`（不 resolve → `getToken` 永久挂起）、要么静默完成（停在登录页）。现在统一 `try/catch/finally`：异常与「没拿到 access_token」都 `toast.error(t("login-oauth-failed"))`，`finally` 里 resolve。
+- **`expires_in` / `refresh_token_expires_in` 是秒**：落库要 `Date.now() + n * 1000`。漏乘 1000 会被当成「8 秒后过期」，每次登录都立刻走一次 refresh（refresh token 没开就是 `Bad credentials`）。
+- 语言键：`login-oauth-failed`（zh「授权没有完成，请重新登录」/ en）。
+
 ## 语言键与窄屏
 
 - **r27 声称新增的语言键实际未落盘**（页面一度显示 key 字符串），本轮补齐并按新结构定稿：`login-page-title`（sr-only 标题）、`login-token`（现有 Token）、`login-to-webdav` / `login-to-s3`（WebDAV / S3 大按钮文案）、`login-webdav-hint`、`login-s3-hint`、`login-no-account`、`login-test-connection`（测试连接）、`login-test-ok`（连接成功 toast）、`login-providers`（常用服务商）、`login-optional`（选填）、`login-create-user`（新建用户）。合并引导页新增：`login-finish-setup`（完成设置）、`login-section-books`（账本）、`login-section-users`（用户）、`please-input-user-name`（新建用户 prompt 标题）；随合并页删除的键：`custom-user-name`（昵称标签）、`custom-user-name-tooltip`（`custom-user-name-placeholder` 保留给 prompt）。`login-group-*` 三组标题与 `login-more`（其他方式）随分组移除**废弃不用**；`login-offline-hint` 随离线升大按钮**删除**。S3 可选字段标签不再自带「(可选)」后缀（`s3-base-dir` / `s3-session-token` 改纯名称，「选填」标注统一由 FieldRow 渲染，避免「(可选)（选填）」叠字）。`app-introduce`（全应用仅登录页使用）值改为「多人协作家庭管理App」/ "Collaborative Family Management App"（用户 2026-11-15 口径）。其余沿用 `APP_NAME` / `pwa-install-tip` / `see-introduce` / `login`（登录中）/ 协议四键。

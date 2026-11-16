@@ -582,6 +582,7 @@
   "login-create-user": "Create a user",
   "login-finish-setup": "Finish setup",
   "login-no-account": "No account",
+  "login-oauth-failed": "Authorization did not finish, please sign in again",
   "login-optional": "optional",
   "login-page-title": "Sign in",
   "login-providers": "Common providers",

@@ -590,6 +590,7 @@
   "login-create-user": "新建用户",
   "login-finish-setup": "完成设置",
   "login-no-account": "无需账号",
+  "login-oauth-failed": "授权没有完成，请重新登录",
   "login-optional": "选填",
   "login-page-title": "登录",
   "login-providers": "常用服务商",
