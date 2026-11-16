@@ -166,13 +166,39 @@ export type CustomCurrency = {
 export type SavedLoanPlan = {
     id: string;
     name: string;
-    /** 贷款本金（元） */
+    /** 贷款本金（元），组合贷款时为两轨合计 */
     principal: number;
-    /** 年利率（百分数） */
+    /** 商贷年利率（百分数，组合贷款时也存商贷利率；缺省时即唯一利率） */
     annualRate: number;
     /** 还款期数（月） */
     months: number;
     createdAt: number;
+    // 新增字段全部可选：旧账本缺省时按旧语义（商业贷款 / 按贷款金额 / 等额本息）解释
+    /** 贷款类型 */
+    loanType?: "commercial" | "fund" | "combo";
+    /** 金额口径 */
+    mode?: "totalPrice" | "amount";
+    /** 房屋总价（万，按房屋总价口径） */
+    housePrice?: number;
+    /** 首付比例 0-1 */
+    downRatio?: number;
+    /** 公积金额度（万，组合贷款） */
+    fundAmount?: number;
+    /** 商贷 LPR（百分数），缺省表示旧数据只有 annualRate */
+    lpr?: number;
+    /** LPR 加减点（BP，可为负） */
+    bp?: number;
+    /** 公积金年利率（百分数） */
+    fundRate?: number;
+    /** 公积金套数 */
+    fundSuite?: "first" | "second";
+    /** 还款方式，缺省 installment */
+    method?: "installment" | "principal";
+    /** 首次还款年月，缺省按 createdAt 次月解释 */
+    firstPayYear?: number;
+    firstPayMonth?: number;
+    /** 方案图标（public/loan/ 下文件名去后缀），缺省按贷款类型 */
+    icon?: string;
 };
 
 /** 一次账单导入的历史记录 */

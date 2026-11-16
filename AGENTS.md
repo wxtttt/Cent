@@ -20,6 +20,7 @@
 | `docs/agents/ui-vehicle.md` | 改车辆记录 / 行车能耗页、车辆领域模型、统计与示例数据、APK 实测口径差异 |
 | `docs/agents/ui-login.md` | 改登录页、登录方式选择、未登录引导层 |
 | `docs/agents/ui-currency.md` | 改汇率与货币页、记一笔币种选择抽屉、手动汇率 / 自定义币种弹层 |
+| `docs/agents/ui-loan.md` | 改贷款计算页（r35 起重构以 APK 实机口径为准） |
 | `docs/agents/navigation.md` | 改二级页出场方式、路由表、`routePath` / FromRight 右滑、弹层与页面的边界 |
 | `docs/agents/fork-customizations.md` | 查 fork 相对上游已重做的功能清单 |
 | `docs/agents/verification.md` | 写 / 跑浏览器验证脚本、WebKit 双引擎验证 |
@@ -77,6 +78,8 @@
 
 **2026-11-15 r34 提交登记**（用户明确「拉取 next 最新代码解决冲突并 push」）：r34 / r34b 全部改动一次性提交到 `feat-currency-261115` 并 push origin；随后把 `origin/release/next` 最新（上述车辆能耗轮次 r31~r33 的提交 `adf872f` 与合入记录 `a9c13cc`）merge 回 feature 分支，冲突落在 AGENTS.md / `docs/agents/verification.md`（双方登记同日撞号 r31，货币侧改记 r34 / r34b 后取并集），zh-en 语言包双方各自新增语言键由 git 自动合并，车辆与货币组件代码零重叠；**随后按用户明确要求「push 并合并」把 feature 分支 `--no-ff` 合入 `release/next` 并 push（本登记更新先随 docs 提交进 feature 分支、再随合并进入 next）；未部署，Cloudflare 线上是旧版**。
 
+**2026-11-15 r35 口径变更登记**（**贷款计算页重构准备轮**，细节与 APK 交互清单 → `docs/agents/ui-loan.md`，采集方法 → `docs/agents/homefull-reference.md`）：用户要求「拉取最新代码，把 worktree 改成新的分支，准备重构贷款计算页面，参考原 apk 的交互和设计，里面所有的交互点都要参考和借鉴」。worktree `E:\code\_cent_currency` 已切到新分支 **`feat-loan-261115`**（基于 `release/next` @ `db73b88`，含登录会话合入的登录页重构；货币轮已以 `bc4ed99` 合入 next）。APK 侧**确实有** loan 模块（`feature/loan/` page / hero_card / form / schedule_card / compare_card / sheets / calculator，API `loan/plan`，纯计算无后端依赖），已用 `vehicle-test/adbhelper.py` 在 `emulator-5554` 现场采集 **38 张截图 + XML 到 `E:\code\_apk_homefull\loan-live\`**，交互全清单（方案条/hero 票券卡/三类型/房价首付口径/LPR+BP/公积金首套二套/还款方式三处联动/首次还款滚轮/对比卡+绿色洞察条/堆叠柱图表/年度行展开月表/保存命名+图标/另存为新方案+保存修改双态/**顶栏 ⋯ 方案管理（改名+删除）**）逐条登记在 ui-loan.md。**本轮未写业务代码、未 commit / push**；5175 preview 已重建到 db73b88（`index-DxDx7A3v.js`）。采集创建的测试方案已通过删除链路清掉；APK 设计评审与改进点见 ui-loan.md「设计评审」段。
+
 **2026-11-15 22:45 合并登记**（登录分支同步 next 最新，worktree `feat-login-261115`）：把 `origin/release/next` 最新（`bc4ed99`，含车辆能耗 r31~r33 与币种抽屉搜索 r34）merge 进登录分支；唯一内容冲突落在 `docs/agents/verification.md`（双方都在文档尾部追加各自验证段），取并集保留两侧；AGENTS.md 与 zh/en 语言包由 git 自动合并（并集校验通过：`login-finish-setup` / `login-section-books` / `login-section-users` / `please-input-user-name` 与币种键俱在、JSON 合法）；车辆 / 货币组件与登录组件零文件重叠，仅全量 bundle 一起变更——合并后按口径重跑 lint、构建与登录双引擎回归。**本轮只做分支内合并提交，未 push、未改动 release/next**。
 
 **2026-11-15 23:02 口径变更登记**（**选择账本页补返回按钮**，用户问「选择账本为什么没有返回按钮」，细节 → `docs/agents/ui-login.md`）：合并引导页（`book/form.tsx`）的左上角圆形返回**改为始终显示**——从个人页等入口进入（`onCancel` 有值）仍是关页返回；**登录后的首次引导返回 = 退出登录回登录页**（登录是流程的一环，要允许反悔换一种登录方式；不能只隐藏登录层，因为登录层仅在未登录时渲染），走新增的 `utils/logout.ts` `logoutWithConfirm`（与设置页 `toLogOut` 共用同一套：`logout-warning` prompt 确认，取消静默留在原地 → beforeLogout 快照 → 端点 logout → 清空本地存储 → afterLogout 恢复上次连接信息 → reload；WebDAV / S3 的连接信息由快照保留，重填成本低）。`verify-login.js` 补断言：返回 → 弹「退出登录」确认 → 确认后回到登录页。
@@ -102,6 +105,7 @@
 **2026-11-16 12:10 口径变更登记**（**说明类内容一律进抽屉 + S3 页补「?」与眼睛**，worktree `feat-login-261115`；细节 → `docs/agents/ui-login.md`，验证 → `docs/agents/verification.md`）：① 用户口径「有什么说明的地方都改成抽屉」——登录流程里解释字段怎么填的内容不再 `target="_blank"` 跳出应用，统一进底部抽屉；骨架抽到 `components/modal/help-sheet.tsx`（`HelpSheetLayout` / `HelpSection` / `HelpCode` / `HELP_SHEET_OPTIONS`），**以后新增说明面板复用这四个，不要各页各写一套**。代理抽屉里原来那个「查看完整说明」外链已删（它正是要消灭的跳转）。② S3 页此前没有任何说明入口，现于 `hint` 行右侧加 `data-s3-help` 圆钮（40×40）打开 `showS3Help()`，五段：Endpoint 怎么填（含三个示例域名）/ Region 与 Bucket / 密钥去哪拿 / 连不上时先查跨域（允许来源 `https://cent.linkai.work`）/ 高级选项；Secret Access Key 补 40×40 眼睛按钮，默认掩码。③ 抽屉上限从 `86dvh` 提到 `90dvh`：86dvh 下 S3 说明末段差 22px 露不全（会切字），90dvh 两页都恰好一屏；段间距 `py-2`。**改文案后必须重新量 `scrollHeight - clientHeight`，不能只看截图。**
 
 **2026-11-16 12:20 口径变更登记**（**登录页页脚删「查看介绍」外链**）：用户口径「登录的查看介绍删掉」——页脚原来在 App 下载圆钮右侧有一条「查看介绍」跳作者博客，与「说明类内容都进抽屉、不跳出应用」冲突。已删该 `<a>`、那条 `size-1` 分隔点与语言键 `see-introduce`（zh/en 同步移除）。页脚现存：PWA 安装提示 → iOS/Android 下载圆钮 → 协议文案（仅 `isMeasurementEnabled()`）。**不要在下图标旁边再加文字链接。**
+**2026-11-16 12:25 口径变更登记**（**贷款计算页按 APK 重构落地**，worktree `feat-loan-261115`；细节 → `docs/agents/ui-loan.md`「Web 实现口径」，验证 → `docs/agents/verification.md`）：r35 采集的 APK 口径已全部实现——hero 票券卡（占比条 + 三项统计 + 3D 类型图标）、商业/公积金/组合三类型、按房屋总价 ↔ 按贷款金额双口径、LPR+BP 与公积金首套二套、对比卡点选还款方式 + 视角跟随的洞察条、堆叠柱年度计划（展开月表）、三模式提前还款模拟、方案命名/图标/改名/删除/另存/保存修改。① **金额单位一律在拼文案时补**（`¥` + 千分位、「万」按量级），不写进语言包——否则英文界面也长出「万」；② **还款方式只在对比卡点选**（用户拍板），表单里不要再放这一行；③ 页面滚动列必须 `[&>*]:shrink-0`，否则 flex 会把 hero 压成 40px；④ `SavedLoanPlan` 新字段**全部可选**，旧账本按旧语义解释；⑤ 提前还款卡**组合贷款不渲染**。已在 Chromium + WebKit 双引擎验证（`verify-loan-page.js`，正文零未翻译键、`pageErrors []`）。
 
 ## 1. 项目速览
 

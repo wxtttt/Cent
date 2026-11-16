@@ -1,68 +1,40 @@
-import { Collapsible } from "radix-ui";
-import { useMemo, useState } from "react";
-import modal from "@/components/modal";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useCurrency } from "@/hooks/use-currency";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useLoanPlans } from "@/hooks/use-loan-plans";
 import PopupLayout from "@/layouts/popup-layout";
-import { compareLoans, type LoanResult } from "@/ledger/loan";
+import type { SavedLoanPlan } from "@/ledger/extra-type";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import { toThousand } from "@/utils/number";
+import { BTN_PRIMARY, BTN_SECONDARY, SHEET_FOOTER } from "../button-styles";
+import { planIconSrc } from "./icons";
+import {
+    defaultDraft,
+    deriveLoan,
+    type LoanDraft,
+    toDraft,
+    toPlanInput,
+} from "./model";
+import {
+    CommercialRateSheet,
+    DownPaymentSheet,
+    FirstPaySheet,
+    FundRateSheet,
+    TermSheet,
+} from "./pickers";
+import { LoanDeleteProvider, showLoanDelete } from "./providers";
+import { CompareCard, PrepayCard, ScheduleCard } from "./results";
+import { ManageMenu, SavePlanSheet } from "./save-sheet";
+import { HeroTicket, SettingsCard, TypeCards } from "./sections";
 
-const YEAR_PRESETS = [10, 20, 30];
+type SheetKind =
+    | "down"
+    | "term"
+    | "rateCommercial"
+    | "rateFund"
+    | "firstPay"
+    | null;
 
-function parsePositive(text: string) {
-    const value = Number(text.replace(/,/g, ""));
-    return Number.isFinite(value) && value > 0 ? value : undefined;
-}
-
-function ResultCard({
-    title,
-    subtitle,
-    main,
-    rows,
-    highlight,
-}: {
-    title: string;
-    subtitle: string;
-    main: React.ReactNode;
-    rows: { label: string; value: string }[];
-    highlight?: boolean;
-}) {
-    return (
-        <div
-            className={cn(
-                "rounded-card border p-4",
-                highlight
-                    ? "border-brand/40 bg-brand/5"
-                    : "border-rule bg-panel",
-            )}
-        >
-            <div className="flex items-baseline justify-between">
-                <span className="text-sm font-semibold">{title}</span>
-                <span className="text-xs text-ink-secondary">{subtitle}</span>
-            </div>
-            <div className="mt-2 font-display text-2xl font-bold tabular-nums">
-                {main}
-            </div>
-            <div className="mt-2 flex flex-col gap-1">
-                {rows.map((row) => (
-                    <div
-                        key={row.label}
-                        className="flex items-baseline justify-between text-xs"
-                    >
-                        <span className="text-ink-secondary">{row.label}</span>
-                        <span className="font-semibold tabular-nums">
-                            {row.value}
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
+const fmtWan = (v: number) => `${Math.round(v * 100) / 100}`;
 
 export default function LoanCalculatorForm({
     onCancel,
@@ -70,295 +42,343 @@ export default function LoanCalculatorForm({
     onCancel?: () => void;
 }) {
     const t = useIntl();
-    const { baseCurrency } = useCurrency();
-    const { plans, add, remove } = useLoanPlans();
+    const { plans, add, remove, update } = useLoanPlans();
 
-    const [principalText, setPrincipalText] = useState("");
-    const [rateText, setRateText] = useState("");
-    const [yearsText, setYearsText] = useState("");
-
-    const principal = parsePositive(principalText);
-    const annualRate = rateText === "" ? undefined : Number(rateText) || 0;
-    const years = parsePositive(yearsText);
-    const input = useMemo(() => {
-        if (!principal || annualRate === undefined || !years) {
-            return undefined;
-        }
-        const months = Math.round(years * 12);
-        if (months < 1) {
-            return undefined;
-        }
-        return { principal, annualRate, months };
-    }, [principal, annualRate, years]);
-
-    const result = useMemo(
-        () => (input ? compareLoans(input) : undefined),
-        [input],
+    const [selectedId, setSelectedId] = useState<string | null>(
+        plans[0]?.id ?? null,
     );
+    const [draft, setDraft] = useState<LoanDraft>(() =>
+        plans[0] ? toDraft(plans[0]) : defaultDraft(),
+    );
+    const [dirty, setDirty] = useState(false);
 
-    const fmt = (value: number) => toThousand(value, 0, 2);
-    const money = (value: number) => `${baseCurrency.symbol}${fmt(value)}`;
+    const [sheet, setSheet] = useState<SheetKind>(null);
+    const [saveSheet, setSaveSheet] = useState<{
+        mode: "create" | "rename";
+        plan?: SavedLoanPlan;
+    } | null>(null);
+    const [manageOpen, setManageOpen] = useState(false);
+    const longPressTimer = useRef<number | undefined>(undefined);
+    const longPressTarget = useRef<SavedLoanPlan | undefined>(undefined);
+    const suppressClickRef = useRef(false);
+    // 刚保存的方案可能晚一拍才进 plans（updatePersonalMeta 异步落库），
+    // 守卫 effect 在 plans 到位前不能把它当成「已被外部删除」
+    const addedIdsRef = useRef<Set<string>>(new Set());
 
-    const toSave = async () => {
-        if (!input) return;
-        const defaultName = `${fmt(input.principal)} / ${years}年`;
-        try {
-            const name = await modal.prompt({
-                title: t("loan-save-plan"),
-                input: { defaultValue: defaultName },
-            });
-            await add({
-                name: String(name ?? defaultName) || defaultName,
-                principal: input.principal,
-                annualRate: input.annualRate,
-                months: input.months,
-            });
-        } catch {
-            // 用户取消
+    const derived = deriveLoan(draft);
+    const selected = plans.find((p) => p.id === selectedId);
+
+    const edit = useCallback((patch: Partial<LoanDraft>) => {
+        setDraft((prev) => ({ ...prev, ...patch }));
+        setDirty(true);
+    }, []);
+
+    const selectPlan = useCallback((plan: SavedLoanPlan) => {
+        setSelectedId(plan.id);
+        setDraft(toDraft(plan));
+        setDirty(false);
+    }, []);
+
+    // 已选方案被外部（如另一端同步）删除时回退到草稿态
+    useEffect(() => {
+        if (
+            selectedId &&
+            !plans.some((p) => p.id === selectedId) &&
+            !addedIdsRef.current.has(selectedId)
+        ) {
+            setSelectedId(null);
+            setDirty(false);
         }
+    }, [plans, selectedId]);
+
+    const typeName = t(
+        draft.loanType === "commercial"
+            ? "loan-type-commercial"
+            : draft.loanType === "fund"
+              ? "loan-type-fund"
+              : "loan-type-combo",
+    );
+    const defaultName = t("loan-plan-default-name", {
+        type: typeName,
+        amount: fmtWan(derived.totalWan),
+        years: draft.termYears,
+    });
+
+    const afterSave = (id: string | undefined) => {
+        if (id) {
+            addedIdsRef.current.add(id);
+            setSelectedId(id);
+            setDirty(false);
+        }
+        toast.success(t("loan-toast-saved"));
     };
 
-    const loadPlan = (plan: {
-        principal: number;
-        annualRate: number;
-        months: number;
-    }) => {
-        setPrincipalText(String(plan.principal));
-        setRateText(String(plan.annualRate));
-        setYearsText(String(plan.months / 12));
+    const patchSelected = async () => {
+        if (!selected) return;
+        await update(
+            selected.id,
+            toPlanInput(draft, selected.name, selected.icon),
+        );
+        setDirty(false);
+        toast.success(t("loan-toast-saved"));
+    };
+
+    const cancelLongPress = () => {
+        window.clearTimeout(longPressTimer.current);
+    };
+
+    // chip 长按：先切到该方案再弹管理菜单（管理菜单始终作用于当前选中方案）
+    const startLongPress = (plan: SavedLoanPlan) => {
+        suppressClickRef.current = false;
+        longPressTarget.current = plan;
+        longPressTimer.current = window.setTimeout(() => {
+            suppressClickRef.current = true;
+            selectPlan(plan);
+            setManageOpen(true);
+        }, 550);
     };
 
     return (
         <PopupLayout
             onBack={onCancel}
             title={t("loan-calculator")}
-            className="h-full overflow-hidden"
+            className="h-full bg-ground"
+            backStyle="circle"
+            right={
+                selected ? (
+                    <button
+                        type="button"
+                        data-loan-more
+                        aria-label={t("loan-manage-open")}
+                        className="-mr-1 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                        onClick={() => setManageOpen(true)}
+                    >
+                        <i className="icon-[lucide--ellipsis] size-5" />
+                    </button>
+                ) : undefined
+            }
         >
-            <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
-                {plans.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-ink-secondary">
-                            {t("loan-saved-plans")}
-                        </span>
-                        {plans.map((plan) => (
-                            <span
-                                key={plan.id}
-                                className="inline-flex items-center gap-1 rounded-full border border-rule bg-panel py-1 pr-1 pl-3 text-xs shadow-panel"
-                            >
+            <div className="flex h-full flex-col">
+                {/* 子项必须 shrink-0：flex 纵向容器里内容高于视口时，
+                    默认 shrink 会把 hero 票券卡压成 40px 高（实测 scrollHeight 222） */}
+                <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-3 [&>*]:shrink-0">
+                    {plans.length > 0 && (
+                        <div
+                            data-loan-plan-bar
+                            className="flex items-center gap-2 overflow-x-auto scrollbar-hidden"
+                        >
+                            {plans.map((plan) => (
                                 <button
+                                    key={plan.id}
                                     type="button"
-                                    className="cursor-pointer font-medium"
-                                    onClick={() => loadPlan(plan)}
+                                    data-loan-plan-chip={plan.id}
+                                    className={cn(
+                                        "flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-medium transition-colors",
+                                        selectedId === plan.id
+                                            ? "border-brand bg-brand/5 text-brand"
+                                            : "border-rule bg-panel text-ink",
+                                    )}
+                                    onClick={() => {
+                                        if (suppressClickRef.current) {
+                                            suppressClickRef.current = false;
+                                            return;
+                                        }
+                                        selectPlan(plan);
+                                    }}
+                                    onPointerDown={() => startLongPress(plan)}
+                                    onPointerUp={cancelLongPress}
+                                    onPointerLeave={cancelLongPress}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        selectPlan(plan);
+                                        setManageOpen(true);
+                                    }}
                                 >
+                                    <img
+                                        src={planIconSrc(
+                                            plan.icon,
+                                            draft.loanType,
+                                        )}
+                                        alt=""
+                                        aria-hidden
+                                        className="size-5 object-contain"
+                                    />
                                     {plan.name}
                                 </button>
-                                <button
-                                    type="button"
-                                    aria-label={t("delete")}
-                                    className="flex size-5 cursor-pointer items-center justify-center rounded-full text-ink-secondary hover:bg-ground-muted"
-                                    onClick={() => remove(plan.id)}
-                                >
-                                    <i className="icon-[apk--close] size-3" />
-                                </button>
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-                <div className="flex flex-col gap-3 rounded-card border border-rule bg-panel p-4 shadow-panel">
-                    <div className="flex flex-col gap-1.5">
-                        <span className="text-xs text-ink-secondary">
-                            {t("loan-principal")}
-                        </span>
-                        <Input
-                            inputMode="decimal"
-                            placeholder="1000000"
-                            value={principalText}
-                            onChange={(e) => setPrincipalText(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                        <span className="text-xs text-ink-secondary">
-                            {t("loan-annual-rate")}
-                        </span>
-                        <Input
-                            inputMode="decimal"
-                            placeholder="3.6"
-                            value={rateText}
-                            onChange={(e) => setRateText(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                        <span className="text-xs text-ink-secondary">
-                            {t("loan-term-years")}
-                        </span>
-                        <div className="flex items-center gap-2">
-                            <Input
-                                inputMode="decimal"
-                                placeholder="30"
-                                className="flex-1"
-                                value={yearsText}
-                                onChange={(e) => setYearsText(e.target.value)}
-                            />
-                            {YEAR_PRESETS.map((preset) => (
-                                <Button
-                                    key={preset}
-                                    variant="outline"
-                                    size="sm"
-                                    className={cn(
-                                        "flex-shrink-0",
-                                        years === preset &&
-                                            "border-brand/50 bg-brand/10",
-                                    )}
-                                    onClick={() => setYearsText(String(preset))}
-                                >
-                                    {preset}
-                                </Button>
                             ))}
+                            {selectedId === null && (
+                                <span
+                                    data-loan-draft-chip
+                                    className="flex-shrink-0 rounded-full border border-brand bg-brand/5 px-3 py-2 text-[13px] font-medium text-brand"
+                                >
+                                    {t("loan-plan-new")}
+                                </span>
+                            )}
+                            <button
+                                type="button"
+                                data-loan-plan-new
+                                className="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-full border border-rule bg-panel px-3 py-2 text-[13px] font-medium text-ink"
+                                onClick={() => {
+                                    setSelectedId(null);
+                                    setDirty(false);
+                                }}
+                            >
+                                <i className="icon-[lucide--plus] size-3.5" />
+                                {t("loan-plan-create")}
+                            </button>
                         </div>
-                    </div>
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={!input}
-                        onClick={toSave}
-                    >
-                        <i className="icon-[lucide--save]" />
-                        {t("loan-save-plan")}
-                    </Button>
-                </div>
+                    )}
 
-                {result && (
-                    <>
-                        <div className="grid grid-cols-2 gap-3">
-                            <ResultCard
-                                title={t("loan-method-installment")}
-                                subtitle={t("loan-installment-fixed")}
-                                main={money(result.installment.firstPayment)}
-                                rows={[
-                                    {
-                                        label: t("loan-total-interest"),
-                                        value: money(
-                                            result.installment.totalInterest,
-                                        ),
-                                    },
-                                    {
-                                        label: t("loan-total-payment"),
-                                        value: money(
-                                            result.installment.totalPayment,
-                                        ),
-                                    },
-                                ]}
-                            />
-                            <ResultCard
-                                title={t("loan-method-principal")}
-                                subtitle={t("loan-principal-decreasing")}
-                                highlight={result.interestDiff > 0}
-                                main={money(result.principal.firstPayment)}
-                                rows={[
-                                    {
-                                        label: t("loan-last-month"),
-                                        value: money(
-                                            result.principal.lastPayment,
-                                        ),
-                                    },
-                                    {
-                                        label: t("loan-total-interest"),
-                                        value: money(
-                                            result.principal.totalInterest,
-                                        ),
-                                    },
-                                    {
-                                        label: t("loan-total-payment"),
-                                        value: money(
-                                            result.principal.totalPayment,
-                                        ),
-                                    },
-                                ]}
-                            />
+                    <HeroTicket draft={draft} derived={derived} />
+
+                    <div>
+                        <div className="px-1 pb-2 text-[15px] font-semibold text-ink">
+                            {t("loan-settings")}
                         </div>
-                        {result.interestDiff > 0 && (
-                            <div className="rounded-card border border-brand/30 bg-brand/5 px-4 py-2.5 text-xs text-brand">
-                                {t("loan-interest-diff-note", {
-                                    amount: money(result.interestDiff),
-                                })}
-                            </div>
-                        )}
-                        <YearlyDetail
-                            result={result.installment}
-                            money={money}
+                        <TypeCards
+                            value={draft.loanType}
+                            onChange={(loanType) => edit({ loanType })}
                         />
-                    </>
-                )}
-            </div>
-        </PopupLayout>
-    );
-}
-
-function YearlyDetail({
-    result,
-    money,
-}: {
-    result: LoanResult;
-    money: (value: number) => string;
-}) {
-    const t = useIntl();
-    const [open, setOpen] = useState(false);
-    return (
-        <Collapsible.Root
-            open={open}
-            onOpenChange={setOpen}
-            className="rounded-card border border-rule bg-panel shadow-panel"
-        >
-            <Collapsible.Trigger asChild>
-                <button
-                    type="button"
-                    className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold"
-                >
-                    {t("loan-yearly-detail")}
-                    <i
-                        className={cn(
-                            "icon-[lucide--chevron-down] size-4 text-ink-secondary transition-transform",
-                            open && "rotate-180",
-                        )}
-                    />
-                </button>
-            </Collapsible.Trigger>
-            <Collapsible.Content className="data-[state=open]:animate-collapse-open data-[state=closed]:animate-collapse-close data-[state=closed]:overflow-hidden">
-                <div className="border-t border-rule px-4 py-2">
-                    <div className="flex items-baseline py-1.5 text-xs text-ink-secondary">
-                        <span className="flex-1">{t("loan-col-year")}</span>
-                        <span className="flex-1 text-right">
-                            {t("loan-col-payment")}
-                        </span>
-                        <span className="flex-1 text-right">
-                            {t("loan-col-interest")}
-                        </span>
-                        <span className="flex-1 text-right">
-                            {t("loan-col-remaining")}
-                        </span>
-                    </div>
-                    {result.yearly.map((row) => (
-                        <div
-                            key={row.year}
-                            className="flex items-baseline border-t border-rule/60 py-1.5 text-xs tabular-nums"
-                        >
-                            <span className="flex-1">
-                                {t("loan-year-n", { n: row.year })}
-                            </span>
-                            <span className="flex-1 text-right">
-                                {money(row.total)}
-                            </span>
-                            <span className="flex-1 text-right">
-                                {money(row.interest)}
-                            </span>
-                            <span className="flex-1 text-right">
-                                {money(row.remaining)}
-                            </span>
+                        <div className="mt-3">
+                            <SettingsCard
+                                draft={draft}
+                                derived={derived}
+                                edit={edit}
+                                onOpenSheet={(kind) => setSheet(kind)}
+                            />
                         </div>
-                    ))}
+                    </div>
+
+                    <div>
+                        <div className="px-1 pb-2 text-[15px] font-semibold text-ink">
+                            {t("loan-analysis-title")}
+                        </div>
+                        <CompareCard
+                            draft={draft}
+                            onSelect={(method) => edit({ method })}
+                        />
+                    </div>
+
+                    <ScheduleCard derived={derived} />
+
+                    {draft.loanType !== "combo" && (
+                        <PrepayCard draft={draft} derived={derived} />
+                    )}
+
+                    <p className="px-1 pb-2 text-[11px] leading-relaxed text-ink-secondary">
+                        {t("loan-page-disclaimer")}
+                    </p>
                 </div>
-            </Collapsible.Content>
-        </Collapsible.Root>
+
+                <div className={SHEET_FOOTER}>
+                    {selected && dirty ? (
+                        <div className="flex gap-2.5">
+                            <button
+                                type="button"
+                                data-loan-save-as
+                                className={`${BTN_SECONDARY} flex-1`}
+                                onClick={() => setSaveSheet({ mode: "create" })}
+                            >
+                                {t("loan-save-as-new")}
+                            </button>
+                            <button
+                                type="button"
+                                data-loan-save-modify
+                                className={`${BTN_PRIMARY} flex-1`}
+                                onClick={() => void patchSelected()}
+                            >
+                                {t("loan-save-modify")}
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            data-loan-save
+                            className={BTN_PRIMARY}
+                            onClick={() => setSaveSheet({ mode: "create" })}
+                        >
+                            {t("loan-save-plan")}
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <TermSheet
+                open={sheet === "term"}
+                onOpenChange={(v) => setSheet(v ? "term" : null)}
+                value={draft.termYears}
+                onConfirm={(years) => edit({ termYears: years })}
+            />
+            <DownPaymentSheet
+                open={sheet === "down"}
+                onOpenChange={(v) => setSheet(v ? "down" : null)}
+                value={draft.downRatio}
+                onConfirm={(ratio) => edit({ downRatio: ratio })}
+            />
+            <FirstPaySheet
+                open={sheet === "firstPay"}
+                onOpenChange={(v) => setSheet(v ? "firstPay" : null)}
+                value={draft.firstPay}
+                onConfirm={(firstPay) => edit({ firstPay })}
+            />
+            <CommercialRateSheet
+                open={sheet === "rateCommercial"}
+                onOpenChange={(v) => setSheet(v ? "rateCommercial" : null)}
+                draft={draft}
+                onConfirm={(patch) => edit(patch)}
+            />
+            <FundRateSheet
+                open={sheet === "rateFund"}
+                onOpenChange={(v) => setSheet(v ? "rateFund" : null)}
+                draft={draft}
+                onConfirm={(patch) => edit(patch)}
+            />
+            <SavePlanSheet
+                open={saveSheet !== null}
+                mode={saveSheet?.mode ?? "create"}
+                draft={draft}
+                defaultName={
+                    saveSheet?.mode === "rename"
+                        ? (saveSheet.plan?.name ?? defaultName)
+                        : defaultName
+                }
+                defaultIcon={saveSheet?.plan?.icon}
+                onClose={() => setSaveSheet(null)}
+                onConfirm={async (name, icon) => {
+                    if (saveSheet?.mode === "rename" && saveSheet.plan) {
+                        await update(saveSheet.plan.id, { name, icon });
+                        afterSave(saveSheet.plan.id);
+                        return;
+                    }
+                    const id = await add(toPlanInput(draft, name, icon));
+                    afterSave(id);
+                }}
+            />
+            <ManageMenu
+                open={manageOpen && selected !== undefined}
+                planName={selected?.name ?? ""}
+                onRename={() =>
+                    selected && setSaveSheet({ mode: "rename", plan: selected })
+                }
+                onDelete={() => {
+                    if (!selected) return;
+                    const target = selected;
+                    showLoanDelete({
+                        title: t("loan-manage-delete"),
+                        description: t("loan-delete-confirm", {
+                            name: target.name,
+                        }),
+                        onDelete: () => {
+                            addedIdsRef.current.delete(target.id);
+                            void remove(target.id).then(() => {
+                                setSelectedId(null);
+                                toast.success(t("loan-toast-deleted"));
+                            });
+                        },
+                    });
+                }}
+                onClose={() => setManageOpen(false)}
+            />
+        </PopupLayout>
     );
 }

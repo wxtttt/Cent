@@ -42,5 +42,21 @@ export function useLoanPlans() {
         });
     }, []);
 
-    return { plans, add, remove };
+    /** patch 已存方案（改名 / 改图标 / 保存修改），按 id 原位覆盖 */
+    const update = useCallback(
+        async (id: string, patch: Partial<SavedLoanPlan>) => {
+            const book = useBookStore.getState().currentBookId;
+            if (!book) return;
+            await useLedgerStore.getState().updatePersonalMeta((prev) => {
+                if (prev.loanPlans === undefined) return prev;
+                prev.loanPlans = prev.loanPlans.map((v) =>
+                    v.id === id ? { ...v, ...patch } : v,
+                );
+                return prev;
+            });
+        },
+        [],
+    );
+
+    return { plans, add, remove, update };
 }
