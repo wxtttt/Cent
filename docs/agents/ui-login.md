@@ -48,8 +48,11 @@
 
 - **「常用服务商」与字段组包在同一张白卡里**（用户口径「整组包裹起来，用白色底色，类似卡片」）：卡 `max-w-[340px] rounded-[20px] bg-panel px-4 pt-4`，字段细线不再顶到卡边。胶囊在卡内必须改浅灰底 `bg-ground`——原来是白底描边（`bg-panel border-rule`），放进白卡后与卡同色、看不出是按钮。文字 `text-ink` 黑色 + `text-[14px]` + `px-3.5 py-1.5`：用户两条口径叠加（「字号略小」→ 放大到 14px；「按钮不要调这么大」→ padding 不再跟着放大），实测 72×36。
 - **S3 高级选项默认折叠**：`baseDir` / `sessionToken` / `forcePathStyle` 收进卡片底部的 44px 折叠行（`aria-expanded` + chevron 旋转），默认折叠；折叠态这三个字段不渲染（探针按 `input[placeholder="cent"]` 计数 0 → 1 判定），卡高 463 → 635。
-- **代理地址的「?」改为应用内说明抽屉**：原来 `target="_blank"` 跳到博客的「使用代理」小节，手机上要来回切应用。现为 `components/modal/login-proxy-help.tsx` 的 `showProxyHelp()`，底部抽屉分五段——什么时候需要 / 怎么填 / 代理拦掉 PROPFIND 时 / 安全提醒 / 免费代理（含「复制地址」）。文案与博客原文口径一致，**正文提到产品名一律「胖记」，不出现 Cent**；`cent.linkai.work`（CORS 允许来源）与 `cent-backend.linkai.work`（免费代理）是真实地址，保留原样。抽屉 `max-h-[86dvh]`、实测高 749，最后一段的地址行与复制按钮在 402×874 首屏内完整可见——降到 82dvh 会把那张地址卡切成半截（实测过）。
+- **代理地址的「?」改为应用内说明抽屉**：原来 `target="_blank"` 跳到博客的「使用代理」小节，手机上要来回切应用。现为 `components/modal/login-proxy-help.tsx` 的 `showProxyHelp()`，底部抽屉分五段——什么时候需要 / 怎么填 / 代理拦掉 PROPFIND 时 / 安全提醒 / 免费代理（含「复制地址」）。文案与博客原文口径一致，**正文提到产品名一律「胖记」，不出现 Cent**；`cent.linkai.work`（CORS 允许来源）与 `cent-backend.linkai.work`（免费代理）是真实地址，保留原样。抽屉上限见下方「说明抽屉统一骨架」条，实测高 731，最后一段的地址行与复制按钮在 402×874 首屏内完整可见——降到 82dvh 会把那张地址卡切成半截（实测过）。
 - **点击热区 40×40**（用户口径「热区放大方便点击」）：眼睛与问号都是 `size-10` 圆钮、图标仍 16px，用 `-mr-2` 抵掉圆钮内边距，输入框可点宽度不变；眼睛按钮补 `aria-label`（显示密码 / 隐藏密码），供探针按状态定位。
+- **说明抽屉统一骨架（2026-11-16 12:10 口径）**：用户口径「有什么说明的地方都改成抽屉」——登录流程里凡解释「这格怎么填 / 为什么这样填」的内容一律进应用内底部抽屉，**不再 `target="_blank"` 跳出应用**。骨架抽到 `components/modal/help-sheet.tsx`：`HelpSheetLayout`（抓手条 → 标题 → 一句引导 → 可滚正文 → 贴底关闭钮）、`HelpSection`、`HelpCode`、`HELP_SHEET_OPTIONS`（`from: "bottom"` + 圆角上 28 + sm 断点居中）。新加说明面板直接复用这四样，不要各页各写一套：`login-proxy-help.tsx` 已改用它（并**删掉了原抽屉里的「查看完整说明」外链**，那正是用户要消灭的跳转），`login-s3-help.tsx` 是本轮新建。
+- **S3 页补「?」与眼睛**：`hint` 行右侧 `data-s3-help` 圆钮（40×40，图标 14px）打开 `showS3Help()`，五段——Endpoint 怎么填（三个示例域名）/ Region 与 Bucket / 密钥去哪拿 / 连不上时先查跨域（`https://cent.linkai.work` 作允许来源）/ 高级选项。Secret Access Key 补同款眼睛按钮，默认掩码。
+- **抽屉高度 `max-h-[90dvh]`**：86dvh 时 S3 说明的末段还差 22px（`overflow: 22`，最后一行被切），90dvh 下两页都恰好一屏（S3 高 774 / overflow 0，代理面板仍 731 由内容撑开）。段间距用 `py-2`（不是 2.5），这是为了多段文案也能一屏放下。**调文案长度后要重新量 `scrollHeight - clientHeight`**，别只看截图。
 
 ## 语言键与窄屏
 

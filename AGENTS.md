@@ -99,6 +99,8 @@
 
 **2026-11-16 11:57 口径变更登记**（**WebDAV / S3 登录二级页：白卡包裹 + S3 高级选项默认折叠 + 代理说明抽屉 + 热区放大**，worktree `feat-login-261115`；细节 → `docs/agents/ui-login.md`，验证 → `docs/agents/verification.md`）：① 「常用服务商」与字段组包进同一张 `max-w-[340px] rounded-[20px] bg-panel` 白卡；**卡内胶囊必须改浅灰底 `bg-ground`**（原来是白底描边，放进白卡就与卡同色、看不出是按钮）。胶囊文字改黑 `text-ink` + `text-[14px]`，padding 保持 `px-3.5 py-1.5`——用户先嫌字号小、后嫌按钮被调太大，两条要同时满足。② S3 的 `baseDir` / `sessionToken` / `forcePathStyle` 收进卡片底部折叠行，**默认折叠**（折叠态不进 DOM）。③ 代理地址的「?」不再 `target="_blank"` 跳博客，改为 `modal/login-proxy-help.tsx` 的底部说明抽屉：何时需要 / 怎么填 / 代理拦掉 PROPFIND 时 / 安全提醒 / 免费代理（带复制地址），口径与博客原文一致；**正文里的产品名统一「胖记」，不出现 Cent**，`cent.linkai.work` 与 `cent-backend.linkai.work` 是真实域名、保留原样。④ 眼睛与问号热区放大到 40×40（`size-10` + `-mr-2`，图标仍 16px，输入框可点宽度不变）。
 
+**2026-11-16 12:10 口径变更登记**（**说明类内容一律进抽屉 + S3 页补「?」与眼睛**，worktree `feat-login-261115`；细节 → `docs/agents/ui-login.md`，验证 → `docs/agents/verification.md`）：① 用户口径「有什么说明的地方都改成抽屉」——登录流程里解释字段怎么填的内容不再 `target="_blank"` 跳出应用，统一进底部抽屉；骨架抽到 `components/modal/help-sheet.tsx`（`HelpSheetLayout` / `HelpSection` / `HelpCode` / `HELP_SHEET_OPTIONS`），**以后新增说明面板复用这四个，不要各页各写一套**。代理抽屉里原来那个「查看完整说明」外链已删（它正是要消灭的跳转）。② S3 页此前没有任何说明入口，现于 `hint` 行右侧加 `data-s3-help` 圆钮（40×40）打开 `showS3Help()`，五段：Endpoint 怎么填（含三个示例域名）/ Region 与 Bucket / 密钥去哪拿 / 连不上时先查跨域（允许来源 `https://cent.linkai.work`）/ 高级选项；Secret Access Key 补 40×40 眼睛按钮，默认掩码。③ 抽屉上限从 `86dvh` 提到 `90dvh`：86dvh 下 S3 说明末段差 22px 露不全（会切字），90dvh 两页都恰好一屏；段间距 `py-2`。**改文案后必须重新量 `scrollHeight - clientHeight`，不能只看截图。**
+
 ## 1. 项目速览
 
 - 名称：**胖记**（用户明确：没有英文名，界面与 PWA 清单里不出现 Cent / 日计；仓库名、包名、上游链接仍是 Cent，不要改）。纯前端 PWA 记账应用，数据存在用户自己的 GitHub / Gitee / WebDAV / S3 仓库或本地离线库中，没有业务后端。

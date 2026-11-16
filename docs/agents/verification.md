@@ -249,3 +249,15 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - **探针定位坑**：眼睛按钮的 `aria-label` 会随状态变（显示密码 / 隐藏密码），用「密码输入框的 following-sibling」定位会在第一次点击后失效——按 `aria-label` 分两次点；登录页 S3 按钮的可见文案是「使用 S3 登录」（`login-to-s3`），不是 `S3`。
 - **深色回归**（`verify-login-form-dark.js`，Chromium）：`html.classList.add("dark")` 后卡片 `rgb(31,25,19)`、输入字 `rgb(247,240,230)`、抽屉同底色、小标题与标题同为亮色——胶囊靠 `bg-ground` 比卡面再暗一档仍能看出边界。
 - `pnpm lint` 通过（378 files）；`optimizeDeps.include` 生效后整轮日志无 `new dependencies optimized`（无整页 reload 打断探针）。
+
+## 2026-11-16 12:10 S3 说明抽屉 + 抽屉骨架抽取验证（worktree `feat-login-261115`）
+
+- **口径**：用户「有什么说明的地方都改成抽屉」→ 登录流程里解释字段填法的内容不再跳出应用。骨架抽到 `components/modal/help-sheet.tsx`（`HelpSheetLayout` / `HelpSection` / `HelpCode` / `HELP_SHEET_OPTIONS`），代理抽屉与新写的 S3 抽屉共用。
+- **`verify-login-form.js` 新增断言**（402×874，WebKit / Chromium 双引擎）：
+  - `s3HitAreas` = `help 40×40`、`eye 40×40`（问号在 hint 行、眼睛在 Secret Key 行右侧，图标分别 14px / 16px）；
+  - `s3EyeToggles` = `textInputs 1 / passwordInputs 0`（点「显示密码」后掩码解除）；
+  - `s3HelpSheet`（Chromium）= `h 774 / coversBottom true / sections 5 / codes 4 / hasTitle·hasEndpoint·hasCors·hasOrigin·hasAdvanced 全 true / noBrandCent true / usesPangji true / overflow 0 / lastSectionVisible true`；WebKit `h 754 / overflow 0`，其余字段一致。
+  - 代理抽屉回归（骨架抽走后的等价性）：`h 731 / sections 5 / codes 4 / copyRowVisible true / noBrandCent true`，与抽取前（749 / 五段 / 复制行首屏可见）行为一致。
+- **高度是量出来的，不是看出来的**：86dvh 时 S3 抽屉 `overflow: 22`——最后一段末行被切字（截图里几乎看不出，只看 `lastSectionVisible` 才暴露）。过程值：初版溢出 80 → 收文案到 40 → 段间距 `py-2.5→py-2` + 跨域段再收一行到 22 → `max-h` 86dvh→90dvh 后归零。**以后调说明文案都要重测 `scrollHeight - clientHeight`。**
+- **深色回归**（`verify-login-form-dark.js` 扩到 S3）：`s3Card.cardBg rgb(31,25,19)`、输入字 `rgb(247,240,230)`、问号 `rgb(181,168,154)`；`s3Sheet` 同底色、标题与小标题 `rgb(247,240,230)`、`code` 底 `rgb(23,19,15)` 字 `rgb(247,240,230)`——层级与对比度都正常。
+- `pnpm lint` 380 files 通过。

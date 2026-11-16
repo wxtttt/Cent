@@ -11,6 +11,7 @@ import { checkS3Config } from "@/tidal/s3";
 import createConfirmProvider from "../confirm";
 import { Checkbox } from "../ui/checkbox";
 import { Form, FormField } from "../ui/form";
+import { S3HelpProvider, showS3Help } from "./login-s3-help";
 
 export type S3Edit = {
     endpoint: string;
@@ -89,6 +90,8 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
     // 高级选项默认折叠：baseDir / sessionToken / forcePathStyle 是少数派配置，
     // 全展开会把主表单挤到一屏之外（用户口径「能默认折叠起来吗」）
     const [advancedOpen, setAdvancedOpen] = useState(false);
+    // Secret Access Key 默认掩码，眼睛按钮切明文（与 WebDAV 密码行同款）
+    const [showSecret, setShowSecret] = useState(false);
     // biome 禁止静态字符串 id，勾选行用 useId 关联 label
     const checkboxId = useId();
     const errors = form.formState.errors;
@@ -152,8 +155,19 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
                                 className="size-14 flex-shrink-0 rounded-[18px] shadow-[0_4px_16px_rgba(92,62,30,0.12)]"
                             />
                         </div>
-                        <div className="mt-2 text-center text-[13px] text-ink-secondary/80">
-                            {t("login-s3-hint")}
+                        {/* 提示行右侧的「?」：整页唯一解释入口，打开应用内说明抽屉
+                        （以前 S3 页没有任何说明，只能跳出应用看文档） */}
+                        <div className="mt-2 flex items-center justify-center gap-0.5 text-[13px] text-ink-secondary/80">
+                            <span>{t("login-s3-hint")}</span>
+                            <button
+                                type="button"
+                                data-s3-help
+                                aria-label={t("s3-help-open")}
+                                onClick={() => showS3Help()}
+                                className="-my-2 flex size-10 flex-shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors active:bg-ground"
+                            >
+                                <i className="icon-[lucide--circle-help] size-3.5" />
+                            </button>
                         </div>
                         <Form {...form}>
                             {/* 常用服务商与字段组包在同一张白卡里（用户口径「类似卡片」） */}
@@ -268,11 +282,42 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
                                                 }
                                                 required
                                             >
-                                                <input
-                                                    {...field}
-                                                    type="password"
-                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
-                                                />
+                                                <span className="flex min-w-0 flex-1 items-center">
+                                                    <input
+                                                        {...field}
+                                                        type={
+                                                            showSecret
+                                                                ? "text"
+                                                                : "password"
+                                                        }
+                                                        className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                    />
+                                                    {/* 眼睛热区 40×40（图标 16），-mr-2 抵掉圆钮内边距 */}
+                                                    <button
+                                                        type="button"
+                                                        aria-label={
+                                                            showSecret
+                                                                ? t(
+                                                                      "hide-password",
+                                                                  )
+                                                                : t(
+                                                                      "show-password",
+                                                                  )
+                                                        }
+                                                        onClick={() =>
+                                                            setShowSecret(
+                                                                !showSecret,
+                                                            )
+                                                        }
+                                                        className="-mr-2 flex size-10 flex-shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors active:bg-ground"
+                                                    >
+                                                        {showSecret ? (
+                                                            <i className="icon-[lucide--eye-off] size-4" />
+                                                        ) : (
+                                                            <i className="icon-[lucide--eye] size-4" />
+                                                        )}
+                                                    </button>
+                                                </span>
                                             </FieldRow>
                                         )}
                                     />
@@ -399,6 +444,7 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
                     </button>
                 </div>
             </div>
+            <S3HelpProvider />
         </>
     );
 };
