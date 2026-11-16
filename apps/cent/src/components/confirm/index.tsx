@@ -27,6 +27,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
         dialogDescription = dialogTitle,
         dialogModalClose,
         contentClassName,
+        routeClassName,
         fade,
         swipe,
         from,
@@ -37,6 +38,9 @@ export default function createConfirmProvider<Value, Returned = Value>(
         dialogDescription?: string | ReactNode;
         dialogModalClose?: boolean;
         contentClassName?: string;
+        /** 路由页（routePath 模式）容器的额外 class：作用域类（dp-category-surface 等）
+         *  必须挂在**路由页根节点**上，否则页面退回全局暖米底；布局类不要放这里。 */
+        routeClassName?: string;
         fade?: boolean;
         swipe?: boolean;
         from?: "left" | "bottom";
@@ -98,6 +102,7 @@ export default function createConfirmProvider<Value, Returned = Value>(
                         // 内容块用 min-h-full + my-auto 居中（登录页同款），长表单靠这里滚动
                         // 二级路由页是全屏面：按 --viewport-bottom-gap 往下延伸，铺满系统底
                         "dp-screen-fill-inset fixed inset-0 z-[3] flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain bg-ground",
+                        routeClassName,
                         routePage.closing
                             ? "dp-route-to-right"
                             : "dp-route-from-right",
