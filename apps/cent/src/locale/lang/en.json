@@ -1,4 +1,4 @@
-﻿{
+{
   "APP_NAME": "胖记",
   "APP_TITLE": "One bite to one cent",
   "Balance": "Balance",
@@ -1442,6 +1442,7 @@
   "loan-list-settled": "Settled",
   "loan-list-settled-value": "Settled",
   "loan-list-payoff-at": "Paid off {ym}",
+  "loan-progress-title": "Repayment progress",
   "loan-progress-paid": "{paid}/{total} paid",
   "loan-detail-remaining-label": "Remaining principal",
   "loan-detail-progress-hint": "{paid} paid · {left} left",

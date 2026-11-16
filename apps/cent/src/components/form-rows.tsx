@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
 import { cn } from "@/utils";
 
-/** 家小满式行列表单基元：分组白卡 + 左标签右值，供生活模块表单复用 */
+/** APK 式行列表单基元：分组白卡 + 左标签右值，供生活模块表单复用 */
 
-/** 分组标题，放在卡片外 */
+/**
+ * 分组标题，放在卡片外。与二级页的 `GroupTitle`（预算页「预算周期」）同款：
+ * 12px 次级灰、不抢卡片主信息的层级；19:00 前这里是 15px 粗黑，观感比卡片标题还重。
+ */
 export function FormSection({ title }: { title: string }) {
     return (
-        <div className="px-1 pb-2 text-[15px] font-semibold text-ink">
+        <div className="px-1 pb-1.5 text-[12px] text-ink-secondary">
             {title}
         </div>
     );
@@ -15,7 +18,7 @@ export function FormSection({ title }: { title: string }) {
 /** 白色圆角分组卡，行间细分割线 */
 export function FormCard({ children }: { children: ReactNode }) {
     return (
-        <div className="divide-y divide-rule/60 rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+        <div className="divide-y divide-rule/60 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
             {children}
         </div>
     );
@@ -72,7 +75,7 @@ export function RowInput({
     );
 }
 
-/** 右对齐输入框 + 下方 n/max 字数计数（对齐家小满备注行样式） */
+/** 右对齐输入框 + 下方 n/max 字数计数（对齐APK 备注行样式） */
 export function CountedRowInput({
     value,
     onChange,

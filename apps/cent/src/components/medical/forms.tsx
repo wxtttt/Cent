@@ -98,7 +98,7 @@ export default function MedicalProfileForm({
             }
         >
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
-                {/* 头像：圆形 + 相机角标，与家小满建档页一致 */}
+                {/* 头像：圆形 + 相机角标，与 APK 建档页一致 */}
                 <div className="flex justify-center pt-1">
                     <div className="relative">
                         <button

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
 import { RowChevron } from "../form-rows";
+import { CARD } from "../sheet-kit";
 import {
     downRatioOf,
     downWanOf,
@@ -11,10 +12,6 @@ import {
 } from "./model";
 import { MonthField } from "./month-field";
 import {
-    GROUP_TITLE,
-    LOAN_CARD,
-    PICK_OFF,
-    PICK_ON,
     ROW,
     ROW_LEFT,
     ROW_VALUE,
@@ -96,9 +93,7 @@ export function NumberCell({
     );
 }
 
-const TYPES: LoanType[] = ["commercial", "fund", "combo"];
-
-/** 贷款类型：纯文字三选一。图标与「商业贷款 / 公积金」没有语义关系，已去掉 */
+/** 贷款类型：纯文字三选一，用全站分段控件，图标与「商业贷款 / 公积金」没有语义关系 */
 export function TypePicker({
     value,
     onChange,
@@ -108,28 +103,16 @@ export function TypePicker({
 }) {
     const t = useIntl();
     return (
-        <div data-loan-type-row className="grid grid-cols-3 gap-2">
-            {TYPES.map((type) => (
-                <button
-                    key={type}
-                    type="button"
-                    data-loan-type={type}
-                    className={cn(
-                        "cursor-pointer rounded-full border py-2.5 text-center text-[14px] transition-colors",
-                        value === type ? PICK_ON : PICK_OFF,
-                    )}
-                    onClick={() => onChange(type)}
-                >
-                    {t(
-                        type === "commercial"
-                            ? "loan-type-commercial"
-                            : type === "fund"
-                              ? "loan-type-fund"
-                              : "loan-type-combo",
-                    )}
-                </button>
-            ))}
-        </div>
+        <Segmented<LoanType>
+            className="w-full [&>button]:flex-1"
+            value={value}
+            options={[
+                { value: "commercial", label: t("loan-type-commercial") },
+                { value: "fund", label: t("loan-type-fund") },
+                { value: "combo", label: t("loan-type-combo") },
+            ]}
+            onChange={onChange}
+        />
     );
 }
 
@@ -185,7 +168,7 @@ export function AmountSection({
     const downRatio = downRatioOf(draft);
 
     return (
-        <div className={cn("divide-y divide-rule/60", LOAN_CARD)}>
+        <div className={cn("divide-y divide-rule/60", CARD)}>
             <div className={ROW}>
                 <span className={ROW_LEFT}>{t("loan-mode-label")}</span>
                 <Segmented<LoanMode>
@@ -289,11 +272,11 @@ export function TermsSection({
     draft: LoanDraft;
     derived: { months: number; commercialRate: number };
     edit: (patch: Partial<LoanDraft>) => void;
-    onOpenSheet: (kind: "term" | "rateCommercial" | "rateFund") => void;
+    onOpenSheet: (kind: "term" | "commercialRate" | "fundRate") => void;
 }) {
     const t = useIntl();
     return (
-        <div className={cn("divide-y divide-rule/60", LOAN_CARD)}>
+        <div className={cn("divide-y divide-rule/60", CARD)}>
             <button
                 type="button"
                 data-loan-row="term"
@@ -320,7 +303,7 @@ export function TermsSection({
                     type="button"
                     data-loan-row="commercial-rate"
                     className={cn(ROW, "cursor-pointer text-left")}
-                    onClick={() => onOpenSheet("rateCommercial")}
+                    onClick={() => onOpenSheet("commercialRate")}
                 >
                     <div className="min-w-0">
                         <div className={ROW_LEFT}>
@@ -344,7 +327,7 @@ export function TermsSection({
                     type="button"
                     data-loan-row="fund-rate"
                     className={cn(ROW, "cursor-pointer text-left")}
-                    onClick={() => onOpenSheet("rateFund")}
+                    onClick={() => onOpenSheet("fundRate")}
                 >
                     <div className="min-w-0">
                         <div className={ROW_LEFT}>{t("loan-fund-rate")}</div>
@@ -397,5 +380,3 @@ export function TermsSection({
         </div>
     );
 }
-
-export { GROUP_TITLE };

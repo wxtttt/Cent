@@ -87,7 +87,7 @@ export default function InventoryPage() {
         };
     }, [items]);
 
-    // 筛选保留家小满内置分类，再补上自定义分类与物品里出现的分类
+    // 筛选保留APK 内置分类，再补上自定义分类与物品里出现的分类
     const categories = useMemo(() => {
         const set = new Set<string>(INVENTORY_DEFAULT_CATEGORIES);
         for (const category of categorySuggestions) set.add(category);
@@ -223,7 +223,7 @@ export default function InventoryPage() {
                 />
 
                 {visible.length === 0 ? (
-                    // 家小满缺省态：纯文字居中，无插画与引导按钮
+                    // APK 缺省态：纯文字居中，无插画与引导按钮
                     <p className="py-12 text-center text-[13px] text-ink-secondary">
                         {items.length === 0
                             ? t("inventory-empty")
@@ -280,11 +280,11 @@ function CategoryFilterButton({
     const t = useIntl();
     const [open, setOpen] = useState(false);
     const active = value !== "__all";
-    // 家小满知物页样式：胶囊只写「筛选」，激活的分类名以橙色文字展示在胶囊右侧
+    // APK 知物页样式：胶囊只写「筛选」，激活的分类名以橙色文字展示在胶囊右侧
     const current = active
         ? (categories.find((c) => c === value) ?? value)
         : undefined;
-    // 家小满内置分类之外的自定义分类单独成组
+    // APK 内置分类之外的自定义分类单独成组
     const customCategories = categories.filter(
         (category) => !INVENTORY_DEFAULT_CATEGORIES.includes(category),
     );

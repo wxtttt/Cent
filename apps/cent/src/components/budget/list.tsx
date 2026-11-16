@@ -11,6 +11,7 @@ import { useIntl } from "@/locale";
 import { useLedgerStore } from "@/store/ledger";
 import { cn } from "@/utils";
 import { PRESSABLE_ROW } from "../button-styles";
+import { GroupTitle, ListCard, ListRow } from "../sheet-kit";
 import {
     clampStartDay,
     periodContaining,
@@ -26,6 +27,8 @@ import {
     BudgetSheetProvider,
     type BudgetSheetValue,
     type MonthlyBudgetValue,
+    normalizeJoiners,
+    showBudgetOptions,
     showBudgetSheet,
 } from "./sheet";
 import type { Budget } from "./type";
@@ -91,13 +94,6 @@ const Bar = ({
     </div>
 );
 
-/** 分组连卡：组内行只有细分隔线、无间隙（APK 类别页 + 预算范围页同款） */
-const SettingCard = ({ children }: { children: ReactNode }) => (
-    <div className="divide-y divide-rule/70 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
-        {children}
-    </div>
-);
-
 /** 历史周期只叠一层蒙层表达只读，不再逐行变淡、也不再配文字提示 */
 const ReadOnlyMask = ({
     children,
@@ -114,71 +110,6 @@ const ReadOnlyMask = ({
                 className="absolute inset-0 rounded-2xl bg-ground/55"
             />
         )}
-    </div>
-);
-
-const SettingRow = ({
-    title,
-    subtitle,
-    value,
-    badge,
-    onClick,
-    disabled,
-}: {
-    title: string;
-    subtitle?: string;
-    value?: string;
-    badge?: ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-}) => (
-    <div className="flex items-center gap-2 px-4 py-1">
-        <button
-            type="button"
-            disabled={disabled}
-            onClick={disabled ? undefined : onClick}
-            className="flex min-h-[58px] min-w-0 flex-1 items-center gap-3 py-2 text-left"
-        >
-            {badge}
-            <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] text-ink">
-                    {title}
-                </span>
-                {subtitle && (
-                    <span className="mt-0.5 block truncate text-[11px] text-ink-secondary">
-                        {subtitle}
-                    </span>
-                )}
-            </span>
-            {value && (
-                <span className="flex-shrink-0 text-[14px] text-ink">
-                    {value}
-                </span>
-            )}
-            {!disabled && (
-                <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0 text-ink-secondary/60" />
-            )}
-        </button>
-    </div>
-);
-
-const GroupTitle = ({
-    title,
-    action,
-    first,
-}: {
-    title: string;
-    action?: ReactNode;
-    first?: boolean;
-}) => (
-    <div
-        className={cn(
-            "mb-1.5 flex items-center justify-between gap-2 px-1 text-[12px] text-ink-secondary",
-            first ? "mt-4" : "mt-3",
-        )}
-    >
-        <span>{title}</span>
-        {action}
     </div>
 );
 
@@ -457,14 +388,26 @@ export default function BudgetListForm({
         }
     };
 
+    /** 计入成员走「关联特殊标签」同款选项抽屉：行内只留摘要，不铺 chip */
     const openMembers = async () => {
-        const res = await openSheet({
-            type: "members",
-            value: normal?.joiners ?? [],
-            members: activeMembers,
-        });
-        if (Array.isArray(res)) {
-            await patchNormal({ joiners: res as (string | number)[] });
+        const saved = (normal?.joiners ?? []).map(String);
+        const res = await showBudgetOptions({
+            title: t("included-members"),
+            hint: t("participants-hint"),
+            options: activeMembers.map((m) => ({
+                id: String(m.id),
+                label: m.name,
+            })),
+            // 空数组在数据层表示「全部成员」，抽屉里要把它们都点亮
+            selected:
+                saved.length === 0
+                    ? activeMembers.map((m) => String(m.id))
+                    : saved,
+        }).catch(() => undefined);
+        if (res !== undefined) {
+            await patchNormal({
+                joiners: normalizeJoiners(res, activeMembers),
+            });
         }
     };
 
@@ -582,7 +525,11 @@ export default function BudgetListForm({
     return (
         <PopupLayout
             onBack={onCancel}
-            title={t("budget-manager")}
+            title={
+                <span className="text-[18px] font-semibold text-ink">
+                    {t("budget-manager")}
+                </span>
+            }
             backStyle="circle"
             className="dp-drawer-surface h-full bg-ground"
         >
@@ -770,22 +717,22 @@ export default function BudgetListForm({
                 {/* 设置项在大卡下方，按分组连卡；历史周期只读只用一层蒙层表达 */}
                 <GroupTitle title={t("budget-range")} />
                 <ReadOnlyMask readOnly={!isCurrent}>
-                    <SettingCard>
-                        <SettingRow
+                    <ListCard>
+                        <ListRow
                             title={t("monthly-budget")}
                             subtitle={t("monthly-budget-hint")}
                             value={`¥${fmt(normal?.totalBudget ?? 0)}`}
                             onClick={() => void openMonthly()}
                             disabled={!isCurrent}
                         />
-                        <SettingRow
+                        <ListRow
                             title={t("budget-start-day")}
                             subtitle={t("budget-start-day-hint")}
                             value={t("day-n-of-month", { n: periodStartDay })}
                             onClick={() => void openStartDay()}
                             disabled={!isCurrent}
                         />
-                        <SettingRow
+                        <ListRow
                             title={t("included-members")}
                             subtitle={t("participants-hint")}
                             value={
@@ -798,7 +745,7 @@ export default function BudgetListForm({
                             onClick={() => void openMembers()}
                             disabled={!isCurrent}
                         />
-                    </SettingCard>
+                    </ListCard>
                 </ReadOnlyMask>
 
                 {showSpecialGroup && (
@@ -839,9 +786,9 @@ export default function BudgetListForm({
                         )}
                         {specials.length > 0 && (
                             <ReadOnlyMask readOnly={!isCurrent}>
-                                <SettingCard>
+                                <ListCard>
                                     {specials.map((b) => (
-                                        <SettingRow
+                                        <ListRow
                                             key={b.id}
                                             badge={
                                                 <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand/10 text-[14px] text-brand">
@@ -867,7 +814,7 @@ export default function BudgetListForm({
                                             disabled={!isCurrent}
                                         />
                                     ))}
-                                </SettingCard>
+                                </ListCard>
                             </ReadOnlyMask>
                         )}
                     </>

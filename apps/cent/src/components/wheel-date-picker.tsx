@@ -34,7 +34,7 @@ type Props = {
     years?: [number, number];
 };
 
-// 家小满式滚轮：行高约等于选中胶囊高度，窗口露出 5 行，上下边缘渐隐
+// APK 式滚轮：行高约等于选中胶囊高度，窗口露出 5 行，上下边缘渐隐
 const ITEM_HEIGHT = 36;
 const VISIBLE_ROWS = 5;
 const WINDOW_HEIGHT = ITEM_HEIGHT * VISIBLE_ROWS;

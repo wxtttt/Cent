@@ -8,7 +8,7 @@ import type { BillType, Budget } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
 
-/** 记账页快捷筛选，维度与家小满筛选面板一致：时间/交易类型/记账人/金额 */
+/** 记账页快捷筛选，维度与 APK 筛选面板一致：时间/交易类型/记账人/金额 */
 export type LedgerQuickFilter = {
     /** 时间筛选来源：月份档位与自定义日期各自保留，只有激活方参与过滤 */
     timeMode?: "month" | "custom";
@@ -76,7 +76,7 @@ export function resolveQuickTimeRange(
     return {
         start: customStart,
         end: customEnd,
-        // 统计卡标题取区间结束月份（家小满实测：跨月区间显示末月）
+        // 统计卡标题取区间结束月份（APK 实测：跨月区间显示末月）
         month: dayjs(customEnd ?? customStart),
         fullPeriod: false,
     };
@@ -234,7 +234,7 @@ function SheetForm({
     };
 
     return (
-        // 面板底色/圆角/档位规格均按家小满实测：#f4f4f4 底、44px 档位、橙色选中
+        // 面板底色/圆角/档位规格均按 APK 实测：#f4f4f4 底、44px 档位、橙色选中
         <div className="relative flex min-h-0 flex-1 flex-col outline-none">
             <div
                 data-sheet-drag

@@ -1453,6 +1453,7 @@
   "loan-list-settled": "已结清",
   "loan-list-settled-value": "已结清",
   "loan-list-payoff-at": "{ym} 还清",
+  "loan-progress-title": "还款进度",
   "loan-progress-paid": "已还 {paid}/{total} 期",
   "loan-detail-remaining-label": "剩余本金",
   "loan-detail-progress-hint": "已还 {paid} 期 · 还剩 {left} 期",

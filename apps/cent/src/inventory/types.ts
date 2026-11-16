@@ -6,7 +6,7 @@ export type InventoryItem = {
     /** 入库时间（毫秒） */
     time: number;
     name: string;
-    /** 实物 / 虚拟（家小满知物页的两类资产） */
+    /** 实物 / 虚拟（APK 知物页的两类资产） */
     kind: "physical" | "virtual";
     /** 物品分类，取自 GlobalMeta.inventoryCategories 建议列表，也允许自由填写 */
     category?: string;
@@ -27,7 +27,7 @@ export type InventoryItem = {
 /** 兼容旧数据的两态取值 */
 export type LegacyInventoryStatus = "active" | "archived";
 
-/** 家小满知物内置分类，按实物/虚拟分组（筛选面板与分类选择共用） */
+/** APK 知物内置分类，按实物/虚拟分组（筛选面板与分类选择共用） */
 export const INVENTORY_CATEGORY_GROUPS = [
     {
         key: "physical",

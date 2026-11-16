@@ -1,6 +1,6 @@
 import createConfirmProvider from "../confirm";
 import LoanCalculatorForm from "./form";
-import { LoanDeleteProvider } from "./providers";
+import { LoanDeleteProvider } from "./sheets";
 
 export const [LoanCalculatorProvider, showLoanCalculator] =
     createConfirmProvider(LoanCalculatorForm, {

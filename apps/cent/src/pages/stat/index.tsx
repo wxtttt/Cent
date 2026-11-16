@@ -3,7 +3,7 @@ import createConfirmProvider from "@/components/confirm";
 import { isCancelError } from "@/components/confirm/state";
 import { LoadingSkeleton } from "@/components/loading";
 
-// 分析页是二级页：按家小满的交互从右侧滑入（Dialog 默认移动端变体），
+// 分析页是二级页：按 APK 的交互从右侧滑入（Dialog 默认移动端变体），
 // 惰性加载保持 echarts 等重依赖不进首屏
 const StatContent = lazy(() => import("./content"));
 

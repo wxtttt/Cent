@@ -10,7 +10,7 @@
 | `src/components/budget/period.ts` | 周期锚点与边界：`anchorFor` / `periodFrom` / `periodContaining` / `periodForMonth` / `firstAnchorAfter` / `periodMonthKey` / `periodLabel` |
 | `src/hooks/use-budget.ts` | 记录链的补齐（`ensureCurrentBudgets`）、起始日变更（`setStartDay`）、CRUD |
 | `src/components/budget/util.ts` | `budgetTotal` / `budgetRange` / `budgetEncountered`（互斥计账、父吃子、孤儿回落） |
-| `src/components/budget/list.tsx` / `sheet.tsx` | 预算页单卡周期视图、底部抽屉（月度预算 / 起始日 / 成员 / 特殊预算）、`SheetRow` / `AmountRows` 行基元与五个 Provider 的挂载点 |
+| `src/components/budget/list.tsx` / `sheet.tsx` | 预算页单卡周期视图、底部抽屉（月度预算 / 起始日 / 特殊预算）、`AmountRows` 行基元与四个 Provider 的挂载点；行 / 卡 / 抽屉壳来自 `src/components/sheet-kit.tsx` |
 | `src/components/budget/amount-input.tsx` | 共享金额输入：无框、灰色 0 占位、`¥` 后置、黑色数字、聚焦全选、失焦千分位 |
 | `src/components/budget/allocation-sheet.tsx` | 「详细分配」独立抽屉：居中标题、**智能分配在分类卡片外面**、无上限提示块、状态栏文字全黑只让 ¥金额 染橙的轻量汇总、黑色主信息（分类名 / 金额 / 按钮符号）、分类名固定成列 + 金额列右移到中线略左 + 两段空白托住且按钮全在右、`+N` 微反馈精确飘在金额正上方、短按 ±50 / 长按 50→100→500、细滑动条 + 吸附整百 + 点击轨道跳转 + **恒橙**端点对齐纯数字 + 覆盖 0%/100% 的 10 个空心圆刻度、单项 `[0, 总额]` 自由改 + 超额时确认禁用 |
 | `src/components/button-styles.ts` | 弹层按钮共享样式：`BTN_BASE`（48px / 15px 主操作）、`SHEET_FOOTER`（统一底部操作栏，含 iOS 安全区）、`BTN_PRIMARY` / `BTN_SECONDARY` / `BTN_DANGER`（可点/禁用双态）、`BTN_TAP`（28px 圆形图标钮，黑色图标、无禁用态）、`BTN_COMPACT`（黑色文字）、`PRESSABLE_ROW` |
@@ -57,11 +57,11 @@
 - **高亮联动（r22）**：主标题里与日历选中项对应的日期用 `text-brand` 橘色——选中态是生效日「11月15日」，默认态是当前周期起始「11月1日」；实测 `rgb(255,132,53)` 与日历 `button.bg-brand` 背景色完全一致。
 - 语言键：`start-day-date-cn` / `start-day-month-cn` / `start-day-current-title` / `start-day-current-note` / `start-day-effective-title` / `start-day-new-period-note` / `start-day-transition-title` / `start-day-transition-note` / `start-day-no-transition` / `start-day-no-transition-note` / `start-day-transition-active` / `start-day-transition-active-note`。r20 的 `*-hint` / `*-period` / `start-day-note`、r21 的 `*-label` / `start-day-join` / `budget-period-month` 均已删除。
 - **历史**：r20 两条 bullet + 底部 29–31 说明；r21 压成两行 label-value 并删掉底部说明；r22 改为上下两段结构化卡片，补默认态周期信息与橘色联动。
-- **计入成员**（r20）：设置行与 `MembersForm` 抽屉标题统一用 `included-members`「计入成员」，不再用 `participants`「参与者」；行副标题仍是 `participants-hint`。
+- **计入成员**（2026-11-16 18:0x）：设置行标题统一用 `included-members`「计入成员」（不再用「参与者」），行副标题仍是 `participants-hint`；点击**不再是行内 chip**，改走 `showBudgetOptions()` 选项抽屉（与「关联特殊标签」完全同款，`MembersForm` 已删除），保存时经 `normalizeJoiners` 把「全选」回落成 `joiners: []`。
 
 ## 预算抽屉结构（2026-11-13 定稿）
 
-- **一张白卡**：`sheet.tsx` 的 `SheetRow`（左 92px 标签 / 右内容，固定 `h-[52px]`）+ `divide-y divide-rule/60 rounded-2xl bg-panel`。特殊预算的名称、关联特殊标签、每月重复、参与者、金额、详细分配**全在同一张卡里**，六行高度必须完全相同；月度预算抽屉复用同一组 `AmountRows` 放进同款白卡。禁止上半白卡 + 下半 `bg-ground-muted` 灰卡混搭。
+- **一张白卡**：`components/sheet-kit.tsx` 的 `SheetRow`（左 92px 标签 / 右内容，固定 `h-[52px]`）+ `divide-y divide-rule/60 rounded-2xl bg-panel`。特殊预算的名称、关联特殊标签、每月重复、参与者、金额、详细分配**全在同一张卡里**，六行高度必须完全相同；月度预算抽屉复用同一组 `AmountRows` 放进同款白卡。禁止上半白卡 + 下半 `bg-ground-muted` 灰卡混搭。
 - **主卡文案与行顺序**（2026-11-13 r15 定稿）：月度与特殊预算抽屉共用 `AmountRows`，两行标签固定为「金额」（`budget-amount`）与「详细分配」（`detailed-allocation`），**不要再出现「普通预算 / 分配预算」**；卡片外（预算页列表）仍用「普通预算」等原有术语。**特殊预算里 `AmountRows` 紧跟名称行，是白卡的第 2、3 行**（预算名称 → 金额 → 详细分配 → 关联特殊标签 → 每月重复 → 参与者）；月度预算抽屉只有这两行。月度抽屉标题下的说明固定为「金额是本月上限，可以对各个分类做详细的分配。」（`monthly-budget-sheet-hint`，中英同步）。
 - **按钮样式**（`components/button-styles.ts`，r20 定稿）：`BTN_BASE` 由 40px / 14px / `rounded-[10px]` 放大为 **48px / 15px / `rounded-[12px]`**（用户「确认和取消按钮太小、离底部太近，最好全局统一改」）；底部操作栏统一 `SHEET_FOOTER = border-t + px-5 + pt-3 + pb-[calc(20px+var(--safe-area-inset-bottom))]`，预算 / 详细分配 / 选项 / 改名抽屉共用，不再是各写一套 `pt-2.5 pb-5`。`BTN_PRIMARY` / `BTN_SECONDARY` / `BTN_DANGER` 保留表单级禁用态（如未填名称时确认禁用），hover/active 一律加 `enabled:` 前缀。**行内按钮用 `BTN_TAP`**：28px 圆形 + 1px 细描边 + 白底 + 轻投影，图标色 r17 改为**主文字黑 `text-ink`**（r15 的次级灰被反馈「灰得像禁用态」），与分类名 / 金额同色同级；hover 变品牌色边框、active 缩到 90%；靠形状与按压反馈表达可点，也不做禁用态。`BTN_COMPACT`（智能分配）文字同步改黑。`BTN_STEP` / `BTN_ICON` 已删除。
 - **控件尺寸**：弹层底部按钮统一 `BTN_BASE`（48px / 15px）+ `SHEET_FOOTER`（预算抽屉、详细分配抽屉、选项抽屉、改名抽屉共用）；金额输入区 `h-9`（36px），主卡总额 `w-[124px]`、分配抽屉每行 `w-[58px]`；起始日日期格子 `h-9`。
@@ -80,7 +80,16 @@
 - **名称行**：标签与预算标题同一行，点击弹 `showBudgetName()`（共享改名抽屉，与「编辑分类名称」同款）；**不常驻输入框**，所以新建时必须先改名才能确认（`saveDisabled` 依赖标题非空）。
 - **标签 / 成员行**：点击弹 `showBudgetOptions()` 多选抽屉，行右侧只显示摘要（「未设置 / #标签 / 全部 / 已选 N 项」+ 右箭头），**不再在行内铺 chip**。成员「全选」经 `normalizeJoiners` 回落为 `joiners: []`（= 全部成员，含以后新增的）。
 - **编辑态**：标题 `edit-special-budget`；底部左侧按钮由「取消」改为「删除」（浅红底 `bg-[#fcdada]`），点击先弹 `showBudgetDelete()` 二次确认，确认后才 `onConfirm("delete")`；原来挂在按钮下方的红色删除链接已删除。取消抽屉仍可点遮罩关闭。
-- **Provider 挂载**：`list.tsx` 里 `BudgetSheetProvider` / `BudgetNameProvider` / `BudgetOptionProvider` / `BudgetDeleteProvider` / `BudgetAllocationProvider` 五个实例各自挂载；三层弹层（预算页 → 预算抽屉 → 分配 / 选项 / 确认抽屉）依赖 `createConfirmProvider` 的 zIndex 栈，Chromium 与真 WebKit 均已实测可用。
+- **Provider 挂载**：`list.tsx` 里 `BudgetSheetProvider` / `BudgetNameProvider` / `BudgetOptionProvider` / `BudgetDeleteProvider` / `BudgetAllocationProvider` 五个实例各自挂载（`MembersForm` 删除后 `BudgetSheetValue` 不再有 `members` 分支）；三层弹层（预算页 → 预算抽屉 → 分配 / 选项 / 确认抽屉）依赖 `createConfirmProvider` 的 zIndex 栈，Chromium 与真 WebKit 均已实测可用。
+
+## 共享版式（2026-11-16 18:0x）
+
+预算页是 `components/sheet-kit.tsx` 的**基准实现**，贷款管理页已对齐同一套：
+
+- 页头 `text-[18px] font-semibold text-ink`；分组小标题 `GroupTitle` 12px 次级灰、在卡外；列表卡 `ListCard` + `ListRow`。
+- 抽屉壳 `SheetShell`（拖拽条 / 17px 居中标题 / 白卡 / `SHEET_FOOTER` 双等宽按钮）。
+- 起始日抽屉里的橙色提醒块（`bg-brand/10` + 15px semibold 主文案 + 11px 灰副文案 + `SheetHintDivider`）是全局提醒样式的基准。
+- 规范全文见 `docs/agents/ui-kit.md`。
 
 ## 预算周期卡片的分类明细（r20）
 

@@ -1,12 +1,8 @@
 import { useIntl } from "@/locale";
+import { GroupTitle } from "../sheet-kit";
 import type { DerivedLoan, LoanDraft } from "./model";
-import { CompareCard, ScheduleCard } from "./results";
-import {
-    AmountSection,
-    GROUP_TITLE,
-    TermsSection,
-    TypePicker,
-} from "./sections";
+import { CompareCard, ScheduleCard, ScheduleLegend } from "./results";
+import { AmountSection, TermsSection, TypePicker } from "./sections";
 
 /** 编辑 / 新增：上半是参数，下半是即时预览（还款分析 + 还款计划） */
 export function LoanEdit({
@@ -19,58 +15,50 @@ export function LoanEdit({
     draft: LoanDraft;
     derived: DerivedLoan;
     edit: (patch: Partial<LoanDraft>) => void;
-    onOpenSheet: (kind: "term" | "rateCommercial" | "rateFund") => void;
+    onOpenSheet: (kind: "term" | "commercialRate" | "fundRate") => void;
     onOpenDown: () => void;
 }) {
     const t = useIntl();
     return (
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-4 [&>*]:shrink-0">
-            <div className="flex flex-col gap-4">
-                <div>
-                    <div className={GROUP_TITLE}>{t("loan-type-title")}</div>
-                    <TypePicker
-                        value={draft.loanType}
-                        onChange={(loanType) => edit({ loanType })}
-                    />
-                </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-4 [&>*]:shrink-0">
+            <GroupTitle title={t("loan-type-title")} first />
+            <TypePicker
+                value={draft.loanType}
+                onChange={(loanType) => edit({ loanType })}
+            />
 
-                <div>
-                    <div className={GROUP_TITLE}>{t("loan-amount-title")}</div>
-                    <AmountSection
-                        draft={draft}
-                        derived={derived}
-                        edit={edit}
-                        onOpenDown={onOpenDown}
-                    />
-                </div>
+            <GroupTitle title={t("loan-amount-title")} />
+            <AmountSection
+                draft={draft}
+                derived={derived}
+                edit={edit}
+                onOpenDown={onOpenDown}
+            />
 
-                <div>
-                    <div className={GROUP_TITLE}>{t("loan-term-title")}</div>
-                    <TermsSection
-                        draft={draft}
-                        derived={derived}
-                        edit={edit}
-                        onOpenSheet={onOpenSheet}
-                    />
-                </div>
+            <GroupTitle title={t("loan-term-title")} />
+            <TermsSection
+                draft={draft}
+                derived={derived}
+                edit={edit}
+                onOpenSheet={onOpenSheet}
+            />
 
-                {/* 分析卡点哪张，上面的「还款方式」就切到哪种 */}
-                <div>
-                    <div className={GROUP_TITLE}>
-                        {t("loan-analysis-title")}
-                    </div>
-                    <CompareCard
-                        draft={draft}
-                        onChange={(method) => edit({ method })}
-                    />
-                </div>
+            {/* 分析卡点哪张，上面的「还款方式」就切到哪种 */}
+            <GroupTitle title={t("loan-analysis-title")} />
+            <CompareCard
+                draft={draft}
+                onChange={(method) => edit({ method })}
+            />
 
-                <ScheduleCard derived={derived} />
+            <GroupTitle
+                title={t("loan-schedule-title")}
+                action={<ScheduleLegend />}
+            />
+            <ScheduleCard derived={derived} />
 
-                <p className="px-1 text-[11px] leading-relaxed text-ink-secondary">
-                    {t("loan-page-disclaimer")}
-                </p>
-            </div>
+            <p className="px-1 pt-3 text-[11px] leading-relaxed text-ink-secondary">
+                {t("loan-page-disclaimer")}
+            </p>
         </div>
     );
 }

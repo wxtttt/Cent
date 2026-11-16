@@ -1,8 +1,9 @@
 # 贷款管理（`/loan`）
 
-> 2026-11-16 17:0x 第二轮重做：**取消列表页**、首付/时间全部抽屉化、保存方案改版、还款计划可点选联动。
-> 15:0x 那版的三视图（列表 / 详情 / 编辑）只剩两视图，`list.tsx` 已删除。APK 只作视觉参照，
-> 信息结构以本文为准；不要再往回加列表页、锁参数、`<input type="month">`。
+> 2026-11-16 18:0x 第三轮：**抽屉全部收编到共享版式**（`components/sheet-kit.tsx` + `createConfirmProvider`），
+> 视觉与预算管理页同构（18px 页头、12px 分组小标题、白卡连行、橙色提醒、底栏双等宽按钮）。
+> 17:0x 第二轮已**取消列表页**、首付/时间全部抽屉化、保存方案改版、还款计划可点选联动。
+> APK 只作视觉参照，信息结构以本文为准；不要再往回加列表页、锁参数、`<input type="month">`。
 
 ## 两个视图（同一路由页内的状态机，`components/loan-calculator/form.tsx`）
 
@@ -33,26 +34,29 @@ prepays?: SavedLoanPrepay[];         // { id, year, month, amount(元), mode }
 - 提前还款、利率调整都是**即时落库**（`persist()` → `update()`），还款计划与进度一起重算；
   加一笔 20 万缩年限后计划从 30 年变 26 年，删掉又回到 30 年。
 
-## 抽屉清单（`pickers.tsx` / `save-sheet.tsx`）
+## 抽屉清单（`sheets.tsx`：一个 provider + `LoanSheetValue` 联合）
 
-| 抽屉 | 触发 | 口径 |
+所有抽屉都走 `createConfirmProvider`，壳 / 行 / 提醒 / 底栏来自 `components/sheet-kit.tsx`；
+调用方只 `await showLoanSheet({ type, ... })`，返回值统一带 `kind`。
+
+| 抽屉（`type`） | 触发 | 口径 |
 | --- | --- | --- |
-| 年限 `TermSheet` | 期限行的「360 期 · 30 年」 | 唯一保留滚轮的字段（30 个选项） |
-| 商贷利率 `CommercialRateSheet` | 利率行 | LPR 输入 + ±5BP 步进 + 快捷片，底部政策说明（页面不再重复放） |
-| 公积金利率 `FundRateSheet` | 公积金行 | 首套/二套卡 + 年利率微调 |
-| 首付 `DownPaymentSheet` | 首付行 | 行上**同时显示**「90 万 · 30%」，口径（比例/金额）只在抽屉里切 |
-| 提前还款 `PrepaySheet` | 详情「添加/提前还款」、点已存在的条目 | 时间 / 金额 / 还款后方式**同一张卡**；编辑态底栏是「删除 + 确认」 |
-| 利率调整 `RateChangeSheet` | 详情「记录利率调整」、点已存在的条目 | 生效时间 / 新利率；编辑态同样带删除 |
-| 保存方案 `SavePlanSheet` | 编辑页保存（新增）、铅笔（改名） | 摘要卡 + 名称 + 图标滑动行（右缘渐隐）+ 单颗整宽按钮 |
-| 方案选择 `PlanSwitcherSheet` | 点详情页方案名 | 每笔显示月供与剩余本金，勾选当前；底部「新增贷款方案」 |
-| 动作菜单 `LoanMenuSheet` | 顶栏 ⋯ | 编辑贷款 / 删除方案 |
+| `term` | 期限行的「360 期 · 30 年」 | 唯一保留滚轮的字段（30 个选项） |
+| `commercialRate` | 利率行 | LPR 输入 + ±5BP 步进 + 快捷片 + 橙色政策提醒（页面不再重复放） |
+| `fundRate` | 公积金行 | 首套/二套卡 + 年利率微调 + 橙色政策提醒 |
+| `down` | 首付行 | 行上**同时显示**「90 万 · 30%」，口径（比例/金额）只在抽屉里切；折算值放橙色提醒里（`text-ink` 13px） |
+| `prepay` | 详情「添加」、点已存在的条目 | 时间 / 金额 / 还款后方式**同一张卡** + 橙色预览；编辑态底栏左键是「删除」 |
+| `rateChange` | 详情「记录利率调整」、点已存在的条目 | 生效时间 / 新利率 + 橙色月供预览；编辑态同样带删除 |
+| `save` | 编辑页保存（新增）、铅笔（改名） | 摘要卡 + 名称（`h-12 rounded-[12px]` 单行输入）+ 图标滑动行（右缘渐隐）+ 单颗整宽按钮 |
+| `switch` | 点详情页方案名 | 每笔显示月供与剩余本金，勾选当前；底部「新增贷款方案」 |
+| `menu` | 顶栏 ⋯ | 编辑贷款 / 删除方案（白卡两行，删除红字） |
 
 - **时间选择器一律用全站滚轮**（`MonthField` → `components/date-picker` → `WheelDatePicker`，
   与「选择预算周期 / 选择记账时间」同一套）。`WheelDatePicker` 新增可选 `years` 区间：
   还款生涯要跨二三十年，默认「今年 ±10 年」的窗口不够用，抽屉按 `[firstPay.year-1, firstPay.year+termYears]` 放出去。
 - 提前还款/利率抽屉的日期行：灰字「第 n 期」放在日期值**左边**（用户口径「第一期应该显示在 2026 的左边」）。
-- 删提前还款 / 删利率调整前**必须先 `setXxxSheet(null)` 再 `showLoanDelete`**：全局确认弹层的
-  z-index 是 4+，而本模块抽屉是 z-40/z-50，两层叠着时遮罩会盖住确认按钮。
+- 删提前还款 / 删利率调整的二次确认在**抽屉内部**完成（底栏「删除」→ `showLoanDelete` → 返回 `{ kind: "delete" }`）。
+  抽屉与确认同在 `createConfirmProvider` 的 zIndex 栈里，不会再出现「遮罩盖住确认按钮」。
 
 ## 还款计划（`results.tsx: ScheduleCard`）
 
@@ -76,14 +80,16 @@ prepays?: SavedLoanPrepay[];         // { id, year, month, amount(元), mode }
 
 ## 视觉口径
 
-- 页面底色 `dp-drawer-surface`（#f4f4f4 + 纯白卡），卡片壳 `LOAN_CARD`。
+- 页面底色 `dp-drawer-surface`（#f4f4f4 + 纯白卡），页头 18px semibold（与分类 / 预算管理页一致）。
+- 详情与编辑都是「`GroupTitle` + 白卡」节奏：`GroupTitle` 12px 次级灰在卡外，卡用 `CARD` / `ListCard`；
+  详情页把「剩余本金进度」与「下次还款」并进同一张卡（中间 `border-t border-rule/60` 分段），
+  顺序是 还款进度 → 提前还款 → 利率轨迹 → 还款计划。
 - **页面底栏用 `PAGE_FOOTER`，不要用 `SHEET_FOOTER`**：`PopupLayout` 已经垫过
   `--safe-area-inset-bottom`，抽屉底栏再叠一次会把「保存」/「提前还款」顶出可视区。
 - **详情页根节点必须是 `flex min-h-0 flex-1 flex-col`**：写成 `h-full` 会把顶栏高度也算进 100%，
   底栏被挤出屏幕（用户报的「最下面按钮只露一点」）。
-- 抽屉一律 `SHEET_SURFACE` + `SHEET_FOOTER`；**内容左右留白 20px（`px-5` / `mx-5`）**，
-  与 `SHEET_FOOTER` 的 `px-5` 对齐——之前用 16px，确认按钮比上面的卡片窄 8px（用户报的「宽度不一样」）。
-- 标题行的主副值字号不同时必须 `items-baseline`（「360 期」与「30 年」要坐在一条线上）。
+- 抽屉一律 `SheetShell`（内置拖拽条 / 17px 居中标题 / `SHEET_FOOTER`）；底栏是**两颗 `flex-1` 等宽按钮**
+  （编辑态左侧换 `BTN_DANGER` 的「删除」），与「编辑特殊预算」完全一致。手写 Dialog 已全部删除。
 - 中文标签不用 `font-semibold`；只有数字用 600/700。
 - **保存成功不弹 toast**：抽屉关掉、页面数字变了就是反馈。行业常态如此，用户也明确嫌「已保存」丑。
 
@@ -91,7 +97,8 @@ prepays?: SavedLoanPrepay[];         // { id, year, month, amount(元), mode }
 
 `.playwright-cli/probe-loan3-*.js`（390×844，Chromium）：
 
-- 首付 / 商贷利率抽屉：卡片与确认按钮左右边界均为 `[21, 369]`，确认按钮底边 824 < 844。
+- 首付抽屉：卡片 `[20, 370]`、取消 `[20, 191]`、确认 `[201, 370]`，三者左右边界一致；按钮底边 824 < 844。
+- 橙色提醒（`bg-brand/10`，圆角 16）出现在首付折算、提前还款预览、利率预览三处；绿色提示块已全部下线。
 - 详情：`data-loan-more` 与返回按钮对称（左 16 / 右距边 16）；`data-loan-prepay-cta` y=784 h=48，完整可见。
 - 还款计划：30 列；点第 10 列 → `data-loan-year-row="10"` 高亮且列表 `scrollTop` 458；点第 20 年 → 第 20 列 opacity 1、其余 ≤0.4。
 - 提前还款 20 万缩年限：省息 ¥265,819、缩短 52 个月，计划 30 年 → 26 年（轴变 1/13/26）；删除后回到 1/15/30。

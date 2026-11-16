@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
+import { CARD, SheetHint } from "../sheet-kit";
 import {
     compareMethods,
     type DerivedLoan,
     type LoanDraft,
     yearRangeLabel,
 } from "./model";
-import { LOAN_CARD, ROW_MUTED } from "./styles";
+import { ROW_MUTED } from "./styles";
 
 export const fmtMoney = (v: number) =>
     v.toLocaleString("en-US", {
@@ -53,7 +54,7 @@ export function CompareCard({
             : "";
 
     return (
-        <div data-loan-compare-card className={cn(LOAN_CARD, "p-4")}>
+        <div data-loan-compare-card className={cn(CARD, "p-4")}>
             <div className="grid grid-cols-2 gap-3">
                 {(["installment", "principal"] as const).map((m) => {
                     const item =
@@ -106,14 +107,30 @@ export function CompareCard({
                     );
                 })}
             </div>
-            <div
-                data-loan-insight
-                className="mt-3 rounded-2xl bg-[#e8f3ea] px-4 py-2.5 text-[13px] leading-relaxed text-[#1a7f37]"
-            >
-                {insight}
-                {crossover}
-            </div>
+            <SheetHint className="mt-3" data-loan-insight>
+                <p className="text-[13px] leading-relaxed text-ink">
+                    {insight}
+                    {crossover}
+                </p>
+            </SheetHint>
         </div>
+    );
+}
+
+/** 本金 / 利息图例：放在「还款计划」分组标题右侧 */
+export function ScheduleLegend() {
+    const t = useIntl();
+    return (
+        <span className="flex items-center gap-3 text-[11px] text-ink-secondary">
+            <span className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-brand" />
+                {t("loan-legend-principal")}
+            </span>
+            <span className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-brand/30" />
+                {t("loan-legend-interest")}
+            </span>
+        </span>
     );
 }
 
@@ -156,24 +173,8 @@ export function ScheduleCard({ derived }: { derived: DerivedLoan }) {
     const midYear = Math.ceil(maxYear / 2);
 
     return (
-        <div data-loan-schedule className={cn(LOAN_CARD, "p-4")}>
-            <div className="flex items-center justify-between">
-                <span className="text-[15px] dp-text-medium text-ink">
-                    {t("loan-schedule-title")}
-                </span>
-                <span className="flex items-center gap-3 text-xs text-ink-secondary">
-                    <span className="flex items-center gap-1">
-                        <span className="size-1.5 rounded-full bg-brand" />
-                        {t("loan-legend-principal")}
-                    </span>
-                    <span className="flex items-center gap-1">
-                        <span className="size-1.5 rounded-full bg-brand/30" />
-                        {t("loan-legend-interest")}
-                    </span>
-                </span>
-            </div>
-
-            <div data-loan-chart className="mt-3 flex h-32 items-end gap-[2px]">
+        <div data-loan-schedule className={cn(CARD, "p-4")}>
+            <div data-loan-chart className="flex h-32 items-end gap-[2px]">
                 {derived.yearly.map((row) => {
                     const h = (row.total / maxTotal) * 100;
                     const interestShare =

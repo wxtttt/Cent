@@ -297,7 +297,7 @@ function SectionHeader({
 }
 
 function EmptyText({ text }: { text: string }) {
-    // 家小满缺省态：纯文字居中、无插画与引导按钮
+    // APK 缺省态：纯文字居中、无插画与引导按钮
     return (
         <p className="py-12 text-center text-[13px] text-ink-secondary">
             {text}

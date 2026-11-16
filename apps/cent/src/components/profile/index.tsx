@@ -128,7 +128,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
     }, [bills, cursor]);
 
     const weekdays = useMemo(() => {
-        // narrow 单字头（一二三四五六日），与家小满日历一致
+        // narrow 单字头（一二三四五六日），与 APK 日历一致
         const formatter = new Intl.DateTimeFormat(locale, {
             weekday: "narrow",
         });
@@ -162,7 +162,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         navigate("/ledger");
     };
 
-    // 宫格顺序对齐家小满个人页：预算/分类/首页设置/家庭/行车/贷款，其余功能跟在后面
+    // 宫格顺序对齐APK 个人页：预算/分类/首页设置/家庭/行车/贷款，其余功能跟在后面
     const moreActions = [
         {
             key: "budget",
@@ -267,7 +267,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
         },
     ];
 
-    // 快捷记账对齐家小满：账单导入 / 自动记账 / 定时记账
+    // 快捷记账对齐APK：账单导入 / 自动记账 / 定时记账
     const quickActions = [
         {
             key: "import",
@@ -297,7 +297,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
 
     return (
         <div className="dp-drawer-surface flex h-full flex-col overflow-hidden bg-ground">
-            {/* 用户行：头像 + 昵称 + 箭头，点击进设置（对齐家小满个人抽屉）
+            {/* 用户行：头像 + 昵称 + 箭头，点击进设置（对齐APK 个人抽屉）
                 APK 现场实测（1080→393 CSS）：头像圆 x24..65 直径 42px、昵称 16px、
                 箭头 20px；状态栏 24px 之下头像上留 12px、下留 21px，日历卡顶部 y=98，
                 即内容区净高 74px。网页无系统状态栏，故 pt=12 + 42 + pb=20 = 74px。
@@ -370,7 +370,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                             </div>
                         ))}
                     </div>
-                    {/* 左右滑动切月（家小满日历无翻页按钮） */}
+                    {/* 左右滑动切月（APK 日历无翻页按钮） */}
                     <div
                         className="touch-pan-y grid grid-cols-7"
                         onPointerDown={(event) => {
@@ -522,7 +522,7 @@ function ProfileForm({ onCancel }: { onCancel?: () => void }) {
                         ))}
                     </div>
                 </div>
-                {/* 关于置于抽屉最底部，对齐家小满个人页的底部入口行 */}
+                {/* 关于置于抽屉最底部，对齐APK 个人页的底部入口行 */}
                 <button
                     type="button"
                     className="mt-4 flex w-full cursor-pointer items-center gap-3 rounded-panel bg-panel px-3.5 py-3 text-left transition-colors hover:bg-ground-muted"

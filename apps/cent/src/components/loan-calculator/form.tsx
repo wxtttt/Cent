@@ -19,25 +19,30 @@ import {
     toPlanInput,
 } from "./model";
 import {
-    CommercialRateSheet,
-    DownPaymentSheet,
-    FundRateSheet,
-    PrepaySheet,
-    RateChangeSheet,
-    TermSheet,
-} from "./pickers";
-import { showLoanDelete } from "./providers";
-import { LoanMenuSheet, PlanSwitcherSheet, SavePlanSheet } from "./save-sheet";
+    LoanSheetProvider,
+    type LoanSheetResult,
+    type LoanSheetValue,
+    showLoanDelete,
+    showLoanSheet,
+} from "./sheets";
 import { PAGE_FOOTER } from "./styles";
 
 type View = "detail" | "edit";
-type ParamSheet = "term" | "rateCommercial" | "rateFund" | "down" | null;
+
+/** 取消抽屉会 reject，这里统一吞掉，返回 undefined */
+const openSheet = (
+    value: LoanSheetValue,
+): Promise<LoanSheetResult | undefined> =>
+    showLoanSheet(value).catch(() => undefined);
 
 /**
  * 贷款管理页只有两个视图：
  *   detail 还到哪了 / 提前还款 / 利率轨迹 / 还款计划——进来默认落在第一笔
  *   edit   改参数，下半屏即时给还款分析与还款计划预览
  * 不再有列表页；多笔贷款在详情页点标题切换。
+ *
+ * 所有编辑都走底部抽屉（统一壳 + 卡片 + 橙色提醒 + 底栏），
+ * 页面本身只负责编排与落库。
  */
 export default function LoanCalculatorForm({
     onCancel,
@@ -58,19 +63,6 @@ export default function LoanCalculatorForm({
     // 主动「新增」时不能被自动选中逻辑拉回已有方案
     const [creating, setCreating] = useState(!first);
     const [dirty, setDirty] = useState(false);
-
-    const [paramSheet, setParamSheet] = useState<ParamSheet>(null);
-    const [prepaySheet, setPrepaySheet] = useState<{
-        item?: SavedLoanPrepay;
-    } | null>(null);
-    const [rateSheet, setRateSheet] = useState<{
-        item?: SavedLoanRateChange;
-    } | null>(null);
-    const [saveSheet, setSaveSheet] = useState<"create" | "rename" | null>(
-        null,
-    );
-    const [switchOpen, setSwitchOpen] = useState(false);
-    const [menuOpen, setMenuOpen] = useState(false);
 
     // 刚保存的方案可能晚一拍才进 plans（updatePersonalMeta 异步落库），
     // 守卫 effect 在它到位前不能把它当成「已被外部删除」
@@ -171,28 +163,164 @@ export default function LoanCalculatorForm({
             setView("detail");
             return;
         }
-        setSaveSheet("create");
+        void openSave("create");
     };
 
-    const confirmDelete = (plan: SavedLoanPlan) => {
-        showLoanDelete({
+    /** 保存 / 改名：摘要 + 名称 + 图标，一个抽屉搞完 */
+    const openSave = async (mode: "create" | "rename") => {
+        const res = await openSheet({
+            type: "save",
+            mode,
+            draft,
+            defaultName:
+                mode === "rename"
+                    ? (selected?.name ?? defaultName)
+                    : defaultName,
+            defaultIcon: mode === "rename" ? selected?.icon : undefined,
+        });
+        if (res?.kind !== "saved") return;
+        if (mode === "rename" && selected) {
+            await update(selected.id, { name: res.name, icon: res.icon });
+            return;
+        }
+        const id = await add(toPlanInput(draft, res.name, res.icon));
+        if (id) {
+            addedIdsRef.current.add(id);
+            setSelectedId(id);
+            setCreating(false);
+            setDirty(false);
+            setView("detail");
+        }
+    };
+
+    const confirmDelete = async (plan: SavedLoanPlan) => {
+        const ok = await showLoanDelete({
             title: t("loan-manage-delete"),
             description: t("loan-delete-confirm", { name: plan.name }),
-            onDelete: () => {
-                addedIdsRef.current.delete(plan.id);
-                void remove(plan.id).then(() => {
-                    const rest = plans.filter((p) => p.id !== plan.id);
-                    if (rest.length > 0) openPlan(rest[0]);
-                    else toEmpty();
-                });
-            },
+        }).catch(() => false);
+        if (!ok) return;
+        addedIdsRef.current.delete(plan.id);
+        await remove(plan.id);
+        const rest = plans.filter((p) => p.id !== plan.id);
+        if (rest.length > 0) openPlan(rest[0]);
+        else toEmpty();
+    };
+
+    const openMenu = async () => {
+        if (!selected) return;
+        const res = await openSheet({
+            type: "menu",
+            planName: selected.name,
+        });
+        if (res?.kind === "edit") setView("edit");
+        if (res?.kind === "delete") await confirmDelete(selected);
+    };
+
+    const openSwitch = async () => {
+        const res = await openSheet({
+            type: "switch",
+            plans,
+            activeId: selectedId ?? undefined,
+        });
+        if (!res) return;
+        if (res.kind === "plan") openPlan(res.plan);
+        if (res.kind === "create") startCreate();
+    };
+
+    const openTerm = async () => {
+        const res = await openSheet({ type: "term", years: draft.termYears });
+        if (res?.kind === "term") edit({ termYears: res.years });
+    };
+
+    const openCommercialRate = async () => {
+        const res = await openSheet({ type: "commercialRate", draft });
+        if (res?.kind === "commercialRate") {
+            edit({ lpr: res.lpr, bp: res.bp });
+        }
+    };
+
+    const openFundRate = async () => {
+        const res = await openSheet({ type: "fundRate", draft });
+        if (res?.kind === "fundRate") {
+            edit({ fundSuite: res.suite, fundRate: res.rate });
+        }
+    };
+
+    const openDown = async () => {
+        const res = await openSheet({ type: "down", draft });
+        if (res?.kind === "down") {
+            edit({
+                downMode: res.mode,
+                downRatio: res.ratio,
+                downAmount: res.amount,
+            });
+        }
+    };
+
+    const openPrepay = async (item?: SavedLoanPrepay) => {
+        const res = await openSheet({ type: "prepay", draft, initial: item });
+        if (!res) return;
+        if (res.kind === "delete" && item) {
+            await persist({
+                ...draft,
+                prepays: draft.prepays.filter((p) => p.id !== item.id),
+            });
+            return;
+        }
+        if (res.kind !== "prepay") return;
+        const next: SavedLoanPrepay = {
+            id: item?.id ?? v4(),
+            year: res.year,
+            month: res.month,
+            amount: Math.round(res.amountWan * 10000),
+            mode: res.mode,
+        };
+        await persist({
+            ...draft,
+            prepays: item
+                ? draft.prepays.map((p) => (p.id === item.id ? next : p))
+                : [...draft.prepays, next],
+        });
+    };
+
+    const openRateChange = async (item?: SavedLoanRateChange) => {
+        const res = await openSheet({
+            type: "rateChange",
+            draft,
+            initial: item,
+        });
+        if (!res) return;
+        if (res.kind === "delete" && item) {
+            await persist({
+                ...draft,
+                rateChanges: draft.rateChanges.filter((r) => r.id !== item.id),
+            });
+            return;
+        }
+        if (res.kind !== "rateChange") return;
+        const next: SavedLoanRateChange = {
+            id: item?.id ?? v4(),
+            year: res.year,
+            month: res.month,
+            commercialRate: res.commercialRate,
+            fundRate: res.fundRate,
+        };
+        await persist({
+            ...draft,
+            rateChanges: item
+                ? draft.rateChanges.map((r) => (r.id === item.id ? next : r))
+                : [...draft.rateChanges, next],
         });
     };
 
     return (
         <PopupLayout
             onBack={goBack}
-            title={t("loan-calculator")}
+            title={
+                <span className="text-[18px] font-semibold text-ink">
+                    {t("loan-calculator")}
+                </span>
+            }
             className="dp-drawer-surface h-full bg-ground"
             backStyle="circle"
             right={
@@ -202,7 +330,7 @@ export default function LoanCalculatorForm({
                         data-loan-more
                         aria-label={t("loan-manage-open")}
                         className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
-                        onClick={() => setMenuOpen(true)}
+                        onClick={() => void openMenu()}
                     >
                         <i className="icon-[lucide--ellipsis] size-5" />
                     </button>
@@ -215,12 +343,12 @@ export default function LoanCalculatorForm({
                     plans={plans}
                     draft={draft}
                     derived={derived}
-                    onPickPlan={() => setSwitchOpen(true)}
-                    onRename={() => setSaveSheet("rename")}
-                    onAddPrepay={() => setPrepaySheet({})}
-                    onEditPrepay={(item) => setPrepaySheet({ item })}
-                    onAddRate={() => setRateSheet({})}
-                    onEditRate={(item) => setRateSheet({ item })}
+                    onPickPlan={() => void openSwitch()}
+                    onRename={() => void openSave("rename")}
+                    onAddPrepay={() => void openPrepay()}
+                    onEditPrepay={(item) => void openPrepay(item)}
+                    onAddRate={() => void openRateChange()}
+                    onEditRate={(item) => void openRateChange(item)}
                 />
             )}
 
@@ -230,8 +358,13 @@ export default function LoanCalculatorForm({
                         draft={draft}
                         derived={derived}
                         edit={edit}
-                        onOpenSheet={(kind) => setParamSheet(kind)}
-                        onOpenDown={() => setParamSheet("down")}
+                        onOpenSheet={(kind) => {
+                            if (kind === "term") void openTerm();
+                            else if (kind === "commercialRate")
+                                void openCommercialRate();
+                            else void openFundRate();
+                        }}
+                        onOpenDown={() => void openDown()}
                     />
                     <div className={PAGE_FOOTER}>
                         <button
@@ -248,178 +381,8 @@ export default function LoanCalculatorForm({
                 </>
             )}
 
-            <TermSheet
-                open={paramSheet === "term"}
-                onOpenChange={(v) => setParamSheet(v ? "term" : null)}
-                value={draft.termYears}
-                onConfirm={(years) => edit({ termYears: years })}
-            />
-            <CommercialRateSheet
-                open={paramSheet === "rateCommercial"}
-                onOpenChange={(v) => setParamSheet(v ? "rateCommercial" : null)}
-                draft={draft}
-                onConfirm={(patch) => edit(patch)}
-            />
-            <FundRateSheet
-                open={paramSheet === "rateFund"}
-                onOpenChange={(v) => setParamSheet(v ? "rateFund" : null)}
-                draft={draft}
-                onConfirm={(patch) => edit(patch)}
-            />
-            <DownPaymentSheet
-                open={paramSheet === "down"}
-                onOpenChange={(v) => setParamSheet(v ? "down" : null)}
-                draft={draft}
-                onConfirm={(patch) => edit(patch)}
-            />
-
-            <PrepaySheet
-                open={prepaySheet !== null}
-                onOpenChange={(v) =>
-                    setPrepaySheet(v ? (prepaySheet ?? {}) : null)
-                }
-                draft={draft}
-                initial={prepaySheet?.item}
-                onConfirm={(v) => {
-                    const item = prepaySheet?.item;
-                    const next: SavedLoanPrepay = {
-                        id: item?.id ?? v4(),
-                        year: v.year,
-                        month: v.month,
-                        amount: Math.round(v.amountWan * 10000),
-                        mode: v.mode,
-                    };
-                    void persist({
-                        ...draft,
-                        prepays: item
-                            ? draft.prepays.map((p) =>
-                                  p.id === item.id ? next : p,
-                              )
-                            : [...draft.prepays, next],
-                    });
-                }}
-                onDelete={
-                    prepaySheet?.item
-                        ? () => {
-                              const target = prepaySheet.item!;
-                              // 先收抽屉再弹确认：两层 Radix 弹层叠在一起时，
-                              // 下层遮罩会盖住确认弹层的按钮
-                              setPrepaySheet(null);
-                              showLoanDelete({
-                                  title: t("loan-prepay-delete"),
-                                  description: t("loan-prepay-delete-desc"),
-                                  onDelete: () => {
-                                      void persist({
-                                          ...draft,
-                                          prepays: draft.prepays.filter(
-                                              (p) => p.id !== target.id,
-                                          ),
-                                      });
-                                  },
-                              });
-                          }
-                        : undefined
-                }
-            />
-            <RateChangeSheet
-                open={rateSheet !== null}
-                onOpenChange={(v) => setRateSheet(v ? (rateSheet ?? {}) : null)}
-                draft={draft}
-                initial={rateSheet?.item}
-                onConfirm={(v) => {
-                    const item = rateSheet?.item;
-                    const next: SavedLoanRateChange = {
-                        id: item?.id ?? v4(),
-                        ...v,
-                    };
-                    void persist({
-                        ...draft,
-                        rateChanges: item
-                            ? draft.rateChanges.map((r) =>
-                                  r.id === item.id ? next : r,
-                              )
-                            : [...draft.rateChanges, next],
-                    });
-                }}
-                onDelete={
-                    rateSheet?.item
-                        ? () => {
-                              const target = rateSheet.item!;
-                              setRateSheet(null);
-                              showLoanDelete({
-                                  title: t("loan-rate-delete"),
-                                  description: t("loan-rate-delete-desc"),
-                                  onDelete: () => {
-                                      void persist({
-                                          ...draft,
-                                          rateChanges: draft.rateChanges.filter(
-                                              (r) => r.id !== target.id,
-                                          ),
-                                      });
-                                  },
-                              });
-                          }
-                        : undefined
-                }
-            />
-
-            <SavePlanSheet
-                open={saveSheet !== null}
-                mode={saveSheet ?? "create"}
-                draft={draft}
-                defaultName={
-                    saveSheet === "rename"
-                        ? (selected?.name ?? defaultName)
-                        : defaultName
-                }
-                defaultIcon={
-                    saveSheet === "rename" ? selected?.icon : undefined
-                }
-                onClose={() => setSaveSheet(null)}
-                onConfirm={async (name, icon) => {
-                    if (saveSheet === "rename" && selected) {
-                        await update(selected.id, { name, icon });
-                        setDraft((prev) => ({ ...prev }));
-                        return;
-                    }
-                    const id = await add(toPlanInput(draft, name, icon));
-                    if (id) {
-                        addedIdsRef.current.add(id);
-                        setSelectedId(id);
-                        setCreating(false);
-                        setDirty(false);
-                        setView("detail");
-                    }
-                }}
-            />
-
-            <PlanSwitcherSheet
-                open={switchOpen}
-                plans={plans}
-                activeId={selectedId ?? undefined}
-                onPick={openPlan}
-                onCreate={startCreate}
-                onClose={() => setSwitchOpen(false)}
-            />
-
-            <LoanMenuSheet
-                open={menuOpen && selected !== undefined}
-                planName={selected?.name ?? ""}
-                items={[
-                    {
-                        key: "edit",
-                        label: t("loan-edit-settings"),
-                        onClick: () => setView("edit"),
-                    },
-                    {
-                        key: "delete",
-                        label: t("loan-manage-delete"),
-                        danger: true,
-                        onClick: () => selected && confirmDelete(selected),
-                    },
-                ]}
-                onClose={() => setMenuOpen(false)}
-            />
+            {/* 删除确认是全局挂载的实例（main-layout），这里只挂抽屉 */}
+            <LoanSheetProvider />
         </PopupLayout>
     );
 }
