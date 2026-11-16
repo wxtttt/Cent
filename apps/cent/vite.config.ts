@@ -127,6 +127,11 @@ export default defineConfig(({ mode }) => {
         // 不要被 esbuild 预打包成外部依赖（否则其 `#/` 子路径导入与 Tailwind 扫描会失效）。
         optimizeDeps: {
             exclude: ["@glink25/chaty"],
+            // chaty 被 exclude 后不参与启动扫描，它内部引用的这几个包只会在真正打开
+            // AI 面板时才被运行时发现 → 触发一次「重优化 + 整页 reload」（真机调试时
+            // 表现为页面自己刷一下，且重优化末尾要删上百个缓存文件，会撞沙箱批量删除拦截）。
+            // 这里显式预打包，让冷启动一次到位。chaty 新增裸依赖时同步补到这里。
+            include: ["jsonrepair", "marked", "zustand-indexeddb"],
         },
         worker: {
             format: "es",
