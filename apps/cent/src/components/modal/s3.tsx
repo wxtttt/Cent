@@ -86,6 +86,9 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
     });
     const [checking, setChecking] = useState(false);
     const [testing, setTesting] = useState(false);
+    // 高级选项默认折叠：baseDir / sessionToken / forcePathStyle 是少数派配置，
+    // 全展开会把主表单挤到一屏之外（用户口径「能默认折叠起来吗」）
+    const [advancedOpen, setAdvancedOpen] = useState(false);
     // biome 禁止静态字符串 id，勾选行用 useId 关联 label
     const checkboxId = useId();
     const errors = form.formState.errors;
@@ -153,8 +156,11 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
                             {t("login-s3-hint")}
                         </div>
                         <Form {...form}>
-                            {/* 字段列收窄居中：细线不顶满屏幕两边（主流 iOS 登录表单比例） */}
-                            <div className="mx-auto mt-9 flex w-full max-w-[300px] flex-col gap-6">
+                            {/* 常用服务商与字段组包在同一张白卡里（用户口径「类似卡片」） */}
+                            <div
+                                data-login-form-card
+                                className="mx-auto mt-8 w-full max-w-[340px] rounded-[20px] bg-panel px-4 pt-4 pb-2 shadow-[0_1px_6px_rgba(92,62,30,0.06)]"
+                            >
                                 {/* 常用服务商：点击自动填入标准 Endpoint，整组居中 */}
                                 <div className="flex flex-col items-center gap-2.5">
                                     <span className="text-[12px] text-ink-secondary/70">
@@ -171,159 +177,196 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
                                                         preset.url,
                                                     );
                                                 }}
-                                                className="rounded-full border border-rule bg-panel px-3.5 py-1.5 text-[13px] text-ink-secondary transition-colors hover:border-brand/60 hover:text-brand"
+                                                className="rounded-full border border-rule bg-ground px-3.5 py-1.5 text-[14px] text-ink transition-colors hover:border-brand/60 hover:text-brand"
                                             >
                                                 {preset.label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                                <FormField
-                                    control={form.control}
-                                    name="endpoint"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("s3-endpoint")}
-                                            error={errors.endpoint?.message}
-                                            required
-                                        >
-                                            <input
-                                                {...field}
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
-                                                placeholder="https://s3.amazonaws.com"
-                                            />
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="region"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("s3-region")}
-                                            error={errors.region?.message}
-                                            required
-                                        >
-                                            <input
-                                                {...field}
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
-                                                placeholder="us-east-1"
-                                            />
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="bucket"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("s3-bucket")}
-                                            error={errors.bucket?.message}
-                                            required
-                                        >
-                                            <input
-                                                {...field}
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
-                                                placeholder="my-bucket"
-                                            />
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="accessKeyId"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("s3-access-key-id")}
-                                            error={errors.accessKeyId?.message}
-                                            required
-                                        >
-                                            <input
-                                                {...field}
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
-                                            />
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="secretAccessKey"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("s3-secret-access-key")}
-                                            error={
-                                                errors.secretAccessKey?.message
-                                            }
-                                            required
-                                        >
-                                            <input
-                                                {...field}
-                                                type="password"
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
-                                            />
-                                        </FieldRow>
-                                    )}
-                                />
-                            </div>
-                            <div className="mt-7 text-center text-[12px] text-ink-secondary/70">
-                                {t("s3-advanced-options")}
-                            </div>
-                            <div className="mx-auto mt-3 flex w-full max-w-[300px] flex-col gap-6">
-                                <FormField
-                                    control={form.control}
-                                    name="baseDir"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("s3-base-dir")}
-                                            optional
-                                            optionalLabel={t("login-optional")}
-                                        >
-                                            <input
-                                                {...field}
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
-                                                placeholder="cent"
-                                            />
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="sessionToken"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("s3-session-token")}
-                                            optional
-                                            optionalLabel={t("login-optional")}
-                                        >
-                                            <input
-                                                {...field}
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
-                                                placeholder={t(
-                                                    "s3-session-token-placeholder",
+                                <div className="mt-5 flex w-full flex-col gap-5">
+                                    <FormField
+                                        control={form.control}
+                                        name="endpoint"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t("s3-endpoint")}
+                                                error={errors.endpoint?.message}
+                                                required
+                                            >
+                                                <input
+                                                    {...field}
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
+                                                    placeholder="https://s3.amazonaws.com"
+                                                />
+                                            </FieldRow>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="region"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t("s3-region")}
+                                                error={errors.region?.message}
+                                                required
+                                            >
+                                                <input
+                                                    {...field}
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
+                                                    placeholder="us-east-1"
+                                                />
+                                            </FieldRow>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="bucket"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t("s3-bucket")}
+                                                error={errors.bucket?.message}
+                                                required
+                                            >
+                                                <input
+                                                    {...field}
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
+                                                    placeholder="my-bucket"
+                                                />
+                                            </FieldRow>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="accessKeyId"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t("s3-access-key-id")}
+                                                error={
+                                                    errors.accessKeyId?.message
+                                                }
+                                                required
+                                            >
+                                                <input
+                                                    {...field}
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                />
+                                            </FieldRow>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="secretAccessKey"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t(
+                                                    "s3-secret-access-key",
+                                                )}
+                                                error={
+                                                    errors.secretAccessKey
+                                                        ?.message
+                                                }
+                                                required
+                                            >
+                                                <input
+                                                    {...field}
+                                                    type="password"
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                />
+                                            </FieldRow>
+                                        )}
+                                    />
+                                </div>
+                                {/* 高级选项：默认折叠。整行 44px 可点，右侧 chevron 跟随展开态旋转 */}
+                                <div className="mt-1">
+                                    <button
+                                        type="button"
+                                        data-advanced-toggle
+                                        aria-expanded={advancedOpen}
+                                        onClick={() =>
+                                            setAdvancedOpen((v) => !v)
+                                        }
+                                        className="flex h-11 w-full items-center justify-between text-[13px] text-ink-secondary"
+                                    >
+                                        <span>{t("s3-advanced-options")}</span>
+                                        <i
+                                            className={`icon-[lucide--chevron-down] size-4 transition-transform ${
+                                                advancedOpen ? "rotate-180" : ""
+                                            }`}
+                                        />
+                                    </button>
+                                    {advancedOpen && (
+                                        <div className="flex w-full flex-col gap-5 pb-3">
+                                            <FormField
+                                                control={form.control}
+                                                name="baseDir"
+                                                render={({ field }) => (
+                                                    <FieldRow
+                                                        label={t("s3-base-dir")}
+                                                        optional
+                                                        optionalLabel={t(
+                                                            "login-optional",
+                                                        )}
+                                                    >
+                                                        <input
+                                                            {...field}
+                                                            className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                            placeholder="cent"
+                                                        />
+                                                    </FieldRow>
                                                 )}
                                             />
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="forcePathStyle"
-                                    render={({ field }) => (
-                                        <span className="flex cursor-pointer items-center gap-2 pb-1 text-[14px] text-ink">
-                                            <Checkbox
-                                                id={checkboxId}
-                                                checked={field.value}
-                                                onCheckedChange={field.onChange}
+                                            <FormField
+                                                control={form.control}
+                                                name="sessionToken"
+                                                render={({ field }) => (
+                                                    <FieldRow
+                                                        label={t(
+                                                            "s3-session-token",
+                                                        )}
+                                                        optional
+                                                        optionalLabel={t(
+                                                            "login-optional",
+                                                        )}
+                                                    >
+                                                        <input
+                                                            {...field}
+                                                            className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                            placeholder={t(
+                                                                "s3-session-token-placeholder",
+                                                            )}
+                                                        />
+                                                    </FieldRow>
+                                                )}
                                             />
-                                            <label
-                                                htmlFor={checkboxId}
-                                                className="cursor-pointer"
-                                            >
-                                                {t("s3-force-path-style")}
-                                            </label>
-                                        </span>
+                                            <FormField
+                                                control={form.control}
+                                                name="forcePathStyle"
+                                                render={({ field }) => (
+                                                    <span className="flex cursor-pointer items-center gap-2 pb-1 text-[14px] text-ink">
+                                                        <Checkbox
+                                                            id={checkboxId}
+                                                            checked={
+                                                                field.value
+                                                            }
+                                                            onCheckedChange={
+                                                                field.onChange
+                                                            }
+                                                        />
+                                                        <label
+                                                            htmlFor={checkboxId}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            {t(
+                                                                "s3-force-path-style",
+                                                            )}
+                                                        </label>
+                                                    </span>
+                                                )}
+                                            />
+                                        </div>
                                     )}
-                                />
+                                </div>
                             </div>
                             {/* 测试连接：主流做法是品牌色文字链，只校验不落库 */}
                             <div className="mt-7 flex justify-center">

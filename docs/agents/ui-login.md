@@ -44,6 +44,13 @@
 - 保留：`login_method_used` 埋点（`StorageAPI.type` 落在 `LOGIN_METHODS` 才上报）、`loading` 态白卡 + spinner、PWA 安装提示、App 下载、`see-introduce` 外链、使用条款 / 隐私政策。
 - r26 移除且**继续不恢复**：黑色遮罩、深棕色 `bg-field` 品牌区、通用 `Button` 胶囊按钮、`beta` 角标、下划线「或者使用现有的token」链接。~~居中大品牌头~~：**已解禁**（用户要求找回登录页观感），但规格按上表欢迎区执行，不要回到 r26 的 84px 大头 + 卡片堆叠样式。
 
+## 登录方式二级页的白卡与说明抽屉（2026-11-16 11:57 口径）
+
+- **「常用服务商」与字段组包在同一张白卡里**（用户口径「整组包裹起来，用白色底色，类似卡片」）：卡 `max-w-[340px] rounded-[20px] bg-panel px-4 pt-4`，字段细线不再顶到卡边。胶囊在卡内必须改浅灰底 `bg-ground`——原来是白底描边（`bg-panel border-rule`），放进白卡后与卡同色、看不出是按钮。文字 `text-ink` 黑色 + `text-[14px]` + `px-3.5 py-1.5`：用户两条口径叠加（「字号略小」→ 放大到 14px；「按钮不要调这么大」→ padding 不再跟着放大），实测 72×36。
+- **S3 高级选项默认折叠**：`baseDir` / `sessionToken` / `forcePathStyle` 收进卡片底部的 44px 折叠行（`aria-expanded` + chevron 旋转），默认折叠；折叠态这三个字段不渲染（探针按 `input[placeholder="cent"]` 计数 0 → 1 判定），卡高 463 → 635。
+- **代理地址的「?」改为应用内说明抽屉**：原来 `target="_blank"` 跳到博客的「使用代理」小节，手机上要来回切应用。现为 `components/modal/login-proxy-help.tsx` 的 `showProxyHelp()`，底部抽屉分五段——什么时候需要 / 怎么填 / 代理拦掉 PROPFIND 时 / 安全提醒 / 免费代理（含「复制地址」）。文案与博客原文口径一致，**正文提到产品名一律「胖记」，不出现 Cent**；`cent.linkai.work`（CORS 允许来源）与 `cent-backend.linkai.work`（免费代理）是真实地址，保留原样。抽屉 `max-h-[86dvh]`、实测高 749，最后一段的地址行与复制按钮在 402×874 首屏内完整可见——降到 82dvh 会把那张地址卡切成半截（实测过）。
+- **点击热区 40×40**（用户口径「热区放大方便点击」）：眼睛与问号都是 `size-10` 圆钮、图标仍 16px，用 `-mr-2` 抵掉圆钮内边距，输入框可点宽度不变；眼睛按钮补 `aria-label`（显示密码 / 隐藏密码），供探针按状态定位。
+
 ## 语言键与窄屏
 
 - **r27 声称新增的语言键实际未落盘**（页面一度显示 key 字符串），本轮补齐并按新结构定稿：`login-page-title`（sr-only 标题）、`login-token`（现有 Token）、`login-to-webdav` / `login-to-s3`（WebDAV / S3 大按钮文案）、`login-webdav-hint`、`login-s3-hint`、`login-no-account`、`login-test-connection`（测试连接）、`login-test-ok`（连接成功 toast）、`login-providers`（常用服务商）、`login-optional`（选填）、`login-create-user`（新建用户）。合并引导页新增：`login-finish-setup`（完成设置）、`login-section-books`（账本）、`login-section-users`（用户）、`please-input-user-name`（新建用户 prompt 标题）；随合并页删除的键：`custom-user-name`（昵称标签）、`custom-user-name-tooltip`（`custom-user-name-placeholder` 保留给 prompt）。`login-group-*` 三组标题与 `login-more`（其他方式）随分组移除**废弃不用**；`login-offline-hint` 随离线升大按钮**删除**。S3 可选字段标签不再自带「(可选)」后缀（`s3-base-dir` / `s3-session-token` 改纯名称，「选填」标注统一由 FieldRow 渲染，避免「(可选)（选填）」叠字）。`app-introduce`（全应用仅登录页使用）值改为「多人协作家庭管理App」/ "Collaborative Family Management App"（用户 2026-11-15 口径）。其余沿用 `APP_NAME` / `pwa-install-tip` / `see-introduce` / `login`（登录中）/ 协议四键。

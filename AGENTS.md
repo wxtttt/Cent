@@ -97,6 +97,8 @@
 
 **2026-11-16 11:26 口径变更登记**（**AI 面板首开触发重优化 / 沙箱批量删除拦截，dev server 起法固定**，worktree `feat-login-261115`，验证 → `docs/agents/verification.md`）：① `vite.config.ts` 的 `optimizeDeps.include` 补 `jsonrepair` / `marked` / `zustand-indexeddb`。`@glink25/chaty` 被 `optimizeDeps.exclude` 后不参与启动扫描，它内部这三个裸依赖只在**首次打开 AI 面板**时才被运行时发现 → 触发一次「重优化 + 整页 reload」（真机调试时页面自己刷一下）。预打包后冷启动一次到位；**chaty 以后新增裸依赖要同步补进 include**，否则又会退化成运行时重优化。② **dev server 一律这样起：`CODEBUDDY_SAFE_DELETE_ENABLED=0 pnpm --filter cent dev`**。vite 重优化提交阶段会 `fs.rm` 旧 `deps_temp_*`（实测 152 个文件），撞上 WorkBuddy 沙箱 safe-delete shim 的批量删除阈值（`~/.workbuddy/settings.json` 的 `sandbox.safeDeleteBulkThreshold = 100`）；该拦截语义是「需确认」，后台任务没法应答就把异常抛出来，进程 exit 1，而残留的 `deps_temp_*` 会让下次启动继续死在同一步——这就是「每次都要先清理临时目录」的真因。前置这个环境变量让该条命令的进程树不加载 shim，作用范围仅限 vite 自己的缓存目录。**不要再手动 `mv` 缓存目录绕过，也不用去调低沙箱阈值。**
 
+**2026-11-16 11:57 口径变更登记**（**WebDAV / S3 登录二级页：白卡包裹 + S3 高级选项默认折叠 + 代理说明抽屉 + 热区放大**，worktree `feat-login-261115`；细节 → `docs/agents/ui-login.md`，验证 → `docs/agents/verification.md`）：① 「常用服务商」与字段组包进同一张 `max-w-[340px] rounded-[20px] bg-panel` 白卡；**卡内胶囊必须改浅灰底 `bg-ground`**（原来是白底描边，放进白卡就与卡同色、看不出是按钮）。胶囊文字改黑 `text-ink` + `text-[14px]`，padding 保持 `px-3.5 py-1.5`——用户先嫌字号小、后嫌按钮被调太大，两条要同时满足。② S3 的 `baseDir` / `sessionToken` / `forcePathStyle` 收进卡片底部折叠行，**默认折叠**（折叠态不进 DOM）。③ 代理地址的「?」不再 `target="_blank"` 跳博客，改为 `modal/login-proxy-help.tsx` 的底部说明抽屉：何时需要 / 怎么填 / 代理拦掉 PROPFIND 时 / 安全提醒 / 免费代理（带复制地址），口径与博客原文一致；**正文里的产品名统一「胖记」，不出现 Cent**，`cent.linkai.work` 与 `cent-backend.linkai.work` 是真实域名、保留原样。④ 眼睛与问号热区放大到 40×40（`size-10` + `-mr-2`，图标仍 16px，输入框可点宽度不变）。
+
 ## 1. 项目速览
 
 - 名称：**胖记**（用户明确：没有英文名，界面与 PWA 清单里不出现 Cent / 日计；仓库名、包名、上游链接仍是 Cent，不要改）。纯前端 PWA 记账应用，数据存在用户自己的 GitHub / Gitee / WebDAV / S3 仓库或本地离线库中，没有业务后端。

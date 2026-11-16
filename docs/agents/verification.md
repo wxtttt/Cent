@@ -236,3 +236,16 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - **判据不看浏览器侧、看 dev server 日志**：整轮（含 `probe-vehicle-xpan.js` 的 20 多步交互）日志里**只有启动时那一行 `[optimizer] bundling dependencies...`，没有任何 `✨ new dependencies optimized`**，即重优化与整页 reload 都没有再发生。改配置后 `probe-vehicle-xpan.js` 仍全绿（滚动保持 300、两层容器 `overflowX=hidden`、`scrollLeft ±90` clamp 到 0、注入 62px 后路由页 874→936）。
 - **probe 脚本写法**：`playwright-cli run-code --filename` 的文件体是**一个裸的 `async page => { ... }` 箭头函数**（不是 `module.exports`），写成 CommonJS 会报 `SyntaxError: Unexpected token ';'`。
 - **顺带清理**：`.vite-bak-1115`（51MB 旧缓存）已删；`CODEBUDDY_SAFE_DELETE_ENABLED=0` 对 Bash 工具里的 `rm -rf` 不生效（那是 shell 层的删除保护，会走审批），只对 node 进程树里的 shim 生效。
+
+## 2026-11-16 11:57 登录二级页白卡 / S3 折叠 / 代理说明抽屉验证（worktree `feat-login-261115`）
+
+- **探针 `verify-login-form.js`**（`.playwright-cli/`，402×874）：登录页 → 「使用 WebDAV 登录」→ 量卡片与胶囊 → 点眼睛 → 点问号开抽屉 → 读抽屉结构 → 返回 → 「使用 S3 登录」→ 量折叠态 → 点击展开。断言结果（WebKit / Chromium 一致）：
+  - `webdavCard` 340×390、`bg rgb(255,255,255)`、`radius 20px`；`providerPill` 72×36、`fontSize 14px`、`color rgb(56,50,48)`（黑字）、`bg rgb(244,244,244)`；
+  - 热区 `eye 40×40`、`help 40×40`（图标仍 16px，`-mr-2` 抵掉圆钮内边距）；
+  - 眼睛点击后 `textInputs 1 / passwordInputs 0`（明文切换生效）；
+  - `helpSheet`：高 749、`coversBottom true`、`sections 5`、`codes 4`、标题 / 安全提醒 / PROPFIND / 关闭 全在、`noBrandCent true`、`usesPangji true`、`copyRowVisible true`；
+  - S3：折叠态 `aria-expanded=false`、`input[placeholder="cent"]` 0 个、卡高 463；展开后 1 个、卡高 635。
+- **两个「调到正好」的坑**：① 抽屉 `max-h` 用 82dvh 时最后一段的地址卡被切成半截（首屏只露出半张卡），82 → 86dvh（749）后 `copyRowVisible` 才为 true；② 「查看完整说明」原来单独占一行、正好被折在 cut 线下，改成接在「免费代理」说明文字末尾的行内链接后，抽屉底部以地址卡收尾、不再有半截元素。
+- **探针定位坑**：眼睛按钮的 `aria-label` 会随状态变（显示密码 / 隐藏密码），用「密码输入框的 following-sibling」定位会在第一次点击后失效——按 `aria-label` 分两次点；登录页 S3 按钮的可见文案是「使用 S3 登录」（`login-to-s3`），不是 `S3`。
+- **深色回归**（`verify-login-form-dark.js`，Chromium）：`html.classList.add("dark")` 后卡片 `rgb(31,25,19)`、输入字 `rgb(247,240,230)`、抽屉同底色、小标题与标题同为亮色——胶囊靠 `bg-ground` 比卡面再暗一档仍能看出边界。
+- `pnpm lint` 通过（378 files）；`optimizeDeps.include` 生效后整轮日志无 `new dependencies optimized`（无整页 reload 打断探针）。
