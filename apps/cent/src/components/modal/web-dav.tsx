@@ -13,6 +13,7 @@ import { useIntl } from "@/locale";
 import { checkWebDAVConfig } from "@/tidal/web-dav";
 import createConfirmProvider from "../confirm";
 import { Form, FormField } from "../ui/form";
+import { ProxyHelpProvider, showProxyHelp } from "./login-proxy-help";
 
 export type WebDAVEdit = {
     remote: string;
@@ -138,8 +139,13 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
                             </div>
                         )}
                         <Form {...form}>
-                            {/* 字段列收窄居中：细线不顶满屏幕两边（主流 iOS 登录表单比例） */}
-                            <div className="mx-auto mt-9 flex w-full max-w-[300px] flex-col gap-6">
+                            {/* 常用服务商与字段组包在同一张白卡里（用户口径「类似卡片」）：
+                                卡宽 340、卡内 padding 16，字段细线因此不再顶到卡边，
+                                比原先裸铺在灰底上更接近 iOS 分组表单 */}
+                            <div
+                                data-login-form-card
+                                className="mx-auto mt-8 w-full max-w-[340px] rounded-[20px] bg-panel px-4 pt-4 pb-4 shadow-[0_1px_6px_rgba(92,62,30,0.06)]"
+                            >
                                 {/* 常用服务商：点击自动填入标准地址，整组居中 */}
                                 <div className="flex flex-col items-center gap-2.5">
                                     <span className="text-[12px] text-ink-secondary/70">
@@ -156,111 +162,131 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
                                                         preset.url,
                                                     );
                                                 }}
-                                                className="rounded-full border border-rule bg-panel px-3.5 py-1.5 text-[13px] text-ink-secondary transition-colors hover:border-brand/60 hover:text-brand"
+                                                className="rounded-full border border-rule bg-ground px-3.5 py-1.5 text-[14px] text-ink transition-colors hover:border-brand/60 hover:text-brand"
                                             >
                                                 {preset.label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                                <FormField
-                                    control={form.control}
-                                    name="remote"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("web-dav-remote-url")}
-                                            error={errors.remote?.message}
-                                            required
-                                        >
-                                            <input
-                                                {...field}
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
-                                                placeholder="https://dav.jianguoyun.com/dav/"
-                                            />
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="username"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("username")}
-                                            error={errors.username?.message}
-                                            required
-                                        >
-                                            <input
-                                                {...field}
-                                                className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
-                                            />
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="password"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("password")}
-                                            required
-                                        >
-                                            <span className="flex min-w-0 flex-1 items-center">
+                                <div className="mt-5 flex w-full flex-col gap-5">
+                                    <FormField
+                                        control={form.control}
+                                        name="remote"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t("web-dav-remote-url")}
+                                                error={errors.remote?.message}
+                                                required
+                                            >
                                                 <input
                                                     {...field}
-                                                    type={
-                                                        showPassword
-                                                            ? "text"
-                                                            : "password"
-                                                    }
-                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
+                                                    placeholder="https://dav.jianguoyun.com/dav/"
                                                 />
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setShowPassword(
-                                                            !showPassword,
-                                                        )
-                                                    }
-                                                    className="flex-shrink-0 text-ink-secondary transition-colors hover:text-ink"
-                                                >
-                                                    {showPassword ? (
-                                                        <i className="icon-[lucide--eye-off] size-4" />
-                                                    ) : (
-                                                        <i className="icon-[lucide--eye] size-4" />
-                                                    )}
-                                                </button>
-                                            </span>
-                                        </FieldRow>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="proxy"
-                                    render={({ field }) => (
-                                        <FieldRow
-                                            label={t("proxy-url")}
-                                            optional
-                                            optionalLabel={t("login-optional")}
-                                        >
-                                            <span className="flex min-w-0 flex-1 items-center">
+                                            </FieldRow>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="username"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t("username")}
+                                                error={errors.username?.message}
+                                                required
+                                            >
                                                 <input
                                                     {...field}
-                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                    className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-secondary/70"
                                                 />
-                                                <a
-                                                    className="flex-shrink-0 text-ink-secondary transition-colors hover:text-brand"
-                                                    href={t(
-                                                        "web-dav-proxy-url",
-                                                    )}
-                                                    target="_blank"
-                                                    rel="noopener"
-                                                >
-                                                    <i className="icon-[lucide--circle-help] size-4" />
-                                                </a>
-                                            </span>
-                                        </FieldRow>
-                                    )}
-                                />
+                                            </FieldRow>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="password"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t("password")}
+                                                required
+                                            >
+                                                <span className="flex min-w-0 flex-1 items-center">
+                                                    <input
+                                                        {...field}
+                                                        type={
+                                                            showPassword
+                                                                ? "text"
+                                                                : "password"
+                                                        }
+                                                        className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                    />
+                                                    {/* 眼睛热区 40×40（图标仍 16），右侧 -mr-2 抵掉
+                                                    圆钮内边距，输入框可点宽度不变 */}
+                                                    <button
+                                                        type="button"
+                                                        aria-label={
+                                                            showPassword
+                                                                ? t(
+                                                                      "hide-password",
+                                                                  )
+                                                                : t(
+                                                                      "show-password",
+                                                                  )
+                                                        }
+                                                        onClick={() =>
+                                                            setShowPassword(
+                                                                !showPassword,
+                                                            )
+                                                        }
+                                                        className="-mr-2 flex size-10 flex-shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors active:bg-ground"
+                                                    >
+                                                        {showPassword ? (
+                                                            <i className="icon-[lucide--eye-off] size-4" />
+                                                        ) : (
+                                                            <i className="icon-[lucide--eye] size-4" />
+                                                        )}
+                                                    </button>
+                                                </span>
+                                            </FieldRow>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="proxy"
+                                        render={({ field }) => (
+                                            <FieldRow
+                                                label={t("proxy-url")}
+                                                optional
+                                                optionalLabel={t(
+                                                    "login-optional",
+                                                )}
+                                            >
+                                                <span className="flex min-w-0 flex-1 items-center">
+                                                    <input
+                                                        {...field}
+                                                        className="min-w-0 flex-1 bg-transparent text-[15px] text-ink outline-none"
+                                                    />
+                                                    {/* 问号改为打开应用内说明抽屉（原来跳出应用去博客），
+                                                    热区同眼睛按钮 40×40 */}
+                                                    <button
+                                                        type="button"
+                                                        data-proxy-help
+                                                        aria-label={t(
+                                                            "proxy-help-title",
+                                                        )}
+                                                        onClick={() =>
+                                                            showProxyHelp()
+                                                        }
+                                                        className="-mr-2 flex size-10 flex-shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors active:bg-ground"
+                                                    >
+                                                        <i className="icon-[lucide--circle-help] size-4" />
+                                                    </button>
+                                                </span>
+                                            </FieldRow>
+                                        )}
+                                    />
+                                </div>
                             </div>
                             {/* 测试连接：主流做法是品牌色文字链，只校验不落库 */}
                             <div className="mt-7 flex justify-center">
@@ -276,6 +302,7 @@ const LoadingForm = ({ onCancel }: { onCancel?: () => void }) => {
                                 </button>
                             </div>
                         </Form>
+                        <ProxyHelpProvider />
                     </div>
                 </div>
                 {/* 只留一颗确认按钮，作为列的兄弟节点钉在屏幕底部；

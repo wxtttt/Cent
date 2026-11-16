@@ -22,7 +22,9 @@
 | Token 胶囊 | 「现有 Token」胶囊叠在 Gitee / GitHub 按钮内**右缘**（`absolute right-3 top-1/2 -translate-y-1/2 z-10`）：主按钮上 `bg-white/90 text-brand`，次按钮上 `bg-brand/10 text-brand`。胶囊是主按钮的**兄弟节点**绝对定位，不构成 button 嵌套 button |
 | 登录方式页入口 | WebDAV / S3 大按钮点击 → `loginWith` → endpoint `login()` → **二级路由页**（`/login/webdav`、`/login/s3`，见「登录方式二级路由页」段） |
 | 图标 | GitHub 用官方 Octocat 实心 SVG、Gitee 用品牌实心 SVG（统一 `viewBox 0 0 24 24`，`[&>svg]:size-[20px]` 控制尺寸，组件内常量 `GITHUB_ICON` / `GITEE_ICON`）；离线 / WebDAV / S3 用 Lucide 细线 `hard-drive` / `cloud` / `database`。**不要用 `icon-[lucide--github]`**——那是猫头轮廓，小尺寸下像竖拇指、认不出品牌 |
-| 底部 | 页脚钉在页面最底部（核心内容居中，见「定位与挂载」），自上而下：**PWA 安装提示（info 图标 + 11px 灰字，保持在下载 / 查看介绍按钮的上面——用户明确纠正过顺序）**→ App 下载圆钮 + 「查看介绍」→ 协议文案（仅 `isMeasurementEnabled()` 时显示） |
+| 底部 | 页脚钉在页面最底部（核心内容居中，见「定位与挂载」），自上而下：**PWA 安装提示（info 图标 + 11px 灰字，保持在下载按钮上面——用户明确纠正过顺序）**→ App 下载圆钮（iOS / Android 两个，居中）→ 协议文案（仅 `isMeasurementEnabled()` 时显示） |
+
+**「查看介绍」外链已删（2026-11-16 12:20 用户口径）**：页脚原来在下载圆钮右侧还有一条「查看介绍」跳到作者博客，与「说明类内容都进抽屉、不跳出应用」的口径冲突，直接去掉（连带那条 `size-1` 分隔点与语言键 `see-introduce`）。页脚现在只剩安装提示 + 下载圆钮 + 协议。**不要在下载图标旁边再加文字链接**，那是刚被删掉的东西。 |
 
 - `AppDownloadIcons` 的默认 `buttonClassName` 是**深色品牌区专用**（`bg-white/5 text-white/80`），浅底必须显式传浅色圆钮样式，否则图标看不清。
 - 「无需账号」是离线模式**大按钮**右缘的展示右值（`value` 槽位），用来呼应预算页右值列；不要给 Gitee / GitHub 按钮也加右值，会与 Token 胶囊挤在一起。
@@ -43,6 +45,16 @@
 - **入口差异与返回（2026-11-15 23:02 口径）**：左上角圆形返回**始终显示**——从个人页 / 首页 / ledger store 的 `showBookGuide()`（`book/util.ts`，Dialog 宿主）进入时（`onCancel` 有值）= 关页返回、无改动时确认直接关页；登录后的首次引导（无 `onCancel`）= **退出登录回登录页**（用户口径「选择账本为什么没有返回按钮」——登录是流程的一环，要允许反悔换登录方式），走 `utils/logout.ts` 的 `logoutWithConfirm`（与设置页共用：`logout-warning` prompt 确认 → beforeLogout 快照 → 端点 logout → 清 storage → afterLogout → reload，WebDAV / S3 连接信息由快照保留便于重填）。删除账本只删到当前账本才回引导态，删别的账本留在本页刷新列表。
 - 保留：`login_method_used` 埋点（`StorageAPI.type` 落在 `LOGIN_METHODS` 才上报）、`loading` 态白卡 + spinner、PWA 安装提示、App 下载、`see-introduce` 外链、使用条款 / 隐私政策。
 - r26 移除且**继续不恢复**：黑色遮罩、深棕色 `bg-field` 品牌区、通用 `Button` 胶囊按钮、`beta` 角标、下划线「或者使用现有的token」链接。~~居中大品牌头~~：**已解禁**（用户要求找回登录页观感），但规格按上表欢迎区执行，不要回到 r26 的 84px 大头 + 卡片堆叠样式。
+
+## 登录方式二级页的白卡与说明抽屉（2026-11-16 11:57 口径）
+
+- **「常用服务商」与字段组包在同一张白卡里**（用户口径「整组包裹起来，用白色底色，类似卡片」）：卡 `max-w-[340px] rounded-[20px] bg-panel px-4 pt-4`，字段细线不再顶到卡边。胶囊在卡内必须改浅灰底 `bg-ground`——原来是白底描边（`bg-panel border-rule`），放进白卡后与卡同色、看不出是按钮。文字 `text-ink` 黑色 + `text-[14px]` + `px-3.5 py-1.5`：用户两条口径叠加（「字号略小」→ 放大到 14px；「按钮不要调这么大」→ padding 不再跟着放大），实测 72×36。
+- **S3 高级选项默认折叠**：`baseDir` / `sessionToken` / `forcePathStyle` 收进卡片底部的 44px 折叠行（`aria-expanded` + chevron 旋转），默认折叠；折叠态这三个字段不渲染（探针按 `input[placeholder="cent"]` 计数 0 → 1 判定），卡高 463 → 635。
+- **代理地址的「?」改为应用内说明抽屉**：原来 `target="_blank"` 跳到博客的「使用代理」小节，手机上要来回切应用。现为 `components/modal/login-proxy-help.tsx` 的 `showProxyHelp()`，底部抽屉分五段——什么时候需要 / 怎么填 / 代理拦掉 PROPFIND 时 / 安全提醒 / 免费代理（含「复制地址」）。文案与博客原文口径一致，**正文提到产品名一律「胖记」，不出现 Cent**；`cent.linkai.work`（CORS 允许来源）与 `cent-backend.linkai.work`（免费代理）是真实地址，保留原样。抽屉上限见下方「说明抽屉统一骨架」条，实测高 731，最后一段的地址行与复制按钮在 402×874 首屏内完整可见——降到 82dvh 会把那张地址卡切成半截（实测过）。
+- **点击热区 40×40**（用户口径「热区放大方便点击」）：眼睛与问号都是 `size-10` 圆钮、图标仍 16px，用 `-mr-2` 抵掉圆钮内边距，输入框可点宽度不变；眼睛按钮补 `aria-label`（显示密码 / 隐藏密码），供探针按状态定位。
+- **说明抽屉统一骨架（2026-11-16 12:10 口径）**：用户口径「有什么说明的地方都改成抽屉」——登录流程里凡解释「这格怎么填 / 为什么这样填」的内容一律进应用内底部抽屉，**不再 `target="_blank"` 跳出应用**。骨架抽到 `components/modal/help-sheet.tsx`：`HelpSheetLayout`（抓手条 → 标题 → 一句引导 → 可滚正文 → 贴底关闭钮）、`HelpSection`、`HelpCode`、`HELP_SHEET_OPTIONS`（`from: "bottom"` + 圆角上 28 + sm 断点居中）。新加说明面板直接复用这四样，不要各页各写一套：`login-proxy-help.tsx` 已改用它（并**删掉了原抽屉里的「查看完整说明」外链**，那正是用户要消灭的跳转），`login-s3-help.tsx` 是本轮新建。
+- **S3 页补「?」与眼睛**：`hint` 行右侧 `data-s3-help` 圆钮（40×40，图标 14px）打开 `showS3Help()`，五段——Endpoint 怎么填（三个示例域名）/ Region 与 Bucket / 密钥去哪拿 / 连不上时先查跨域（`https://cent.linkai.work` 作允许来源）/ 高级选项。Secret Access Key 补同款眼睛按钮，默认掩码。
+- **抽屉高度 `max-h-[90dvh]`**：86dvh 时 S3 说明的末段还差 22px（`overflow: 22`，最后一行被切），90dvh 下两页都恰好一屏（S3 高 774 / overflow 0，代理面板仍 731 由内容撑开）。段间距用 `py-2`（不是 2.5），这是为了多段文案也能一屏放下。**调文案长度后要重新量 `scrollHeight - clientHeight`**，别只看截图。
 
 ## 语言键与窄屏
 

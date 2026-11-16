@@ -135,6 +135,11 @@
 	--safe-area-inset-bottom: max(env(safe-area-inset-bottom), 0px);
 	--safe-area-inset-left: env(safe-area-inset-left);
 	--safe-area-top: calc(var(--safe-area-inset-top) + var(--titlebar-height));
+	/* 视口缺口：iOS 主屏幕 PWA 里屏幕比网页可视区高出来的那一条（底部 home
+	   指示条区域，iPhone 16 Pro 实测 62pt）。由 utils/viewport.ts 启动时量测后
+	   写进 html 的内联样式，全屏面据此往下延伸把这一段也铺成自己的底色。
+	   非独立模式 / 视口正常的设备恒为 0，所有 calc 退化成原值。 */
+	--viewport-bottom-gap: 0px;
 }
 
 /* 侧边个人抽屉使用一套独立的中性灰白体系（现场 1080×2340 逐点取色）：
@@ -239,7 +244,9 @@ body {
 
 #root {
 	width: 100%;
-	height: 100%;
+	/* 比 body 多出的那一段正是 iOS 主屏幕 PWA 的系统底（--viewport-bottom-gap），
+	   页面自己的背景色铺进去，底部才不会留一条暖米/系统色 */
+	height: calc(100% + var(--viewport-bottom-gap));
 	padding: var(--safe-area-top) var(--safe-area-inset-right)
 		var(--safe-area-inset-bottom) var(--safe-area-inset-left);
 	overflow: hidden;
@@ -254,6 +261,27 @@ body {
 		transparent var(--safe-area-top)
 	);
 	background-repeat: no-repeat;
+}
+
+/* iOS 主屏幕 PWA 的系统底（--viewport-bottom-gap）不在网页可视区内，靠 html 画布
+   染色只能算兜底：固定定位的全屏面本身不会铺到那一条，表现为抽屉 / 二级页
+   「下面一块空」。两个工具类让全屏面自己往下延伸：
+   - .dp-screen-fill：给 fixed + h-full 的容器用（Dialog 宿主壳）
+   - .dp-screen-fill-inset：给 fixed inset-0 的容器用（二级路由页） */
+.dp-screen-fill {
+	height: calc(100% + var(--viewport-bottom-gap));
+}
+.dp-screen-fill-inset {
+	bottom: calc(-1 * var(--viewport-bottom-gap));
+}
+
+/* 纵向滚动容器一律裁掉横向：overflow-y:auto 的盒子在 CSS 里 overflow-x 的计算
+   值也是 auto，于是 iOS 能把整块内容左右拖走并卡在偏移状态（车辆记录页实测
+   内容整体右移 77pt、右侧卡片被切掉，头部与底部按钮不动——被拖走的是内层滚动
+   容器而不是页面）。真正的横向滚动区自己带 overflow-x-auto，不在本条覆盖范围内，
+   由 utils/viewport.ts 的 useScrollableX 决定「真的溢出才可滚」。 */
+[class~="overflow-y-auto"]:not([class~="overflow-x-auto"]) {
+	overflow-x: hidden;
 }
 
 /*除了.select-all,.select-auto,.select-none,.select-text，其他都禁用选择*/

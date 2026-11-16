@@ -138,28 +138,18 @@ function LoginFooter({
     const t = useIntl();
     return (
         <div className="flex flex-col items-center gap-3 pt-8">
-            {/* 「添加到主屏幕」保持在下载 / 查看介绍这些按钮的上面（用户口径），页脚整体钉在页面最底部 */}
+            {/* 「添加到主屏幕」保持在下载按钮上面（用户口径），页脚整体钉在页面最底部 */}
             <div className="flex items-center gap-1.5 text-[11px] text-ink-secondary">
                 <i className="icon-[lucide--info] size-3.5 flex-shrink-0" />
                 <span>{t("pwa-install-tip")}</span>
             </div>
+            {/* 「查看介绍」外链按用户口径删除（页脚只留下载入口，不再跳出应用） */}
             <div className="flex items-center gap-3">
                 <AppDownloadIcons
                     variant="login"
                     platforms={platforms}
                     buttonClassName="inline-flex size-9 items-center justify-center rounded-full border border-rule bg-panel text-ink-secondary shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-colors hover:border-brand/60 hover:text-brand"
                 />
-                {platforms.length > 0 && (
-                    <span className="size-1 rounded-full bg-rule" />
-                )}
-                <a
-                    className="text-[12px] text-ink-secondary underline underline-offset-2 hover:text-brand"
-                    target="_blank"
-                    href="https://glink25.github.io/post/Cent---%E4%BD%A0%E5%8F%AF%E8%83%BD%E5%8F%AA%E9%9C%80%E8%A6%81%E4%B8%80%E4%B8%AA%E8%AE%B0%E8%B4%A6%E8%BD%AF%E4%BB%B6/"
-                    rel="noopener noreferrer"
-                >
-                    {t("see-introduce")}
-                </a>
             </div>
             {isMeasurementEnabled() && (
                 <p className="px-2 text-center text-[11px] leading-relaxed text-ink-secondary">
