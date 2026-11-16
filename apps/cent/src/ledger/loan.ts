@@ -336,3 +336,228 @@ export function simulatePrepay(
         restMonths: months,
     };
 }
+
+// ---------------------------------------------------------------------------
+// 还款生涯引擎：利率调整 + 提前还款都会改变后续每一期
+// ---------------------------------------------------------------------------
+//
+// 旧实现只能「按一组固定参数摊还」，于是提前还款只能做成一次性的模拟卡片，
+// 详情页的「已还 / 剩余」也只能靠猜。这里改成事件驱动的逐期摊还：
+//   · 利率调整（第 n 期起换利率）→ 等额本息按「剩余期数不变」重算月供；
+//   · 提前还款（第 n 期还款后）→ 缩年限保持月供、减月供保持期数；
+//   · 两者可叠加，且顺序按时间自然发生。
+// 逐期行是详情页进度、还款计划、利率轨迹的唯一数据源。
+
+/** 第 period 期起生效的新利率（period 1-based） */
+export type RateChangeInput = {
+    fromPeriod: number;
+    annualRate: number;
+};
+
+/** 第 atPeriod 期正常还款后追加的一笔提前还款 */
+export type PrepayEventInput = {
+    atPeriod: number;
+    /** 追加金额（元）；mode=payoff 时忽略 */
+    amount: number;
+    mode: PrepayMode;
+    /** 该笔之后的还款方式（缺省沿用） */
+    methodAfter?: LoanMethod;
+};
+
+export type ScheduleRow = {
+    /** 期号，1-based */
+    period: number;
+    principal: number;
+    interest: number;
+    payment: number;
+    /** 本期还完后的剩余本金 */
+    remaining: number;
+    /** 本期适用年利率（%） */
+    annualRate: number;
+};
+
+export type ScheduleInput = {
+    principal: number;
+    months: number;
+    method: LoanMethod;
+    annualRate: number;
+    rateChanges?: RateChangeInput[];
+    prepays?: PrepayEventInput[];
+};
+
+export type ScheduleResult = {
+    rows: ScheduleRow[];
+    /** 实际期数（提前结清会小于原始期数） */
+    months: number;
+    totalPayment: number;
+    totalInterest: number;
+    firstPayment: number;
+    lastPayment: number;
+    /** 提前结清时结清的期号 */
+    closedAt?: number;
+};
+
+const MAX_PERIODS = 12 * 60;
+
+/** 等额本息月供 */
+function pmt(principal: number, annualRate: number, months: number): number {
+    if (months <= 0) return principal;
+    const r = annualRate / 100 / 12;
+    if (r <= 0) return principal / months;
+    const pow = (1 + r) ** months;
+    return (principal * r * pow) / (pow - 1);
+}
+
+/** 固定月供下还要多少期（等额本息反解，向上取整） */
+function periodsFor(
+    principal: number,
+    annualRate: number,
+    payment: number,
+): number {
+    const r = annualRate / 100 / 12;
+    if (r <= 0) return Math.max(1, Math.ceil(principal / payment));
+    if (payment <= principal * r) return MAX_PERIODS;
+    const n = Math.log(payment / (payment - principal * r)) / Math.log(1 + r);
+    return Math.max(1, Math.ceil(n - 1e-9));
+}
+
+export function buildSchedule(input: ScheduleInput): ScheduleResult {
+    const total = Math.max(1, Math.round(input.months));
+    const rateChanges = [...(input.rateChanges ?? [])].sort(
+        (a, b) => a.fromPeriod - b.fromPeriod,
+    );
+    const prepays = [...(input.prepays ?? [])].sort(
+        (a, b) => a.atPeriod - b.atPeriod,
+    );
+
+    let method = input.method;
+    let annualRate = input.annualRate;
+    let remaining = input.principal;
+    let endPeriod = total;
+    let monthlyPayment = pmt(remaining, annualRate, endPeriod);
+    let principalPerMonth = remaining / endPeriod;
+
+    const rows: ScheduleRow[] = [];
+    let closedAt: number | undefined;
+
+    for (let i = 1; i <= endPeriod && i <= MAX_PERIODS; i++) {
+        // 本期起生效的利率调整（同一期多条取最后一条）
+        const change = rateChanges.find((c) => c.fromPeriod === i);
+        if (change && Math.abs(change.annualRate - annualRate) > 1e-9) {
+            annualRate = change.annualRate;
+            if (method === "installment") {
+                monthlyPayment = pmt(remaining, annualRate, endPeriod - i + 1);
+            }
+        }
+
+        const restPeriods = Math.max(1, endPeriod - i + 1);
+        const interest = round2((remaining * annualRate) / 100 / 12);
+        let principalPart: number;
+        if (method === "installment") {
+            principalPart = round2(monthlyPayment - interest);
+            // 利率骤升导致月供覆盖不了利息：退回按剩余期数均摊，避免负摊还
+            if (principalPart <= 0) {
+                principalPart = round2(remaining / restPeriods);
+                monthlyPayment = round2(principalPart + interest);
+            }
+        } else {
+            principalPart = round2(principalPerMonth);
+        }
+        if (i >= endPeriod || principalPart > remaining) {
+            principalPart = remaining;
+        }
+
+        const payment = round2(principalPart + interest);
+        remaining = round2(remaining - principalPart);
+        rows.push({
+            period: i,
+            principal: principalPart,
+            interest,
+            payment,
+            remaining: Math.max(0, remaining),
+            annualRate,
+        });
+
+        // 本期还款后的提前还款事件（可能同一点有多笔）
+        for (const event of prepays) {
+            if (event.atPeriod !== i) continue;
+            if (event.mode === "payoff") {
+                remaining = 0;
+            } else {
+                remaining = round2(Math.max(0, remaining - event.amount));
+            }
+            if (rows.length > 0) {
+                rows[rows.length - 1].remaining = Math.max(0, remaining);
+            }
+            if (event.methodAfter && event.methodAfter !== method) {
+                method = event.methodAfter;
+                if (method === "installment") {
+                    monthlyPayment = pmt(
+                        remaining,
+                        annualRate,
+                        Math.max(1, endPeriod - i),
+                    );
+                } else {
+                    principalPerMonth = remaining / Math.max(1, endPeriod - i);
+                }
+            }
+            if (remaining <= 0.005) {
+                remaining = 0;
+                closedAt = i;
+                break;
+            }
+            if (event.mode === "shorten") {
+                if (method === "installment") {
+                    const n = periodsFor(remaining, annualRate, monthlyPayment);
+                    endPeriod = i + Math.max(1, Math.min(n, MAX_PERIODS - i));
+                } else {
+                    const n = Math.ceil(remaining / principalPerMonth);
+                    endPeriod = i + Math.max(1, n);
+                }
+            } else if (event.mode === "reduceMonthly") {
+                const rest = Math.max(1, endPeriod - i);
+                if (method === "installment") {
+                    monthlyPayment = pmt(remaining, annualRate, rest);
+                } else {
+                    principalPerMonth = remaining / rest;
+                }
+            }
+        }
+        if (remaining <= 0.005) {
+            remaining = 0;
+            closedAt = closedAt ?? (i < total ? i : undefined);
+            break;
+        }
+    }
+
+    const totalPayment = round2(rows.reduce((s, r) => s + r.payment, 0));
+    const totalInterest = round2(rows.reduce((s, r) => s + r.interest, 0));
+    return {
+        rows,
+        months: rows.length,
+        totalPayment,
+        totalInterest,
+        firstPayment: rows[0]?.payment ?? 0,
+        lastPayment: rows[rows.length - 1]?.payment ?? 0,
+        closedAt,
+    };
+}
+
+/** 年月 → 连续月份索引（用于期号 ↔ 年月换算） */
+export function ymIndex(ym: FirstPayYm): number {
+    return (ym.year - 1) * 12 + (ym.month - 1);
+}
+
+export function ymFromIndex(index: number): FirstPayYm {
+    return { year: Math.floor(index / 12) + 1, month: (index % 12) + 1 };
+}
+
+/** 首期还款月到「今天」已经过去的期数（不含当月，clamp 到 [0, months]） */
+export function periodsElapsed(
+    firstPay: FirstPayYm,
+    months: number,
+    now = new Date(),
+): number {
+    const nowIndex = (now.getFullYear() - 1) * 12 + now.getMonth();
+    return Math.max(0, Math.min(months, nowIndex - ymIndex(firstPay)));
+}

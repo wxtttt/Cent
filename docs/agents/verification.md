@@ -293,3 +293,13 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
   - 探针坑：`page.getByRole("button", { name })` 用中文无障碍名最稳（按钮内图标 + 文案，`data-*` 未挂）；拦截 oauth 请求时用 `route.fulfill` 返回 stub，避免真的把会话带去 GitHub。
 
 **同一轮末：5173 换成本 worktree 的构建预览**（用户选定「接管 5173」）。原 5173 是另一会话在 `_cent_analysis` 起的 `pnpm --filter cent dev`（服务主 worktree，看不到本轮改动），已停；`apps/cent` 重新 `pnpm build` 后 `pnpm preview` 绑回 5173，`dist/index.html` 的 `assets/index-B6OVFuuo.js` 与 5173 返回的一致。在该预览（生产构建）上复跑 `verify-loan-page-5173.js`（Chromium）：hero / 结构 / 对比切换 / 洞察条 / `rawKeys []` 与 dev 完全一致、`pageErrors []`；`probe-login-oauth-5173.js` 点 GitHub / Gitee 均落到 `https://oncent-backend.linkai.work/api/{github,gitee}-oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A5173`。**dev 的 5183 已停**，本轮只保留 5173 预览。
+
+## 2026-11-16 15:10 贷款页三视图 + 还款生涯 + 分类页作用域修复（worktree `feat-loan-261115`）
+
+- **三视图**（`shot-loan-v2.js` 全流程截图）：空态「记一笔房贷」→ 编辑页（类型三胶囊无插画、首付「比例/金额」切换 + 双向换算、商贷利率两行 LPR 副值、首次还款系统 month 控件、还款方式分段）→ 保存抽屉（`max-h-[80dvh]` + 取消/保存双按钮，与预算抽屉同构）→ 详情页（剩余本金 / 已还 0/360 / 已还本金·已付利息·剩余利息 / 下次还款 / 还款计划 / 还款分析 / 提前还款 / 利率轨迹）。
+- **数值**（Chromium 与 WebKit 输出逐字一致，`verify-loan-v2.js`）：默认商业贷款 210 万 / 30 年 / LPR 3.5 −45BP → `¥2,100,000`、下次还款 `2026.12 · 第 1 期 ¥8,910.41`（本金 3,573 + 利息 5,338）、剩余利息 `¥1,107,750`、到期 `2056.11`；加一笔 20 万「减月供」→ 省息 `¥105,172`、月供降至 `¥8,060.36`、列表卡计数 1。
+- **锁定**：无提前还款时铅笔进编辑页（`data-loan-save` 计数 1）；加记录后点铅笔仍在详情（计数 0）+ toast `loan-locked-toast`。
+- **缺陷修复**：① 保存抽屉点「保存方案」后不关闭（重写时漏了 `onClose`）；② 提前还款抽屉切「减月供」无效——`useEffect` 依赖 `derived.next.ym`（每次渲染都是新对象）导致 effect 每轮重置 `mode`，改成依赖 `年-月` 字符串；③ 0 期进度条仍渲染 1.5% 最小宽度形成小圆点 → 条件渲染；④ 图表中间刻度在 0 期与左端重复 → `currentYear > 1` 才显示。
+- **深色**：hero `rgb(31,25,19)` / 文字 `rgb(247,240,230)` / 页面底 `rgb(23,19,15)`，橙色数字与图表柱对比度正常（`dark-detail.png`）。
+- **分类管理页**：`[data-route-path='/category']` 实测 `backgroundColor rgb(244,244,244)`、`--dp-color-ground #f4f4f4`（修前退回 `#fbf7ef`，用户描述「看着偏黄」）。根因：`createConfirmProvider` 的路由页分支未拼 `contentClassName`，`category/list-form.tsx` 的 `dp-category-surface` 丢失；新增 `routeClassName` 并改传。
+- **探针坑**：`getByText("记一笔房贷")` 会命中说明段落（子串匹配），必须 `getByRole("button", { name, exact: true })`；保存后的 toast 会盖住左上返回按钮，点击前先 `document.querySelectorAll("[data-sonner-toast]").forEach(e => e.remove())`。

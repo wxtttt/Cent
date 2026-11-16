@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { v4 } from "uuid";
 import { useLoanPlans } from "@/hooks/use-loan-plans";
 import PopupLayout from "@/layouts/popup-layout";
 import type { SavedLoanPlan } from "@/ledger/extra-type";
 import { useIntl } from "@/locale";
-import { cn } from "@/utils";
-import { BTN_PRIMARY, BTN_SECONDARY, SHEET_FOOTER } from "../button-styles";
-import { planIconSrc } from "./icons";
+import { BTN_PRIMARY } from "../button-styles";
+import { LoanDetail } from "./detail";
+import { LoanEdit } from "./edit";
+import { LoanEmptyState, LoanPlanCard } from "./list";
 import {
     defaultDraft,
     deriveLoan,
@@ -16,26 +18,30 @@ import {
 } from "./model";
 import {
     CommercialRateSheet,
-    DownPaymentSheet,
-    FirstPaySheet,
     FundRateSheet,
+    PrepaySheet,
+    RateChangeSheet,
     TermSheet,
 } from "./pickers";
 import { LoanDeleteProvider, showLoanDelete } from "./providers";
-import { CompareCard, PrepayCard, ScheduleCard } from "./results";
 import { ManageMenu, SavePlanSheet } from "./save-sheet";
-import { HeroTicket, SettingsCard, TypeCards } from "./sections";
+import { PAGE_FOOTER } from "./styles";
 
+type View = "list" | "detail" | "edit";
 type SheetKind =
-    | "down"
     | "term"
     | "rateCommercial"
     | "rateFund"
-    | "firstPay"
+    | "prepay"
+    | "rateChange"
     | null;
 
-const fmtWan = (v: number) => `${Math.round(v * 100) / 100}`;
-
+/**
+ * 贷款页的三个视图：
+ *   list   已存方案卡片（月供 / 进度 / 剩余本金都摊在卡面）
+ *   detail 还款进度 + 还款计划 + 提前还款 + 利率轨迹（不再放设置项）
+ *   edit   只改参数，保存后回详情
+ */
 export default function LoanCalculatorForm({
     onCancel,
 }: {
@@ -44,20 +50,17 @@ export default function LoanCalculatorForm({
     const t = useIntl();
     const { plans, add, remove, update } = useLoanPlans();
 
-    const [selectedId, setSelectedId] = useState<string | null>(
-        plans[0]?.id ?? null,
-    );
-    const [draft, setDraft] = useState<LoanDraft>(() =>
-        plans[0] ? toDraft(plans[0]) : defaultDraft(),
-    );
+    const [view, setView] = useState<View>("list");
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [draft, setDraft] = useState<LoanDraft>(() => defaultDraft());
     const [dirty, setDirty] = useState(false);
-
     const [sheet, setSheet] = useState<SheetKind>(null);
     const [saveSheet, setSaveSheet] = useState<{
         mode: "create" | "rename";
         plan?: SavedLoanPlan;
     } | null>(null);
     const [manageOpen, setManageOpen] = useState(false);
+
     const longPressTimer = useRef<number | undefined>(undefined);
     const longPressTarget = useRef<SavedLoanPlan | undefined>(undefined);
     const suppressClickRef = useRef(false);
@@ -67,29 +70,50 @@ export default function LoanCalculatorForm({
 
     const derived = deriveLoan(draft);
     const selected = plans.find((p) => p.id === selectedId);
+    const locked = draft.prepays.length > 0;
 
-    const edit = useCallback((patch: Partial<LoanDraft>) => {
+    const edit = (patch: Partial<LoanDraft>) => {
         setDraft((prev) => ({ ...prev, ...patch }));
         setDirty(true);
-    }, []);
+    };
 
-    const selectPlan = useCallback((plan: SavedLoanPlan) => {
+    const openPlan = (plan: SavedLoanPlan) => {
         setSelectedId(plan.id);
         setDraft(toDraft(plan));
         setDirty(false);
-    }, []);
+        setView("detail");
+    };
 
-    // 已选方案被外部（如另一端同步）删除时回退到草稿态
+    const startCreate = () => {
+        setSelectedId(null);
+        setDraft(defaultDraft());
+        setDirty(false);
+        setView("edit");
+    };
+
+    // 已选方案被外部（如另一端同步）删除时回列表
     useEffect(() => {
         if (
+            view === "detail" &&
             selectedId &&
             !plans.some((p) => p.id === selectedId) &&
             !addedIdsRef.current.has(selectedId)
         ) {
+            setView("list");
             setSelectedId(null);
-            setDirty(false);
         }
-    }, [plans, selectedId]);
+    }, [plans, selectedId, view]);
+
+    /** 详情页上的即时改动（提前还款 / 利率调整）直接落库，重算进度 */
+    const persist = async (next: LoanDraft) => {
+        setDraft(next);
+        if (selected) {
+            await update(
+                selected.id,
+                toPlanInput(next, selected.name, selected.icon),
+            );
+        }
+    };
 
     const typeName = t(
         draft.loanType === "commercial"
@@ -100,226 +124,211 @@ export default function LoanCalculatorForm({
     );
     const defaultName = t("loan-plan-default-name", {
         type: typeName,
-        amount: fmtWan(derived.totalWan),
+        amount: `${Math.round(derived.totalWan * 100) / 100}`,
         years: draft.termYears,
     });
 
-    const afterSave = (id: string | undefined) => {
-        if (id) {
-            addedIdsRef.current.add(id);
-            setSelectedId(id);
-            setDirty(false);
+    const goBack = () => {
+        if (view === "edit") {
+            setView(selectedId ? "detail" : "list");
+            return;
         }
-        toast.success(t("loan-toast-saved"));
+        if (view === "detail") {
+            setView("list");
+            return;
+        }
+        onCancel?.();
     };
 
-    const patchSelected = async () => {
-        if (!selected) return;
-        await update(
-            selected.id,
-            toPlanInput(draft, selected.name, selected.icon),
-        );
-        setDirty(false);
-        toast.success(t("loan-toast-saved"));
+    const startEdit = () => {
+        if (locked) {
+            toast.info(t("loan-locked-toast"));
+            return;
+        }
+        setView("edit");
+    };
+
+    const saveEdit = async () => {
+        if (selected) {
+            await update(
+                selected.id,
+                toPlanInput(draft, selected.name, selected.icon),
+            );
+            setDirty(false);
+            setView("detail");
+            toast.success(t("loan-toast-saved"));
+            return;
+        }
+        setSaveSheet({ mode: "create" });
     };
 
     const cancelLongPress = () => {
         window.clearTimeout(longPressTimer.current);
     };
 
-    // chip 长按：先切到该方案再弹管理菜单（管理菜单始终作用于当前选中方案）
     const startLongPress = (plan: SavedLoanPlan) => {
         suppressClickRef.current = false;
         longPressTarget.current = plan;
         longPressTimer.current = window.setTimeout(() => {
             suppressClickRef.current = true;
-            selectPlan(plan);
+            setSelectedId(plan.id);
+            setDraft(toDraft(plan));
+            setView("detail");
             setManageOpen(true);
         }, 550);
     };
 
+    const title =
+        view === "list"
+            ? t("loan-calculator")
+            : view === "edit"
+              ? selected
+                  ? t("loan-modify-plan")
+                  : t("loan-plan-create")
+              : (selected?.name ?? t("loan-calculator"));
+
+    const right =
+        view === "detail" && selected ? (
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    data-loan-edit
+                    aria-label={t("loan-edit-settings")}
+                    className="-mr-1 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                    onClick={startEdit}
+                >
+                    <i className="icon-[lucide--pencil] size-4.5" />
+                </button>
+                <button
+                    type="button"
+                    data-loan-more
+                    aria-label={t("loan-manage-open")}
+                    className="-mr-1 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                    onClick={() => setManageOpen(true)}
+                >
+                    <i className="icon-[lucide--ellipsis] size-5" />
+                </button>
+            </div>
+        ) : undefined;
+
     return (
         <PopupLayout
-            onBack={onCancel}
-            title={t("loan-calculator")}
+            onBack={goBack}
+            title={title}
             className="dp-drawer-surface h-full bg-ground"
             backStyle="circle"
-            right={
-                selected ? (
-                    <button
-                        type="button"
-                        data-loan-more
-                        aria-label={t("loan-manage-open")}
-                        className="-mr-1 flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
-                        onClick={() => setManageOpen(true)}
-                    >
-                        <i className="icon-[lucide--ellipsis] size-5" />
-                    </button>
-                ) : undefined
-            }
+            right={right}
         >
-            <div className="flex h-full flex-col">
-                {/* 子项必须 shrink-0：flex 纵向容器里内容高于视口时，
-                    默认 shrink 会把 hero 票券卡压成 40px 高（实测 scrollHeight 222） */}
-                <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-3 [&>*]:shrink-0">
-                    {plans.length > 0 && (
-                        <div
-                            data-loan-plan-bar
-                            className="flex items-center gap-2 overflow-x-auto scrollbar-hidden"
-                        >
-                            {plans.map((plan) => (
-                                <button
+            {view === "list" && (
+                <div className="flex h-full flex-col">
+                    <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pt-3 pb-4 [&>*]:shrink-0">
+                        {plans.length === 0 ? (
+                            <LoanEmptyState onCreate={startCreate} />
+                        ) : (
+                            plans.map((plan) => (
+                                <LoanPlanCard
                                     key={plan.id}
-                                    type="button"
-                                    data-loan-plan-chip={plan.id}
-                                    className={cn(
-                                        "flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-colors",
-                                        selectedId === plan.id
-                                            ? "bg-brand text-on-brand dp-text-medium"
-                                            : "bg-panel text-ink shadow-[0_1px_5px_rgba(92,62,30,0.08)]",
-                                    )}
-                                    onClick={() => {
+                                    plan={plan}
+                                    onOpen={() => {
                                         if (suppressClickRef.current) {
                                             suppressClickRef.current = false;
                                             return;
                                         }
-                                        selectPlan(plan);
+                                        openPlan(plan);
                                     }}
-                                    onPointerDown={() => startLongPress(plan)}
-                                    onPointerUp={cancelLongPress}
-                                    onPointerLeave={cancelLongPress}
-                                    onContextMenu={(e) => {
-                                        e.preventDefault();
-                                        selectPlan(plan);
+                                    onManage={() => {
+                                        setSelectedId(plan.id);
+                                        setDraft(toDraft(plan));
                                         setManageOpen(true);
                                     }}
-                                >
-                                    <img
-                                        src={planIconSrc(
-                                            plan.icon,
-                                            draft.loanType,
-                                        )}
-                                        alt=""
-                                        aria-hidden
-                                        className="size-5 object-contain"
-                                    />
-                                    {plan.name}
-                                </button>
-                            ))}
-                            {selectedId === null && (
-                                <span
-                                    data-loan-draft-chip
-                                    className="flex-shrink-0 rounded-full bg-brand px-3 py-2 text-[13px] dp-text-medium text-on-brand"
-                                >
-                                    {t("loan-plan-new")}
-                                </span>
-                            )}
+                                    onLongPressStart={() =>
+                                        startLongPress(plan)
+                                    }
+                                    onLongPressEnd={cancelLongPress}
+                                />
+                            ))
+                        )}
+                    </div>
+                    {plans.length > 0 && (
+                        <div className={PAGE_FOOTER}>
                             <button
                                 type="button"
                                 data-loan-plan-new
-                                className="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-full bg-panel px-3 py-2 text-[13px] text-ink shadow-[0_1px_5px_rgba(92,62,30,0.08)]"
-                                onClick={() => {
-                                    setSelectedId(null);
-                                    setDirty(false);
-                                }}
+                                className={`${BTN_PRIMARY} w-full`}
+                                onClick={startCreate}
                             >
-                                <i className="icon-[lucide--plus] size-3.5" />
-                                {t("loan-plan-create")}
+                                {t("loan-plan-new")}
                             </button>
                         </div>
                     )}
-
-                    <HeroTicket draft={draft} derived={derived} />
-
-                    <div>
-                        <div className="px-1 pb-1.5 text-[12px] text-ink-secondary">
-                            {t("loan-settings")}
-                        </div>
-                        <TypeCards
-                            value={draft.loanType}
-                            onChange={(loanType) => edit({ loanType })}
-                        />
-                        <div className="mt-3">
-                            <SettingsCard
-                                draft={draft}
-                                derived={derived}
-                                edit={edit}
-                                onOpenSheet={(kind) => setSheet(kind)}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <div className="px-1 pb-1.5 text-[12px] text-ink-secondary">
-                            {t("loan-analysis-title")}
-                        </div>
-                        <CompareCard
-                            draft={draft}
-                            onSelect={(method) => edit({ method })}
-                        />
-                    </div>
-
-                    <ScheduleCard derived={derived} />
-
-                    {draft.loanType !== "combo" && (
-                        <PrepayCard draft={draft} derived={derived} />
-                    )}
-
-                    <p className="px-1 pb-2 text-[11px] leading-relaxed text-ink-secondary">
-                        {t("loan-page-disclaimer")}
-                    </p>
                 </div>
+            )}
 
-                <div className={SHEET_FOOTER}>
-                    {selected && dirty ? (
-                        <div className="flex gap-2.5">
-                            <button
-                                type="button"
-                                data-loan-save-as
-                                className={`${BTN_SECONDARY} flex-1`}
-                                onClick={() => setSaveSheet({ mode: "create" })}
-                            >
-                                {t("loan-save-as-new")}
-                            </button>
-                            <button
-                                type="button"
-                                data-loan-save-modify
-                                className={`${BTN_PRIMARY} flex-1`}
-                                onClick={() => void patchSelected()}
-                            >
-                                {t("loan-save-modify")}
-                            </button>
-                        </div>
-                    ) : (
+            {view === "detail" && (
+                <LoanDetail
+                    draft={draft}
+                    derived={derived}
+                    onAddPrepay={() => setSheet("prepay")}
+                    onRemovePrepay={(id) => {
+                        showLoanDelete({
+                            title: t("loan-prepay-delete"),
+                            description: t("loan-prepay-delete-desc"),
+                            onDelete: () => {
+                                void persist({
+                                    ...draft,
+                                    prepays: draft.prepays.filter(
+                                        (p) => p.id !== id,
+                                    ),
+                                });
+                            },
+                        });
+                    }}
+                    onAddRate={() => setSheet("rateChange")}
+                    onRemoveRate={(id) => {
+                        showLoanDelete({
+                            title: t("loan-rate-delete"),
+                            description: t("loan-rate-delete-desc"),
+                            onDelete: () => {
+                                void persist({
+                                    ...draft,
+                                    rateChanges: draft.rateChanges.filter(
+                                        (r) => r.id !== id,
+                                    ),
+                                });
+                            },
+                        });
+                    }}
+                />
+            )}
+
+            {view === "edit" && (
+                <>
+                    <LoanEdit
+                        draft={draft}
+                        derived={derived}
+                        edit={edit}
+                        onOpenSheet={(kind) => setSheet(kind)}
+                    />
+                    <div className={PAGE_FOOTER}>
                         <button
                             type="button"
                             data-loan-save
                             className={`${BTN_PRIMARY} w-full`}
-                            onClick={() => setSaveSheet({ mode: "create" })}
+                            onClick={() => void saveEdit()}
                         >
-                            {t("loan-save-plan")}
+                            {selected && dirty
+                                ? t("loan-save-modify")
+                                : t("loan-save-plan")}
                         </button>
-                    )}
-                </div>
-            </div>
+                    </div>
+                </>
+            )}
 
             <TermSheet
                 open={sheet === "term"}
                 onOpenChange={(v) => setSheet(v ? "term" : null)}
                 value={draft.termYears}
                 onConfirm={(years) => edit({ termYears: years })}
-            />
-            <DownPaymentSheet
-                open={sheet === "down"}
-                onOpenChange={(v) => setSheet(v ? "down" : null)}
-                value={draft.downRatio}
-                onConfirm={(ratio) => edit({ downRatio: ratio })}
-            />
-            <FirstPaySheet
-                open={sheet === "firstPay"}
-                onOpenChange={(v) => setSheet(v ? "firstPay" : null)}
-                value={draft.firstPay}
-                onConfirm={(firstPay) => edit({ firstPay })}
             />
             <CommercialRateSheet
                 open={sheet === "rateCommercial"}
@@ -333,13 +342,44 @@ export default function LoanCalculatorForm({
                 draft={draft}
                 onConfirm={(patch) => edit(patch)}
             />
+            <PrepaySheet
+                open={sheet === "prepay"}
+                onOpenChange={(v) => setSheet(v ? "prepay" : null)}
+                draft={draft}
+                onConfirm={(v) => {
+                    void persist({
+                        ...draft,
+                        prepays: [
+                            ...draft.prepays,
+                            {
+                                id: v4(),
+                                year: v.year,
+                                month: v.month,
+                                amount: Math.round(v.amountWan * 10000),
+                                mode: v.mode,
+                            },
+                        ],
+                    });
+                }}
+            />
+            <RateChangeSheet
+                open={sheet === "rateChange"}
+                onOpenChange={(v) => setSheet(v ? "rateChange" : null)}
+                draft={draft}
+                onConfirm={(v) => {
+                    void persist({
+                        ...draft,
+                        rateChanges: [...draft.rateChanges, { id: v4(), ...v }],
+                    });
+                }}
+            />
             <SavePlanSheet
                 open={saveSheet !== null}
                 mode={saveSheet?.mode ?? "create"}
                 draft={draft}
                 defaultName={
                     saveSheet?.mode === "rename"
-                        ? (saveSheet.plan?.name ?? defaultName)
+                        ? (saveSheet?.plan?.name ?? defaultName)
                         : defaultName
                 }
                 defaultIcon={saveSheet?.plan?.icon}
@@ -347,11 +387,20 @@ export default function LoanCalculatorForm({
                 onConfirm={async (name, icon) => {
                     if (saveSheet?.mode === "rename" && saveSheet.plan) {
                         await update(saveSheet.plan.id, { name, icon });
-                        afterSave(saveSheet.plan.id);
+                        if (selectedId === saveSheet.plan.id) {
+                            setDraft((prev) => ({ ...prev }));
+                        }
+                        toast.success(t("loan-toast-saved"));
                         return;
                     }
                     const id = await add(toPlanInput(draft, name, icon));
-                    afterSave(id);
+                    if (id) {
+                        addedIdsRef.current.add(id);
+                        setSelectedId(id);
+                        setDirty(false);
+                        setView("detail");
+                    }
+                    toast.success(t("loan-toast-saved"));
                 }}
             />
             <ManageMenu
@@ -372,6 +421,7 @@ export default function LoanCalculatorForm({
                             addedIdsRef.current.delete(target.id);
                             void remove(target.id).then(() => {
                                 setSelectedId(null);
+                                setView("list");
                                 toast.success(t("loan-toast-deleted"));
                             });
                         },
@@ -379,6 +429,7 @@ export default function LoanCalculatorForm({
                 }}
                 onClose={() => setManageOpen(false)}
             />
+            <LoanDeleteProvider />
         </PopupLayout>
     );
 }

@@ -10,13 +10,24 @@
 export const LOAN_CARD =
     "rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]";
 
+/** 卡片外的分组标题：对齐车辆页 GroupTitle（12px 次级灰，不是 15px 粗黑） */
+export const GROUP_TITLE = "px-1 pb-1.5 text-[12px] text-ink-secondary";
+
+/** 设置行：52 高，左右 16，行间靠 divide-y 分隔 */
+export const ROW =
+    "flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2";
+export const ROW_LEFT = "flex-shrink-0 text-[15px] text-ink";
+/** 行右侧的主值：数字用 600，中文标签一律不用（Windows 上会落 700 发黑） */
+export const ROW_VALUE = "text-[15px] dp-text-medium text-ink tabular-nums";
+export const ROW_MUTED = "text-xs text-ink-secondary tabular-nums";
+
 /** 可选卡 / 胶囊的选中与未选中（描边 + 浅品牌底色，不用 ring 叠两层） */
 export const PICK_ON = "border-brand bg-brand/10 text-brand";
 export const PICK_OFF = "border-rule bg-panel text-ink";
 
 /**
- * 分段控件（计算方式 / 提前还款模式）：浅灰容器 + 白色凸起胶囊，
- * 与 `components/segmented-tabs` 同形，只是容器色改取中性作用域里的 `ground-muted`。
+ * 分段控件：浅灰容器 + 白色凸起胶囊，与 `components/segmented-tabs` 同形，
+ * 容器色取中性作用域里的 `ground-muted`。
  */
 export const SEG_GROUP =
     "flex items-center gap-1 rounded-full bg-ground-muted p-1";
@@ -31,3 +42,11 @@ export const SHEET_SURFACE =
 
 /** 抽屉里的确认按钮：BTN_PRIMARY 是 inline-flex，单独放时必须显式撑满 */
 export const SHEET_ACTION = "w-full";
+
+/**
+ * 页面底栏（不是抽屉底栏）。
+ * `PopupLayout` 已经给整页垫了 `--safe-area-inset-bottom`，这里不能再叠加一次，
+ * 否则「保存」按钮会被顶出可视区、只露出半截（用户报的正是这个）。
+ */
+export const PAGE_FOOTER =
+    "flex-shrink-0 border-t border-rule/70 bg-ground px-4 pt-3 pb-3";

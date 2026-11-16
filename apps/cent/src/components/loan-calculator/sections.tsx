@@ -2,45 +2,62 @@ import { useEffect, useState } from "react";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
 import { RowChevron } from "../form-rows";
-import { LOAN_TYPE_ICONS } from "./icons";
-import type { DerivedLoan, LoanDraft, LoanMode, LoanType } from "./model";
+import type { LoanDraft, LoanMode, LoanType } from "./model";
 import {
+    GROUP_TITLE,
     LOAN_CARD,
     PICK_OFF,
     PICK_ON,
+    ROW,
+    ROW_LEFT,
+    ROW_MUTED,
+    ROW_VALUE,
     SEG_GROUP,
     SEG_ITEM,
     SEG_OFF,
     SEG_ON,
 } from "./styles";
 
-const fmtMoney = (v: number) =>
-    `${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtWan = (v: number) =>
     v.toLocaleString("en-US", {
-        minimumFractionDigits: 2,
+        minimumFractionDigits: 0,
         maximumFractionDigits: 2,
     });
 
-/** 万 → 元显示：数值带 2 位小数 */
-function AmountCell({
-    value,
-    onCommit,
-    ariaLabel,
-}: {
-    value: number;
-    onCommit: (n: number) => void;
-    ariaLabel: string;
-}) {
-    const [text, setText] = useState(() => String(value));
-    // text 是输入缓冲：仅当外部值与缓冲解析不一致（切换方案 / 派生重算）时重置
-    // biome-ignore lint/correctness/useExhaustiveDependencies: 只跟随外部 value 重同步
+/** 输入缓冲：外部值变化（切方案 / 联动换算）时重同步 */
+function useNumberText(value: number) {
+    const [text, setText] = useState(() =>
+        String(Math.round(value * 100) / 100),
+    );
+    // biome-ignore lint/correctness/useExhaustiveDependencies: 只跟随 value 重同步
     useEffect(() => {
         const parsed = Number(text);
         if (!(Number.isFinite(parsed) && Math.abs(parsed - value) < 1e-9)) {
             setText(String(Math.round(value * 100) / 100));
         }
     }, [value]);
+    return [text, setText] as const;
+}
+
+/** 行内数字输入（无边框、右对齐、聚焦全选），单位由外面补 */
+export function NumberCell({
+    value,
+    onCommit,
+    ariaLabel,
+    suffix,
+    className,
+    max,
+    min = 0,
+}: {
+    value: number;
+    onCommit: (n: number) => void;
+    ariaLabel: string;
+    suffix?: string;
+    className?: string;
+    max?: number;
+    min?: number;
+}) {
+    const [text, setText] = useNumberText(value);
     return (
         <div className="flex min-w-0 flex-1 items-baseline justify-end gap-1">
             <input
@@ -52,112 +69,31 @@ function AmountCell({
                     const raw = e.target.value.replace(/[^\d.]/g, "");
                     setText(raw);
                     const parsed = Number(raw);
-                    if (Number.isFinite(parsed) && parsed > 0) {
-                        onCommit(Math.round(parsed * 100) / 100);
+                    if (Number.isFinite(parsed) && parsed >= 0) {
+                        let next = parsed;
+                        if (max !== undefined) next = Math.min(next, max);
+                        if (next < min) next = min;
+                        onCommit(Math.round(next * 100) / 100);
                     }
                 }}
-                className="min-w-0 max-w-40 flex-1 cursor-text bg-transparent text-right text-[17px] font-semibold text-ink outline-none"
+                className={cn(
+                    "min-w-0 max-w-40 flex-1 cursor-text bg-transparent text-right text-[17px] font-semibold text-ink tabular-nums outline-none",
+                    className,
+                )}
             />
-            <span className="flex-shrink-0 text-sm text-ink-secondary">万</span>
-        </div>
-    );
-}
-
-/** Hero 票券卡：实时计算的月供 / 首月 + 本金利息占比条 + 三统计 */
-export function HeroTicket({
-    draft,
-    derived,
-}: {
-    draft: LoanDraft;
-    derived: DerivedLoan;
-}) {
-    const t = useIntl();
-    const isPrincipal = derived.method === "principal";
-    const interestShare =
-        derived.totalPayment > 0
-            ? derived.totalInterest / derived.totalPayment
-            : 0;
-    const sub =
-        derived.method === "installment"
-            ? t("loan-hero-sub-installment", {
-                  years: draft.termYears,
-                  periods: derived.months,
-                  payoff: `${derived.payoff.year}年${derived.payoff.month}月`,
-              })
-            : t("loan-hero-sub-decrease", {
-                  amount: `¥${fmtMoney(derived.decrease)}`,
-                  payoff: `${derived.payoff.year}年${derived.payoff.month}月`,
-              });
-    return (
-        // 白卡（用户口径：暖色渐变票券卡「有点丑」，直接换白底）；
-        // 原来的打孔缺口 + 虚线只在渐变票券里成立，换白卡后一并去掉
-        <div data-loan-hero className={cn(LOAN_CARD, "relative p-4")}>
-            <img
-                src={LOAN_TYPE_ICONS[draft.loanType]}
-                alt=""
-                aria-hidden
-                className="absolute top-4 right-4 size-11"
-            />
-            <div className="text-[13px] text-ink-secondary">
-                {isPrincipal ? t("loan-hero-first") : t("loan-hero-monthly")}
-            </div>
-            <div className="mt-1 font-display text-4xl leading-tight font-bold text-brand tabular-nums">
-                <span className="mr-1 text-xl">¥</span>
-                {fmtMoney(derived.firstPayment)}
-            </div>
-            <div className="mt-1 pr-12 text-xs text-ink-secondary tabular-nums">
-                {sub}
-                {derived.splitFirst
-                    ? ` · ${t("loan-hero-split", {
-                          commercial: fmtMoney(derived.splitFirst.commercial),
-                          fund: fmtMoney(derived.splitFirst.fund),
-                      })}`
-                    : ""}
-            </div>
-            <div className="mt-4 border-t border-rule pt-4">
-                <div className="flex h-2 overflow-hidden rounded-full bg-brand/20">
-                    <div
-                        className="h-full rounded-full bg-brand transition-all"
-                        style={{ width: `${(1 - interestShare) * 100}%` }}
-                    />
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                    <div>
-                        <div className="flex items-center gap-1 text-[11px] text-ink-secondary">
-                            <span className="size-1.5 rounded-full bg-brand" />
-                            {t("loan-principal-label")}
-                        </div>
-                        <div className="mt-0.5 text-[15px] font-semibold text-ink tabular-nums">
-                            {fmtWan(derived.principal / 10000)} 万
-                        </div>
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-1 text-[11px] text-ink-secondary">
-                            <span className="size-1.5 rounded-full bg-brand/30" />
-                            {t("loan-total-interest")}
-                        </div>
-                        <div className="mt-0.5 text-[15px] font-semibold text-ink tabular-nums">
-                            {fmtWan(derived.totalInterest / 10000)} 万
-                        </div>
-                    </div>
-                    <div>
-                        <div className="text-[11px] text-ink-secondary">
-                            {t("loan-total-payment")}
-                        </div>
-                        <div className="mt-0.5 text-[15px] font-semibold text-ink tabular-nums">
-                            {fmtWan(derived.totalPayment / 10000)} 万
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {suffix && (
+                <span className="flex-shrink-0 text-sm text-ink-secondary">
+                    {suffix}
+                </span>
+            )}
         </div>
     );
 }
 
 const TYPES: LoanType[] = ["commercial", "fund", "combo"];
 
-/** 三大贷款类型卡 */
-export function TypeCards({
+/** 贷款类型：纯文字三选一。图标与「商业贷款 / 公积金」没有语义关系，已去掉 */
+export function TypePicker({
     value,
     onChange,
 }: {
@@ -166,166 +102,236 @@ export function TypeCards({
 }) {
     const t = useIntl();
     return (
-        <div data-loan-type-row className="grid grid-cols-3 gap-3">
+        <div data-loan-type-row className="grid grid-cols-3 gap-2">
             {TYPES.map((type) => (
                 <button
                     key={type}
                     type="button"
                     data-loan-type={type}
                     className={cn(
-                        "flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 transition-colors",
+                        "cursor-pointer rounded-full border py-2.5 text-center text-[14px] transition-colors",
                         value === type ? PICK_ON : PICK_OFF,
                     )}
                     onClick={() => onChange(type)}
                 >
-                    <img
-                        src={LOAN_TYPE_ICONS[type]}
-                        alt=""
-                        aria-hidden
-                        className="size-10"
-                    />
-                    <span className="text-[13px] font-medium">
-                        {t(
-                            type === "commercial"
-                                ? "loan-type-commercial"
-                                : type === "fund"
-                                  ? "loan-type-fund"
-                                  : "loan-type-combo",
-                        )}
-                    </span>
+                    {t(
+                        type === "commercial"
+                            ? "loan-type-commercial"
+                            : type === "fund"
+                              ? "loan-type-fund"
+                              : "loan-type-combo",
+                    )}
                 </button>
             ))}
         </div>
     );
 }
 
-/** 计算方式 / 还款方式等二选一：全站分段控件同形（浅灰容器 + 白色凸起胶囊） */
-function ModeChip({
-    active,
-    label,
-    onClick,
-    probe,
+/** 计算方式 / 还款方式 / 首付口径：全站分段控件同形 */
+export function Segmented<T extends string>({
+    value,
+    options,
+    onChange,
+    className,
 }: {
-    active: boolean;
-    label: string;
-    onClick: () => void;
-    probe: LoanMode;
+    value: T;
+    options: { value: T; label: string }[];
+    onChange: (v: T) => void;
+    className?: string;
 }) {
     return (
-        <button
-            type="button"
-            data-loan-mode={probe}
-            className={cn(SEG_ITEM, active ? SEG_ON : SEG_OFF)}
-            onClick={onClick}
-        >
-            {label}
-        </button>
+        <div className={cn(SEG_GROUP, className)}>
+            {options.map((o) => (
+                <button
+                    key={o.value}
+                    type="button"
+                    data-loan-seg={o.value}
+                    className={cn(
+                        SEG_ITEM,
+                        value === o.value ? SEG_ON : SEG_OFF,
+                    )}
+                    onClick={() => onChange(o.value)}
+                >
+                    {o.label}
+                </button>
+            ))}
+        </div>
     );
 }
 
-/** 贷款设置白卡：金额口径 / 金额输入 / 年限 / 双利率 / 首次还款 */
-export function SettingsCard({
+/** 计算方式 + 金额 + 首付 + 公积金额度 */
+export function AmountSection({
     draft,
     derived,
     edit,
-    onOpenSheet,
 }: {
     draft: LoanDraft;
-    derived: DerivedLoan;
+    derived: { commercialWan: number; totalWan: number };
     edit: (patch: Partial<LoanDraft>) => void;
-    onOpenSheet: (
-        kind: "down" | "term" | "rateCommercial" | "rateFund" | "firstPay",
-    ) => void;
 }) {
     const t = useIntl();
     const isCombo = draft.loanType === "combo";
     const fundClamped = isCombo && draft.fundAmount > derived.totalWan + 1e-9;
+    const downWan =
+        draft.downMode === "amount"
+            ? draft.downAmount
+            : Math.round(draft.housePrice * draft.downRatio * 100) / 100;
+    const downRatio =
+        draft.downMode === "ratio"
+            ? draft.downRatio
+            : draft.housePrice > 0
+              ? draft.downAmount / draft.housePrice
+              : 0;
+
     return (
         <div className={cn("divide-y divide-rule/60", LOAN_CARD)}>
-            <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-2">
-                <span className="flex-shrink-0 text-[15px] text-ink">
-                    {t("loan-mode-label")}
-                </span>
-                <div className={SEG_GROUP}>
-                    <ModeChip
-                        probe="totalPrice"
-                        active={draft.mode === "totalPrice"}
-                        label={t("loan-mode-total-price")}
-                        onClick={() => edit({ mode: "totalPrice" })}
-                    />
-                    <ModeChip
-                        probe="amount"
-                        active={draft.mode === "amount"}
-                        label={t("loan-mode-by-amount")}
-                        onClick={() => edit({ mode: "amount" })}
-                    />
-                </div>
+            <div className={ROW}>
+                <span className={ROW_LEFT}>{t("loan-mode-label")}</span>
+                <Segmented<LoanMode>
+                    value={draft.mode}
+                    options={[
+                        {
+                            value: "totalPrice",
+                            label: t("loan-mode-total-price"),
+                        },
+                        { value: "amount", label: t("loan-mode-by-amount") },
+                    ]}
+                    onChange={(mode) => edit({ mode })}
+                />
             </div>
             {draft.mode === "totalPrice" ? (
-                <div className="flex min-h-[52px] items-center gap-3 px-4 py-2">
-                    <span className="flex-shrink-0 text-[15px] text-ink">
-                        {t("loan-house-price")}
-                    </span>
-                    <AmountCell
-                        ariaLabel={t("loan-house-price")}
-                        value={draft.housePrice}
-                        onCommit={(n) => edit({ housePrice: n })}
-                    />
-                </div>
+                <>
+                    <div className={ROW}>
+                        <span className={ROW_LEFT}>
+                            {t("loan-house-price")}
+                        </span>
+                        <NumberCell
+                            ariaLabel={t("loan-house-price")}
+                            value={draft.housePrice}
+                            onCommit={(housePrice) => edit({ housePrice })}
+                            suffix="万"
+                        />
+                    </div>
+                    {/* 首付：口径切换独占一行，数值与换算值在下面对齐，
+                        避免「比例 / 金额」胶囊把 6 位数字挤到行尾 */}
+                    <div className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <span className={ROW_LEFT}>
+                                {t("loan-down-payment")}
+                            </span>
+                            <Segmented
+                                className="flex-shrink-0"
+                                value={draft.downMode}
+                                options={[
+                                    {
+                                        value: "ratio" as const,
+                                        label: t("loan-down-by-ratio"),
+                                    },
+                                    {
+                                        value: "amount" as const,
+                                        label: t("loan-down-by-amount"),
+                                    },
+                                ]}
+                                onChange={(downMode) => {
+                                    // 切换口径时把当前值换成另一口径的等价数值，
+                                    // 避免「比例 30%」切到金额后仍显示 30 万
+                                    if (downMode === "ratio") {
+                                        edit({
+                                            downMode,
+                                            downRatio:
+                                                draft.housePrice > 0
+                                                    ? Math.round(
+                                                          (draft.downAmount /
+                                                              draft.housePrice) *
+                                                              10000,
+                                                      ) / 10000
+                                                    : 0,
+                                        });
+                                    } else {
+                                        edit({
+                                            downMode,
+                                            downAmount:
+                                                Math.round(downWan * 100) / 100,
+                                        });
+                                    }
+                                }}
+                            />
+                        </div>
+                        <div className="mt-2 flex items-baseline justify-end gap-2">
+                            <NumberCell
+                                ariaLabel={t("loan-down-payment")}
+                                className="max-w-28"
+                                value={
+                                    draft.downMode === "ratio"
+                                        ? Math.round(downRatio * 10000) / 100
+                                        : downWan
+                                }
+                                max={
+                                    draft.downMode === "ratio" ? 100 : undefined
+                                }
+                                onCommit={(n) => {
+                                    if (draft.downMode === "ratio") {
+                                        const ratio = n / 100;
+                                        edit({
+                                            downRatio: ratio,
+                                            downAmount:
+                                                Math.round(
+                                                    draft.housePrice *
+                                                        ratio *
+                                                        100,
+                                                ) / 100,
+                                        });
+                                    } else {
+                                        edit({
+                                            downAmount: n,
+                                            downRatio:
+                                                draft.housePrice > 0
+                                                    ? n / draft.housePrice
+                                                    : 0,
+                                        });
+                                    }
+                                }}
+                                suffix={draft.downMode === "ratio" ? "%" : "万"}
+                            />
+                            <span className={cn(ROW_MUTED, "w-16 text-right")}>
+                                {draft.downMode === "ratio"
+                                    ? `${fmtWan(downWan)} 万`
+                                    : `${Math.round(downRatio * 10000) / 100}%`}
+                            </span>
+                        </div>
+                    </div>
+                </>
             ) : (
-                <div className="flex min-h-[52px] items-center gap-3 px-4 py-2">
-                    <span className="flex-shrink-0 text-[15px] text-ink">
-                        {t("loan-principal")}
-                    </span>
-                    <AmountCell
+                <div className={ROW}>
+                    <span className={ROW_LEFT}>{t("loan-principal")}</span>
+                    <NumberCell
                         ariaLabel={t("loan-principal")}
                         value={draft.amount}
-                        onCommit={(n) => edit({ amount: n })}
+                        onCommit={(amount) => edit({ amount })}
+                        suffix="万"
                     />
                 </div>
-            )}
-            {draft.mode === "totalPrice" && (
-                <button
-                    type="button"
-                    data-loan-row="down"
-                    className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-left"
-                    onClick={() => onOpenSheet("down")}
-                >
-                    <span className="flex-shrink-0 text-[15px] text-ink">
-                        {t("loan-down-payment")}
-                    </span>
-                    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                        <span className="text-xs text-ink-secondary tabular-nums">
-                            {fmtWan(draft.housePrice * draft.downRatio)} 万
-                        </span>
-                        <span className="text-[15px] font-semibold text-ink tabular-nums">
-                            {Math.round(draft.downRatio * 100)}%
-                        </span>
-                        <RowChevron />
-                    </div>
-                </button>
             )}
             {isCombo && (
                 <>
-                    <div className="flex min-h-[52px] items-center gap-3 px-4 py-2">
-                        <span className="flex-shrink-0 text-[15px] text-ink">
-                            {t("loan-type-fund")}
-                        </span>
-                        <AmountCell
+                    <div className={ROW}>
+                        <span className={ROW_LEFT}>{t("loan-type-fund")}</span>
+                        <NumberCell
                             ariaLabel={t("loan-type-fund")}
                             value={draft.fundAmount}
-                            onCommit={(n) => edit({ fundAmount: n })}
+                            onCommit={(fundAmount) => edit({ fundAmount })}
+                            suffix="万"
                         />
                     </div>
-                    <div className="flex min-h-[52px] items-center justify-between gap-3 px-4 py-2">
-                        <span className="flex-shrink-0 text-[15px] text-ink">
+                    <div className={ROW}>
+                        <span className={ROW_LEFT}>
                             {t("loan-type-commercial")}
                         </span>
                         <div className="flex items-center gap-1.5">
                             <span className="rounded-full bg-ground-muted px-2 py-0.5 text-[11px] text-ink-secondary">
                                 {t("loan-commercial-auto")}
                             </span>
-                            <span className="text-[15px] text-ink-secondary tabular-nums">
+                            <span className={ROW_VALUE}>
                                 {fmtWan(derived.commercialWan)} 万
                             </span>
                         </div>
@@ -337,20 +343,38 @@ export function SettingsCard({
                     )}
                 </>
             )}
+        </div>
+    );
+}
+
+/** 年限 / 利率 / 首期还款 / 还款方式 */
+export function TermsSection({
+    draft,
+    derived,
+    edit,
+    onOpenSheet,
+}: {
+    draft: LoanDraft;
+    derived: { months: number; commercialRate: number };
+    edit: (patch: Partial<LoanDraft>) => void;
+    onOpenSheet: (kind: "term" | "rateCommercial" | "rateFund") => void;
+}) {
+    const t = useIntl();
+    const monthValue = `${draft.firstPay.year}-${`${draft.firstPay.month}`.padStart(2, "0")}`;
+    return (
+        <div className={cn("divide-y divide-rule/60", LOAN_CARD)}>
             <button
                 type="button"
                 data-loan-row="term"
-                className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-left"
+                className={cn(ROW, "cursor-pointer text-left")}
                 onClick={() => onOpenSheet("term")}
             >
-                <span className="flex-shrink-0 text-[15px] text-ink">
-                    {t("loan-term")}
-                </span>
+                <span className={ROW_LEFT}>{t("loan-term")}</span>
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                    <span className="text-xs text-ink-secondary tabular-nums">
+                    <span className={ROW_MUTED}>
                         {t("loan-period-n", { n: derived.months })}
                     </span>
-                    <span className="text-[15px] font-semibold text-ink tabular-nums">
+                    <span className={ROW_VALUE}>
                         {t("loan-years-n", { n: draft.termYears })}
                     </span>
                     <RowChevron />
@@ -360,18 +384,20 @@ export function SettingsCard({
                 <button
                     type="button"
                     data-loan-row="commercial-rate"
-                    className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-left"
+                    className={cn(ROW, "cursor-pointer text-left")}
                     onClick={() => onOpenSheet("rateCommercial")}
                 >
-                    <span className="flex-shrink-0 text-[15px] text-ink">
-                        {t("loan-commercial-rate")}
-                    </span>
-                    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                        <span className="text-xs text-ink-secondary tabular-nums">
+                    <div className="min-w-0">
+                        <div className={ROW_LEFT}>
+                            {t("loan-commercial-rate")}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-ink-secondary tabular-nums">
                             LPR {draft.lpr}% {draft.bp >= 0 ? "+" : "−"}
                             {Math.abs(draft.bp)} BP
-                        </span>
-                        <span className="text-[15px] font-semibold text-ink tabular-nums">
+                        </div>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-1.5">
+                        <span className={ROW_VALUE}>
                             {fmtWan(derived.commercialRate)}%
                         </span>
                         <RowChevron />
@@ -382,46 +408,65 @@ export function SettingsCard({
                 <button
                     type="button"
                     data-loan-row="fund-rate"
-                    className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-left"
+                    className={cn(ROW, "cursor-pointer text-left")}
                     onClick={() => onOpenSheet("rateFund")}
                 >
-                    <span className="flex-shrink-0 text-[15px] text-ink">
-                        {t("loan-fund-rate")}
-                    </span>
-                    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                        <span className="text-xs text-ink-secondary">
+                    <div className="min-w-0">
+                        <div className={ROW_LEFT}>{t("loan-fund-rate")}</div>
+                        <div className="mt-0.5 text-[11px] text-ink-secondary">
                             {t(
                                 draft.fundSuite === "first"
                                     ? "loan-suite-first"
                                     : "loan-suite-second",
                             )}
-                        </span>
-                        <span className="text-[15px] font-semibold text-ink tabular-nums">
+                        </div>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-1.5">
+                        <span className={ROW_VALUE}>
                             {fmtWan(draft.fundRate)}%
                         </span>
                         <RowChevron />
                     </div>
                 </button>
             )}
-            <button
-                type="button"
-                data-loan-row="first-pay"
-                className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-3 px-4 py-2 text-left"
-                onClick={() => onOpenSheet("firstPay")}
-            >
-                <span className="flex-shrink-0 text-[15px] text-ink">
-                    {t("loan-first-pay")}
-                </span>
-                <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                    <span className="text-[15px] font-semibold text-ink tabular-nums">
-                        {t("loan-ym", {
-                            year: derived.firstPay.year,
-                            month: derived.firstPay.month,
-                        })}
-                    </span>
-                    <RowChevron />
-                </div>
-            </button>
+            <div className={ROW}>
+                <span className={ROW_LEFT}>{t("loan-first-pay")}</span>
+                {/* 首期还款只要年月，系统 month 控件在 iOS / Android 都是原生滚轮；
+                    隐藏 webkit 日历图标，整行仍可点开 */}
+                <input
+                    type="month"
+                    aria-label={t("loan-first-pay")}
+                    value={monthValue}
+                    onChange={(e) => {
+                        const [year, month] = e.target.value
+                            .split("-")
+                            .map(Number);
+                        if (year && month) {
+                            edit({ firstPay: { year, month } });
+                        }
+                    }}
+                    className="min-w-0 cursor-pointer bg-transparent text-right text-[15px] dp-text-medium text-ink tabular-nums outline-none [color-scheme:light] [&::-webkit-calendar-picker-indicator]:hidden"
+                />
+            </div>
+            <div className={ROW}>
+                <span className={ROW_LEFT}>{t("loan-method-label")}</span>
+                <Segmented
+                    value={draft.method}
+                    options={[
+                        {
+                            value: "installment" as const,
+                            label: t("loan-method-installment"),
+                        },
+                        {
+                            value: "principal" as const,
+                            label: t("loan-method-principal"),
+                        },
+                    ]}
+                    onChange={(method) => edit({ method })}
+                />
+            </div>
         </div>
     );
 }
+
+export { GROUP_TITLE };

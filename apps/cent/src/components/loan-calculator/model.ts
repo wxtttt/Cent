@@ -1,19 +1,30 @@
-import type { SavedLoanPlan } from "@/ledger/extra-type";
+import type {
+    SavedLoanPlan,
+    SavedLoanPrepay,
+    SavedLoanRateChange,
+} from "@/ledger/extra-type";
 import {
     aggregateYearly,
-    amortizeRows,
-    calcLoan,
+    buildSchedule,
     type FirstPayYm,
     type LoanInput,
     type LoanMethod,
     type LoanYearRow,
-    monthlyDecrease,
-    payoffYm,
+    periodsElapsed,
     shiftYm,
+    ymFromIndex,
+    ymIndex,
 } from "@/ledger/loan";
 
 export type LoanType = "commercial" | "fund" | "combo";
 export type LoanMode = "totalPrice" | "amount";
+/** 首付输入口径：按比例 / 按金额 */
+export type DownMode = "ratio" | "amount";
+
+/** 利率轨迹上的一个点（草稿态） */
+export type DraftRateChange = SavedLoanRateChange;
+/** 已记录的提前还款（草稿态） */
+export type DraftPrepay = SavedLoanPrepay;
 
 export type LoanDraft = {
     loanType: LoanType;
@@ -22,6 +33,10 @@ export type LoanDraft = {
     housePrice: number;
     /** 首付比例 0-1 */
     downRatio: number;
+    /** 首付口径 */
+    downMode: DownMode;
+    /** 首付金额（万） */
+    downAmount: number;
     /** 贷款金额（万，按贷款金额口径） */
     amount: number;
     /** 公积金额度（万，组合贷款） */
@@ -37,6 +52,10 @@ export type LoanDraft = {
     /** 贷款年限（年） */
     termYears: number;
     firstPay: FirstPayYm;
+    /** 还款生涯：利率调整 */
+    rateChanges: DraftRateChange[];
+    /** 还款生涯：提前还款 */
+    prepays: DraftPrepay[];
 };
 
 /** 2026-09-20 公布的 5 年期以上 LPR；页脚脚注口径以它为基准 */
@@ -59,6 +78,8 @@ export function defaultDraft(now = Date.now()): LoanDraft {
         mode: "totalPrice",
         housePrice: 300,
         downRatio: 0.3,
+        downMode: "ratio",
+        downAmount: 90,
         amount: 210,
         fundAmount: 60,
         lpr: LATEST_LPR.value,
@@ -68,6 +89,8 @@ export function defaultDraft(now = Date.now()): LoanDraft {
         method: "installment",
         termYears: 30,
         firstPay: nextMonthOf(now),
+        rateChanges: [],
+        prepays: [],
     };
 }
 
@@ -75,11 +98,15 @@ export function toDraft(plan: SavedLoanPlan): LoanDraft {
     const principalWan = round2(plan.principal / 10000);
     const legacyRate = plan.annualRate;
     const lpr = plan.lpr ?? LATEST_LPR.value;
+    const housePrice = plan.housePrice ?? 300;
+    const downRatio = plan.downRatio ?? 0.3;
     return {
         loanType: plan.loanType ?? "commercial",
         mode: plan.mode ?? "amount",
-        housePrice: plan.housePrice ?? 300,
-        downRatio: plan.downRatio ?? 0.3,
+        housePrice,
+        downRatio,
+        downMode: plan.downMode ?? "ratio",
+        downAmount: plan.downAmountWan ?? round2(housePrice * downRatio),
         amount: principalWan,
         fundAmount: plan.fundAmount ?? 0,
         lpr,
@@ -92,7 +119,35 @@ export function toDraft(plan: SavedLoanPlan): LoanDraft {
             plan.firstPayYear && plan.firstPayMonth
                 ? { year: plan.firstPayYear, month: plan.firstPayMonth }
                 : nextMonthOf(plan.createdAt),
+        rateChanges: plan.rateChanges ?? [],
+        prepays: plan.prepays ?? [],
     };
+}
+
+/** 首付金额（万）：按比例就用总价算，按金额就用输入值 */
+export function downWanOf(draft: LoanDraft): number {
+    const raw =
+        draft.downMode === "amount"
+            ? draft.downAmount
+            : draft.housePrice * draft.downRatio;
+    return round2(Math.max(0, Math.min(raw, draft.housePrice)));
+}
+
+/** 首付比例（0-1），按金额口径时反推 */
+export function downRatioOf(draft: LoanDraft): number {
+    if (draft.downMode === "ratio") return draft.downRatio;
+    if (draft.housePrice <= 0) return 0;
+    return Math.min(1, Math.max(0, draft.downAmount / draft.housePrice));
+}
+
+/** 年月 → 期号（首期为 1）。早于首期的返回 <= 0 */
+export function periodOfYm(firstPay: FirstPayYm, ym: FirstPayYm): number {
+    return ymIndex(ym) - ymIndex(firstPay) + 1;
+}
+
+/** 期号 → 年月 */
+export function ymOfPeriod(firstPay: FirstPayYm, period: number): FirstPayYm {
+    return shiftYm(firstPay, period - 1);
 }
 
 /** 拆出两条贷款轨（组合 = 商贷 + 公积金，其余单轨） */
@@ -108,7 +163,7 @@ export function tracksOf(draft: LoanDraft): {
     const totalWan =
         draft.mode === "amount"
             ? draft.amount
-            : round2(draft.housePrice * (1 - draft.downRatio));
+            : round2(Math.max(0, draft.housePrice - downWanOf(draft)));
     const fundWan =
         draft.loanType === "combo"
             ? Math.min(draft.fundAmount, totalWan)
@@ -142,36 +197,162 @@ export function tracksOf(draft: LoanDraft): {
     };
 }
 
-/** 同一草稿下两种还款方式的合并对比（对比卡用） */
-export function compareMethods(draft: LoanDraft) {
-    const { commercialInput, fundInput } = tracksOf(draft);
-    const merge = (method: LoanMethod) => {
-        const a = calcLoan(commercialInput, method);
-        if (!fundInput) return a;
-        const b = calcLoan(fundInput, method);
-        return {
-            firstPayment: round2(a.firstPayment + b.firstPayment),
-            totalInterest: round2(a.totalInterest + b.totalInterest),
-            payments: a.payments.map((p, i) => round2(p + b.payments[i])),
-        };
+/** 把草稿里的「年月」事件换算成「期号」事件；越界事件直接丢弃 */
+export function eventsOfDraft(draft: LoanDraft, months: number) {
+    const rates = draft.rateChanges
+        .map((r) => ({
+            fromPeriod: periodOfYm(draft.firstPay, {
+                year: r.year,
+                month: r.month,
+            }),
+            commercialRate: r.commercialRate,
+            fundRate: r.fundRate,
+        }))
+        .filter((r) => r.fromPeriod >= 2 && r.fromPeriod <= months)
+        .sort((a, b) => a.fromPeriod - b.fromPeriod);
+    const prepays = draft.prepays
+        .map((p) => ({
+            atPeriod: periodOfYm(draft.firstPay, {
+                year: p.year,
+                month: p.month,
+            }),
+            amount: p.amount,
+            mode: p.mode,
+        }))
+        .filter((p) => p.atPeriod >= 1 && p.atPeriod <= months)
+        .sort((a, b) => a.atPeriod - b.atPeriod);
+    return { rates, prepays };
+}
+
+/** 单轨 schedule（含提前还款拆分） */
+function scheduleTracks(
+    draft: LoanDraft,
+    method: LoanMethod,
+    withEvents = true,
+): {
+    commercial: ReturnType<typeof buildSchedule>;
+    fund?: ReturnType<typeof buildSchedule>;
+    months: number;
+} {
+    const { commercialInput, fundInput, months } = tracksOf(draft);
+    const { prepays: rawPrepays } = eventsOfDraft(draft, months);
+    const prepays = withEvents ? rawPrepays : [];
+
+    if (!fundInput) {
+        const commercial = buildSchedule({
+            principal: commercialInput.principal,
+            months,
+            method,
+            annualRate: commercialInput.annualRate,
+            rateChanges: eventsOfDraft(draft, months)
+                .rates.map((r) => ({
+                    fromPeriod: r.fromPeriod,
+                    annualRate: r.commercialRate,
+                }))
+                .filter(() => withEvents),
+            prepays: prepays.map((p) => ({
+                atPeriod: p.atPeriod,
+                amount: p.amount,
+                mode: p.mode,
+            })),
+        });
+        return { commercial, months: commercial.months };
+    }
+
+    // combo：先跑基线，按余额把每笔提前还款拆给两轨
+    const baseCommercial = buildSchedule({
+        principal: commercialInput.principal,
+        months,
+        method,
+        annualRate: commercialInput.annualRate,
+        rateChanges: withEvents
+            ? eventsOfDraft(draft, months).rates.map((r) => ({
+                  fromPeriod: r.fromPeriod,
+                  annualRate: r.commercialRate,
+              }))
+            : [],
+    });
+    const baseFund = buildSchedule({
+        principal: fundInput.principal,
+        months,
+        method,
+        annualRate: fundInput.annualRate,
+        rateChanges: withEvents
+            ? eventsOfDraft(draft, months)
+                  .rates.filter((r) => r.fundRate !== undefined)
+                  .map((r) => ({
+                      fromPeriod: r.fromPeriod,
+                      annualRate: r.fundRate as number,
+                  }))
+            : [],
+    });
+
+    const split = {
+        commercial: [] as typeof rawPrepays,
+        fund: [] as typeof rawPrepays,
     };
-    const installment = merge("installment");
-    const principal = merge("principal");
-    let crossover: number | undefined;
-    for (let i = 0; i < installment.payments.length; i++) {
-        if (principal.payments[i] < installment.payments[i]) {
-            crossover = i + 1;
-            break;
+    if (withEvents) {
+        for (const p of prepays) {
+            if (p.mode === "payoff") {
+                split.commercial.push(p);
+                continue;
+            }
+            const cBalance =
+                baseCommercial.rows[p.atPeriod - 1]?.remaining ??
+                (p.atPeriod <= 0 ? commercialInput.principal : 0);
+            const fBalance =
+                baseFund.rows[p.atPeriod - 1]?.remaining ??
+                (p.atPeriod <= 0 ? fundInput.principal : 0);
+            const toCommercial = Math.min(p.amount, cBalance);
+            const toFund = Math.min(p.amount - toCommercial, fBalance);
+            if (toCommercial > 0) {
+                split.commercial.push({ ...p, amount: toCommercial });
+            }
+            if (toFund > 0) {
+                split.fund.push({ ...p, amount: toFund });
+            }
         }
     }
+
+    const commercial = buildSchedule({
+        principal: commercialInput.principal,
+        months,
+        method,
+        annualRate: commercialInput.annualRate,
+        rateChanges: eventsOfDraft(draft, months)
+            .rates.map((r) => ({
+                fromPeriod: r.fromPeriod,
+                annualRate: r.commercialRate,
+            }))
+            .filter(() => withEvents),
+        prepays: split.commercial.map((p) => ({
+            atPeriod: p.atPeriod,
+            amount: p.amount,
+            mode: p.mode,
+        })),
+    });
+    const fund = buildSchedule({
+        principal: fundInput.principal,
+        months,
+        method,
+        annualRate: fundInput.annualRate,
+        rateChanges: eventsOfDraft(draft, months)
+            .rates.filter((r) => r.fundRate !== undefined)
+            .map((r) => ({
+                fromPeriod: r.fromPeriod,
+                annualRate: r.fundRate as number,
+            }))
+            .filter(() => withEvents),
+        prepays: split.fund.map((p) => ({
+            atPeriod: p.atPeriod,
+            amount: p.amount,
+            mode: p.mode,
+        })),
+    });
     return {
-        installment,
-        principal,
-        interestDiff: round2(
-            installment.totalInterest - principal.totalInterest,
-        ),
-        firstDiff: round2(principal.firstPayment - installment.firstPayment),
-        crossover,
+        commercial,
+        fund,
+        months: Math.max(commercial.months, fund.months),
     };
 }
 
@@ -186,14 +367,24 @@ export type DerivedLoan = {
     commercialRate: number;
     /** 公积金年利率（%） */
     fundRate: number;
+    /** 剩余期数（含未还的，提前结清后为 0） */
     months: number;
     firstPay: FirstPayYm;
     payoff: FirstPayYm;
     method: LoanMethod;
     /** 合并后的逐期月供（元） */
     payments: number[];
-    /** 合并后的逐期拆分（月度表用） */
+    /** 合并后的逐期拆分 */
     monthlyRows: { principal: number; interest: number; payment: number }[];
+    /** 合并后的逐期行（带期号 / 年月 / 剩余本金） */
+    rows: {
+        period: number;
+        principal: number;
+        interest: number;
+        payment: number;
+        remaining: number;
+        annualRate: number;
+    }[];
     /** 合并年度拆分 */
     yearly: LoanYearRow[];
     firstPayment: number;
@@ -210,62 +401,82 @@ export type DerivedLoan = {
     commercialInput: LoanInput;
     /** 公积金轨输入 */
     fundInput?: LoanInput;
+    /** 进度：已还期数 / 总期数 */
+    progress: { paid: number; total: number; ratio: number };
+    /** 剩余本金（元） */
+    remainingPrincipal: number;
+    /** 已付利息（元） */
+    paidInterest: number;
+    /** 剩余利息（元） */
+    restInterest: number;
+    /** 下一期还款（全部还完时为 undefined） */
+    next?: {
+        period: number;
+        ym: FirstPayYm;
+        payment: number;
+        principal: number;
+        interest: number;
+    };
+    /** 提前还款相比不做提前还款省下的利息（元） */
+    prepaySaved: number;
+    /** 已记录提前还款的期数（用于锁定设置） */
+    prepayCount: number;
+    /** 提前结清期号 */
+    closedAt?: number;
 };
 
-export function deriveLoan(draft: LoanDraft): DerivedLoan {
+export function deriveLoan(draft: LoanDraft, now = new Date()): DerivedLoan {
     const {
         commercialInput,
         fundInput,
-        months,
         totalWan,
         fundWan,
         commercialWan,
         commercialRate,
     } = tracksOf(draft);
-    const schedule = calcLoan(commercialInput, draft.method);
-    const commercialRows = amortizeRows(commercialInput, draft.method);
-    let payments = schedule.payments;
-    let monthlyRows = commercialRows;
-    let yearly = schedule.yearly;
-    let firstPayment = schedule.firstPayment;
-    let lastPayment = schedule.lastPayment;
-    let totalPayment = schedule.totalPayment;
-    let totalInterest = schedule.totalInterest;
-    let splitFirst: { commercial: number; fund: number } | undefined;
-    if (fundInput) {
-        const fundSchedule = calcLoan(fundInput, draft.method);
-        const fundRows = amortizeRows(fundInput, draft.method);
-        payments = schedule.payments.map((p, i) =>
-            round2(p + fundSchedule.payments[i]),
-        );
-        monthlyRows = commercialRows.map((row, i) => ({
-            principal: round2(row.principal + fundRows[i].principal),
-            interest: round2(row.interest + fundRows[i].interest),
-            payment: round2(row.payment + fundRows[i].payment),
-        }));
-        yearly = aggregateYearly(
-            monthlyRows,
-            round2(commercialInput.principal + fundInput.principal),
-        );
-        firstPayment = payments[0];
-        lastPayment = payments[payments.length - 1];
-        totalPayment = round2(payments.reduce((s, p) => s + p, 0));
-        totalInterest = round2(
-            schedule.totalInterest + fundSchedule.totalInterest,
-        );
-        splitFirst = {
-            commercial: schedule.firstPayment,
-            fund: fundSchedule.firstPayment,
-        };
-    }
+    const actual = scheduleTracks(draft, draft.method, true);
+    const baseline = draft.prepays.length
+        ? scheduleTracks(draft, draft.method, false)
+        : undefined;
+
+    const { commercial, fund } = actual;
+    const months = actual.months;
     const principal = round2(
         commercialInput.principal + (fundInput?.principal ?? 0),
     );
-    const decrease = round2(
-        fundInput
-            ? monthlyDecrease(commercialInput) + monthlyDecrease(fundInput)
-            : monthlyDecrease(commercialInput),
+
+    const rows: DerivedLoan["rows"] = [];
+    for (let i = 0; i < months; i++) {
+        const c = commercial.rows[i];
+        const f = fund?.rows[i];
+        rows.push({
+            period: i + 1,
+            principal: round2((c?.principal ?? 0) + (f?.principal ?? 0)),
+            interest: round2((c?.interest ?? 0) + (f?.interest ?? 0)),
+            payment: round2((c?.payment ?? 0) + (f?.payment ?? 0)),
+            remaining: round2((c?.remaining ?? 0) + (f?.remaining ?? 0)),
+            annualRate: c?.annualRate ?? commercialInput.annualRate,
+        });
+    }
+
+    const yearly = aggregateYearly(rows, principal);
+    const totalPayment = round2(rows.reduce((s, r) => s + r.payment, 0));
+    const totalInterest = round2(rows.reduce((s, r) => s + r.interest, 0));
+    const paid = periodsElapsed(draft.firstPay, rows.length, now);
+    const paidInterest = round2(
+        rows.slice(0, paid).reduce((s, r) => s + r.interest, 0),
     );
+    const restInterest = round2(totalInterest - paidInterest);
+    const remainingPrincipal =
+        paid === 0 ? principal : (rows[paid - 1]?.remaining ?? 0);
+    const nextRow = rows[paid];
+    const baselineInterest = baseline
+        ? round2(
+              baseline.commercial.totalInterest +
+                  (baseline.fund?.totalInterest ?? 0),
+          )
+        : totalInterest;
+
     return {
         totalWan,
         fundWan,
@@ -274,20 +485,83 @@ export function deriveLoan(draft: LoanDraft): DerivedLoan {
         fundRate: draft.fundRate,
         months,
         firstPay: draft.firstPay,
-        payoff: payoffYm(draft.firstPay, months),
+        payoff: ymFromIndex(
+            ymIndex(draft.firstPay) + Math.max(0, rows.length - 1),
+        ),
         method: draft.method,
-        payments,
-        monthlyRows,
+        payments: rows.map((r) => r.payment),
+        monthlyRows: rows.map((r) => ({
+            principal: r.principal,
+            interest: r.interest,
+            payment: r.payment,
+        })),
+        rows,
         yearly,
-        firstPayment,
-        lastPayment,
+        firstPayment: rows[0]?.payment ?? 0,
+        lastPayment: rows[rows.length - 1]?.payment ?? 0,
         totalPayment,
         totalInterest,
-        splitFirst,
-        decrease,
+        splitFirst: fund
+            ? {
+                  commercial: commercial.firstPayment,
+                  fund: fund.firstPayment,
+              }
+            : undefined,
+        decrease:
+            rows.length > 1 ? round2(rows[0].payment - rows[1].payment) : 0,
         principal,
         commercialInput,
         fundInput,
+        progress: {
+            paid,
+            total: rows.length,
+            ratio: rows.length > 0 ? paid / rows.length : 0,
+        },
+        remainingPrincipal,
+        paidInterest,
+        restInterest,
+        next: nextRow
+            ? {
+                  period: nextRow.period,
+                  ym: ymOfPeriod(draft.firstPay, nextRow.period),
+                  payment: nextRow.payment,
+                  principal: nextRow.principal,
+                  interest: nextRow.interest,
+              }
+            : undefined,
+        prepaySaved: Math.max(0, round2(baselineInterest - totalInterest)),
+        prepayCount: draft.prepays.length,
+        closedAt: commercial.closedAt,
+    };
+}
+
+/** 同一草稿下两种还款方式的合并对比（对比卡用） */
+export function compareMethods(draft: LoanDraft) {
+    const a = deriveLoan({ ...draft, method: "installment" });
+    const b = deriveLoan({ ...draft, method: "principal" });
+    let crossover: number | undefined;
+    for (let i = 0; i < Math.min(a.payments.length, b.payments.length); i++) {
+        if (b.payments[i] < a.payments[i]) {
+            crossover = i + 1;
+            break;
+        }
+    }
+    return {
+        installment: {
+            firstPayment: a.firstPayment,
+            totalInterest: a.totalInterest,
+            payments: a.payments,
+            months: a.months,
+        },
+        principal: {
+            firstPayment: b.firstPayment,
+            totalInterest: b.totalInterest,
+            payments: b.payments,
+            months: b.months,
+        },
+        interestDiff: round2(a.totalInterest - b.totalInterest),
+        firstDiff: round2(b.firstPayment - a.firstPayment),
+        crossover,
     };
 }
 
@@ -302,11 +576,14 @@ export function toPlanInput(
         principal: derived.principal,
         annualRate:
             draft.loanType === "fund" ? draft.fundRate : derived.commercialRate,
-        months: derived.months,
+        months: Math.round(draft.termYears * 12),
         loanType: draft.loanType,
         mode: draft.mode,
         housePrice: draft.mode === "totalPrice" ? draft.housePrice : undefined,
-        downRatio: draft.mode === "totalPrice" ? draft.downRatio : undefined,
+        downRatio: draft.mode === "totalPrice" ? downRatioOf(draft) : undefined,
+        downMode: draft.mode === "totalPrice" ? draft.downMode : undefined,
+        downAmountWan:
+            draft.mode === "totalPrice" ? downWanOf(draft) : undefined,
         fundAmount: draft.loanType === "combo" ? draft.fundAmount : undefined,
         lpr: draft.lpr,
         bp: draft.bp,
@@ -317,6 +594,8 @@ export function toPlanInput(
         firstPayYear: draft.firstPay.year,
         firstPayMonth: draft.firstPay.month,
         icon,
+        rateChanges: draft.rateChanges,
+        prepays: draft.prepays,
     };
 }
 

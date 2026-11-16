@@ -162,6 +162,29 @@ export type CustomCurrency = {
     rateToBase: number;
 };
 
+/** 利率调整记录：从某年某月起按新利率继续还款（还款生涯） */
+export type SavedLoanRateChange = {
+    id: string;
+    /** 生效年月 */
+    year: number;
+    month: number;
+    /** 商贷年利率（%） */
+    commercialRate: number;
+    /** 公积金年利率（%） */
+    fundRate?: number;
+};
+
+/** 提前还款记录：某期还款后追加一笔 */
+export type SavedLoanPrepay = {
+    id: string;
+    /** 提前还款发生的年月 */
+    year: number;
+    month: number;
+    /** 追加金额（元） */
+    amount: number;
+    mode: "shorten" | "reduceMonthly" | "payoff";
+};
+
 /** 贷款计算器保存的方案，随个人配置同步 */
 export type SavedLoanPlan = {
     id: string;
@@ -182,6 +205,14 @@ export type SavedLoanPlan = {
     housePrice?: number;
     /** 首付比例 0-1 */
     downRatio?: number;
+    /** 首付口径：比例 / 金额 */
+    downMode?: "ratio" | "amount";
+    /** 首付金额（万，按首付金额口径） */
+    downAmountWan?: number;
+    /** 利率调整轨迹（按生效时间升序） */
+    rateChanges?: SavedLoanRateChange[];
+    /** 提前还款记录（按发生时间升序） */
+    prepays?: SavedLoanPrepay[];
     /** 公积金额度（万，组合贷款） */
     fundAmount?: number;
     /** 商贷 LPR（百分数），缺省表示旧数据只有 annualRate */
