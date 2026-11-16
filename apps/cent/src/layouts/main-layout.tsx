@@ -16,7 +16,10 @@ import { DataManagerProvider } from "@/components/data-manager";
 import { ImportPreviewProvider } from "@/components/data-manager/preview-form";
 import { InventoryItemProvider } from "@/components/inventory";
 import { LedgerFilterProvider } from "@/components/ledger/filter-sheet";
-import { LoanCalculatorProvider } from "@/components/loan-calculator";
+import {
+    LoanCalculatorProvider,
+    LoanDeleteProvider,
+} from "@/components/loan-calculator";
 import {
     MedicalMedicineProvider,
     MedicalProfileProvider,
@@ -120,6 +123,7 @@ export default function MainLayout() {
                 <VehiclePageProvider />
                 <CurrencyListProvider />
                 <LoanCalculatorProvider />
+                <LoanDeleteProvider />
                 <BookGuide />
                 <BookConfirmProvider />
                 <BudgetProvider />

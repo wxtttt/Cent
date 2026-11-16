@@ -184,3 +184,17 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 5. **内存红线**：机器剩 0.4 GB 空闲时 WebKit 启动即崩，等回落到 ~1 GB 才能跑；跑完立即 close，并用 `Get-CimInstance` 复核无残留 `WebKit|MiniBrowser|headless` 进程。
 6. **Chromium 首轮 35/37 的两个失败均为脚本误报**：默认币种实际 31 个（排除本位币 30 行，不是 29）；`Failed to fetch` 是 kurrency / 登录探测的既有噪声，需进过滤名单。
 7. **并发会话会实时重建挤端口**：本轮 5173 / 5174 的入口哈希在验证期间两次变化（其他会话在重建自己的 dist），本会话 preview 也会被挤到下一端口，每次构建/验证前都要重新核对 BASE 端口与哈希。
+
+## 2026-11-16 12:25 贷款计算页重构验证（worktree `feat-loan-261115`）
+
+- **探针 `verify-loan-page.js`**（`.playwright-cli/`，402×874）：`addInitScript` 灌离线账本（`SYNC_ENDPOINT=offline` + 单 book）→ 进首页 → 抽屉点「贷款计算」→ 落 `[data-route-page][data-route-path="/loan"]`。断言（Chromium / WebKit 完全一致）：
+  - 首屏 `hero` = `每月应还 ¥8,910.41 | 等额本息 · 30 年 360 期 · 2056年11月还清 | 贷款本金 210.00 万 | 利息总额 110.77 万 | 还款总额 320.77 万`；
+  - `typeCount 3`、设置行 `down / term / commercial-rate / first-pay`、`hasCompare / hasSchedule / hasPrepay / hasSaveBar` 全 true、`rawKeys []`、页脚「结果仅供参考，以银行贷款合同为准。」；
+  - 点 `[data-loan-compare="principal"]` → hero 变 `首月应还 ¥11,170.83 | 每月递减 ¥14.83 · 2056年11月还清`，利息 `110.77 → 96.34 万`；洞察条翻面成「选等额本息首月少还 ¥2,260.42，但利息多付 14.43 万」；
+  - 底部：计划卡 5 年行 + `查看全部 30 年`、提前还款卡（`省利息 ¥254,001.83，缩短 51 个月`）、免责声明、保存按钮；`pageErrors []`。
+- **本轮修掉的两个真问题**（都是探针截图看出来的，不是自测猜的）：
+  - **hero 被 flex 压成 40px**：`getBoundingClientRect().height 40` 但 `scrollHeight 222`，页面只显示「每月应还」一行。根因是滚动列 `flex flex-1 flex-col` 的子项默认 `shrink`，内容高于视口时所有卡片一起被压。容器加 `[&>*]:shrink-0` 后 222/222。
+  - **金额单位缺失**：洞察条曾渲成「少付利息 14.43，但首月要多还 2,260.42」，`loan-decrease-note` / `loan-hero-sub-decrease` / `loan-prepay-saved` / `loan-prepay-new-monthly` 也漏 `¥`。改为在拼文案时补单位（语言包里不写单位）。
+- **zh.json 去重**：loan 段有 **77 行重复键**（两次跑 locale 脚本所致，两条值完全相同、`JSON.parse` 取后者所以功能无感），已删重复、保留首条；去重后 zh 1418 键 / loan 94 键，en 94 键，loan 段零差异。
+- `pnpm --filter cent lint` 383 files 通过；清理了 4 个残留构建目录（`dist-stale-*`，合计 ~16MB，未被 .gitignore 覆盖、也不该入库）。
+- **探针坑**：`page.goto` 后立刻 `page.evaluate` 会因客户端跳转报 `Execution context was destroyed`——初始化必须走 `addInitScript` + 等 2s；`[data-loan-compare]` 只命中第一张卡（属性挂在两张按钮上），要点第二张得写 `[data-loan-compare="principal"]`。
