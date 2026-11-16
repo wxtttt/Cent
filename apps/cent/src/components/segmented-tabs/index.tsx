@@ -1,7 +1,7 @@
 import { cn } from "@/utils";
 
 /**
- * 家小满式页面分段控件：浅色胶囊容器 + 激活项白色凸起胶囊。
+ * APK 式页面分段控件：浅色胶囊容器 + 激活项白色凸起胶囊。
  */
 export default function SegmentedTabs({
     items,
@@ -14,7 +14,7 @@ export default function SegmentedTabs({
     value: string;
     onChange: (value: string) => void;
     className?: string;
-    /** sm 为紧凑档位（家小满筛选激活时的缩小样式） */
+    /** sm 为紧凑档位（APK 筛选激活时的缩小样式） */
     size?: "md" | "sm";
 }) {
     return (

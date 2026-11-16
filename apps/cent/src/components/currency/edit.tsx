@@ -5,15 +5,9 @@ import { z } from "zod";
 import { useCurrency } from "@/hooks/use-currency";
 import type { CustomCurrency } from "@/ledger/type";
 import { useIntl } from "@/locale";
-import { cn } from "@/utils";
-import {
-    BTN_DANGER,
-    BTN_PRIMARY,
-    BTN_SECONDARY,
-    SHEET_FOOTER,
-} from "../button-styles";
-import { FormCard, FormRow, RowInput } from "../form-rows";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "../ui/form";
+import { RowInput } from "../form-rows";
+import { SheetCard, SheetRow, SheetShell } from "../sheet-kit";
+import { Form, FormControl, FormField } from "../ui/form";
 import RateInput from "./rate-input";
 import { showCurrencyDelete } from "./sheets";
 
@@ -72,114 +66,79 @@ export const EditCurrencyForm = ({
 
     return (
         <Form {...form}>
-            <div className="flex max-h-[80dvh] flex-col">
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3">
-                    <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-secondary/40" />
-                    <h2 className="text-center text-[17px] font-semibold text-ink">
-                        {isCreate ? t("add-new-currency") : t("edit-currency")}
-                    </h2>
-                    <div className="mt-4 mb-2">
-                        <FormCard>
-                            <FormField
-                                control={form.control}
-                                name="name"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormRow label={t("currency-name")}>
-                                            <FormControl>
-                                                <RowInput
-                                                    value={field.value ?? ""}
-                                                    onChange={field.onChange}
-                                                    placeholder={t(
-                                                        "custom-currency-name-placeholder",
-                                                    )}
-                                                    maxLength={50}
-                                                />
-                                            </FormControl>
-                                        </FormRow>
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="symbol"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormRow label={t("currency-symbol")}>
-                                            <FormControl>
-                                                <RowInput
-                                                    value={field.value ?? ""}
-                                                    onChange={field.onChange}
-                                                    placeholder={t(
-                                                        "custom-currency-symbol-placeholder",
-                                                    )}
-                                                    maxLength={5}
-                                                />
-                                            </FormControl>
-                                        </FormRow>
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="rateToBase"
-                                render={({ field }) => (
-                                    <FormItem className="px-4 py-3">
-                                        <FormLabel className="text-[13px] text-ink-secondary">
-                                            {t("rate-to-base")}
-                                        </FormLabel>
-                                        <FormControl>
-                                            <RateInput
-                                                baseCurrencyLabel={
-                                                    baseCurrency.label
-                                                }
-                                                targetCurrencyLabel={
-                                                    form.watch("name") ||
-                                                    t("default-currency-name")
-                                                }
-                                                value={field.value}
-                                                allowClear={false}
-                                                onChange={(newRate) =>
-                                                    field.onChange(newRate)
-                                                }
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
-                        </FormCard>
-                    </div>
-                </div>
-                <div className={SHEET_FOOTER}>
-                    <div className="flex gap-2.5">
-                        {!isCreate && (
-                            <button
-                                type="button"
-                                onClick={toDelete}
-                                className={BTN_DANGER}
-                            >
-                                {t("delete")}
-                            </button>
+            <SheetShell
+                title={isCreate ? t("add-new-currency") : t("edit-currency")}
+                onCancel={isCreate ? onCancel : toDelete}
+                cancelLabel={isCreate ? undefined : t("delete")}
+                cancelDanger={!isCreate}
+                onConfirm={toSubmit}
+            >
+                <SheetCard>
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <SheetRow label={t("currency-name")}>
+                                <FormControl>
+                                    <RowInput
+                                        value={field.value ?? ""}
+                                        onChange={field.onChange}
+                                        placeholder={t(
+                                            "custom-currency-name-placeholder",
+                                        )}
+                                        maxLength={50}
+                                    />
+                                </FormControl>
+                            </SheetRow>
                         )}
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            className={cn(BTN_SECONDARY, "flex-1")}
-                        >
-                            {t("cancel")}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={toSubmit}
-                            className={cn(BTN_PRIMARY, "flex-1")}
-                        >
-                            {t("confirm")}
-                        </button>
-                    </div>
-                </div>
-            </div>
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="symbol"
+                        render={({ field }) => (
+                            <SheetRow label={t("currency-symbol")}>
+                                <FormControl>
+                                    <RowInput
+                                        value={field.value ?? ""}
+                                        onChange={field.onChange}
+                                        placeholder={t(
+                                            "custom-currency-symbol-placeholder",
+                                        )}
+                                        maxLength={5}
+                                    />
+                                </FormControl>
+                            </SheetRow>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="rateToBase"
+                        render={({ field }) => (
+                            <div className="px-4 py-3">
+                                <span className="text-[13px] text-ink-secondary">
+                                    {t("rate-to-base")}
+                                </span>
+                                <FormControl>
+                                    <RateInput
+                                        baseCurrencyLabel={baseCurrency.label}
+                                        targetCurrencyLabel={
+                                            form.watch("name") ||
+                                            t("default-currency-name")
+                                        }
+                                        value={field.value}
+                                        allowClear={false}
+                                        onChange={(newRate) =>
+                                            field.onChange(newRate)
+                                        }
+                                    />
+                                </FormControl>
+                            </div>
+                        )}
+                    />
+                </SheetCard>
+            </SheetShell>
         </Form>
     );
 };

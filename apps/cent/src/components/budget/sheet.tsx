@@ -4,17 +4,19 @@ import { useBudget } from "@/hooks/use-budget";
 import type { BillCategory, BillTag, Member } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
-import {
-    BTN_DANGER,
-    BTN_PRIMARY,
-    BTN_SECONDARY,
-    PRESSABLE_ROW,
-    SHEET_FOOTER,
-} from "../button-styles";
+import { BTN_PRIMARY, BTN_SECONDARY, SHEET_FOOTER } from "../button-styles";
 import createConfirmProvider from "../confirm";
 import { createDeleteConfirm } from "../delete-confirm";
 import { createNameDialog } from "../name-dialog";
 import { createOptionSheet } from "../option-sheet";
+import {
+    SheetCard,
+    SheetHint,
+    SheetHintDivider,
+    SheetLinkValue,
+    SheetRow,
+    SheetShell,
+} from "../sheet-kit";
 import { createAllocationSheet } from "./allocation-sheet";
 import { AmountInput } from "./amount-input";
 import {
@@ -42,7 +44,6 @@ export type BudgetSheetValue =
           categories: BillCategory[];
       }
     | { type: "startDay"; value: number }
-    | { type: "members"; value: (string | number)[]; members: Member[] }
     | {
           type: "special";
           value: BudgetDraft;
@@ -55,7 +56,6 @@ export type BudgetSheetValue =
 export type BudgetSheetResult =
     | MonthlyBudgetValue
     | number
-    | (string | number)[]
     | BudgetDraft
     | "delete";
 
@@ -65,162 +65,6 @@ export const [BudgetOptionProvider, showBudgetOptions] = createOptionSheet();
 export const [BudgetDeleteProvider, showBudgetDelete] = createDeleteConfirm();
 export const [BudgetAllocationProvider, showBudgetAllocation] =
     createAllocationSheet();
-
-function SheetShell({
-    title,
-    hint,
-    children,
-    onCancel,
-    onSave,
-    cancelLabel,
-    cancelDanger,
-    saveDisabled,
-}: {
-    title: string;
-    hint?: string;
-    children: ReactNode;
-    onCancel?: () => void;
-    onSave?: () => void;
-    /** 编辑态把左侧按钮改成「删除」，点击进入二次确认 */
-    cancelLabel?: string;
-    cancelDanger?: boolean;
-    saveDisabled?: boolean;
-}) {
-    const t = useIntl();
-    return (
-        <div className="flex max-h-[80dvh] flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3">
-                <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-secondary/40" />
-                <h2 className="text-center text-[17px] text-ink">{title}</h2>
-                {hint && (
-                    <p className="mt-1.5 text-center text-[12px] leading-relaxed text-ink-secondary">
-                        {hint}
-                    </p>
-                )}
-                <div className="mt-5 mb-2">{children}</div>
-            </div>
-            {/* 长表单滚动时，操作按钮常驻抽屉底部；间距走全局统一常量 */}
-            <div className={SHEET_FOOTER}>
-                <div className="flex gap-2.5">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className={cn(
-                            cancelDanger ? BTN_DANGER : BTN_SECONDARY,
-                            "flex-1",
-                        )}
-                    >
-                        {cancelLabel ?? t("cancel")}
-                    </button>
-                    <button
-                        type="button"
-                        disabled={saveDisabled}
-                        onClick={onSave}
-                        className={cn(BTN_PRIMARY, "flex-1")}
-                    >
-                        {t("confirm")}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/** 一行一卡的 chip 多选 */
-const Chips = ({
-    items,
-    selected,
-    onToggle,
-    align = "left",
-    empty,
-}: {
-    items: { id: string; label: string }[];
-    selected: string[];
-    onToggle: (id: string) => void;
-    align?: "left" | "right";
-    empty?: string;
-}) => {
-    const t = useIntl();
-    return (
-        <div
-            className={cn(
-                "flex w-full flex-wrap gap-2",
-                align === "right" && "justify-end",
-            )}
-        >
-            {items.length === 0 && (
-                <span className="text-[12px] text-ink-secondary">
-                    {empty ?? t("no-options")}
-                </span>
-            )}
-            {items.map((item) => {
-                const on = selected.includes(item.id);
-                return (
-                    <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => onToggle(item.id)}
-                        className={cn(
-                            "rounded-full px-3 py-1.5 text-[13px] shadow-[0_1px_3px_rgba(0,0,0,0.05)]",
-                            PRESSABLE_ROW,
-                            "enabled:active:scale-95",
-                            on
-                                ? "bg-brand text-on-brand enabled:hover:brightness-105"
-                                : "border border-rule bg-panel text-ink enabled:hover:border-brand/60",
-                        )}
-                    >
-                        {item.label}
-                    </button>
-                );
-            })}
-        </div>
-    );
-};
-
-/** 抽屉内所有设置块统一「左标签 / 右内容」的行，不再出现有的带角标、有的不带 */
-const SheetRow = ({
-    label,
-    children,
-    onClick,
-}: {
-    label: string;
-    children: ReactNode;
-    onClick?: () => void;
-}) => {
-    const inner = (
-        <>
-            <span className="w-[92px] flex-shrink-0 text-[13px] leading-5 text-ink">
-                {label}
-            </span>
-            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
-                {children}
-            </div>
-        </>
-    );
-    /** 固定 52px：36px 输入框 + 上下各 8px，纯文字行也保持同一高度 */
-    const cls = "flex h-[52px] w-full items-center gap-2 px-4 py-2 text-left";
-    return onClick ? (
-        <button
-            type="button"
-            onClick={onClick}
-            className={cn(cls, PRESSABLE_ROW)}
-        >
-            {inner}
-        </button>
-    ) : (
-        <div className={cls}>{inner}</div>
-    );
-};
-
-/** 可点行进选项抽屉时，右侧统一显示「当前值 + 箭头」 */
-const RowLinkValue = ({ label }: { label: string }) => (
-    <>
-        <span className="min-w-0 truncate text-[13px] text-ink-secondary">
-            {label}
-        </span>
-        <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0 text-ink-secondary/60" />
-    </>
-);
 
 /**
  * 金额 + 详细分配：月度预算与特殊预算共用同一组行，插进各自那张白卡里。
@@ -268,7 +112,7 @@ function AmountRows({
                 label={t("detailed-allocation")}
                 onClick={() => void openAllocation()}
             >
-                <RowLinkValue
+                <SheetLinkValue
                     label={
                         configured > 0
                             ? t("n-categories-set", { n: configured })
@@ -300,7 +144,7 @@ function MonthlyForm({
             title={t("monthly-budget")}
             hint={t("monthly-budget-sheet-hint")}
             onCancel={onCancel}
-            onSave={() =>
+            onConfirm={() =>
                 onConfirm?.({
                     totalBudget: total,
                     categoriesBudget: categories.filter(
@@ -309,7 +153,7 @@ function MonthlyForm({
                 })
             }
         >
-            <div className="divide-y divide-rule/60 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+            <SheetCard>
                 <AmountRows
                     total={total}
                     onTotalChange={setTotal}
@@ -317,7 +161,7 @@ function MonthlyForm({
                     categoriesBudget={categories}
                     onCategoriesChange={setCategories}
                 />
-            </div>
+            </SheetCard>
         </SheetShell>
     );
 }
@@ -379,7 +223,7 @@ function StartDayForm({
         <SheetShell
             title={t("budget-start-day")}
             onCancel={onCancel}
-            onSave={() => onConfirm?.(value)}
+            onConfirm={() => onConfirm?.(value)}
         >
             <div className="grid grid-cols-7 gap-1.5">
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
@@ -399,8 +243,9 @@ function StartDayForm({
                 ))}
             </div>
             {/* 上下两段：生效周期 / 过渡期，中间一条极淡分隔线。
-                选中日期在日历上高亮，生效日文字也用同色品牌橘呼应。 */}
-            <div className="mt-4 mb-3 rounded-2xl bg-brand/10 px-3.5 py-3">
+                选中日期在日历上高亮，生效日文字也用同色品牌橘呼应。
+                这一块就是全局「抽屉橙色提醒」的基准样式。 */}
+            <SheetHint className="mt-4 mb-3">
                 <p className="text-[15px] font-semibold text-ink">
                     {changed
                         ? t("start-day-effective-title")
@@ -427,7 +272,7 @@ function StartDayForm({
                         : t("start-day-current-note", { n: edit.value })}
                 </p>
 
-                <div className="my-2.5 h-px bg-ink-secondary/15" />
+                <SheetHintDivider />
 
                 <p className="text-[14px] font-semibold tabular-nums text-ink">
                     {changed && preview.hasGap ? (
@@ -450,7 +295,7 @@ function StartDayForm({
                           ? t("start-day-transition-active-note")
                           : t("start-day-no-transition-note")}
                 </p>
-            </div>
+            </SheetHint>
         </SheetShell>
     );
 }
@@ -460,50 +305,12 @@ function StartDayForm({
  * UI 上不暴露这个逻辑，打开时把全部成员高亮；保存时若仍是全选，写回空数组。
  */
 const allMemberIds = (members: Member[]) => members.map((m) => String(m.id));
-const normalizeJoiners = (selected: string[], members: Member[]) => {
+export const normalizeJoiners = (selected: string[], members: Member[]) => {
     const all = allMemberIds(members);
     const allSelected =
         all.length > 0 && all.every((id) => selected.includes(id));
     return allSelected ? [] : selected;
 };
-
-function MembersForm({
-    edit,
-    onCancel,
-    onConfirm,
-}: {
-    edit: Extract<BudgetSheetValue, { type: "members" }>;
-    onCancel?: () => void;
-    onConfirm?: (v: BudgetSheetResult) => void;
-}) {
-    const t = useIntl();
-    const [value, setValue] = useState<string[]>(() =>
-        edit.value.length === 0
-            ? allMemberIds(edit.members)
-            : edit.value.map(String),
-    );
-    const toggle = (id: string) =>
-        setValue((prev) =>
-            prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id],
-        );
-    return (
-        <SheetShell
-            title={t("included-members")}
-            hint={t("participants-hint")}
-            onCancel={onCancel}
-            onSave={() => onConfirm?.(normalizeJoiners(value, edit.members))}
-        >
-            <Chips
-                items={edit.members.map((m) => ({
-                    id: String(m.id),
-                    label: m.name,
-                }))}
-                selected={value}
-                onToggle={toggle}
-            />
-        </SheetShell>
-    );
-}
 
 function SpecialForm({
     edit,
@@ -605,7 +412,7 @@ function SpecialForm({
             onCancel={edit.isEdit ? () => void deleteBudget() : onCancel}
             cancelLabel={edit.isEdit ? t("delete") : undefined}
             cancelDanger={edit.isEdit}
-            onSave={() =>
+            onConfirm={() =>
                 onConfirm?.({
                     ...value,
                     categoriesBudget: (value.categoriesBudget ?? []).filter(
@@ -613,10 +420,10 @@ function SpecialForm({
                     ),
                 })
             }
-            saveDisabled={!value.title.trim()}
+            confirmDisabled={!value.title.trim()}
         >
             {/* 全部设置项在同一张白卡里：金额与详细分配紧随名称排在第 2、3 位 */}
-            <div className="divide-y divide-rule/60 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+            <SheetCard>
                 <SheetRow
                     label={t("budget-title")}
                     onClick={() => void editName()}
@@ -642,7 +449,7 @@ function SpecialForm({
                     label={t("linked-special-tags")}
                     onClick={() => void selectTags()}
                 >
-                    <RowLinkValue label={tagSummary} />
+                    <SheetLinkValue label={tagSummary} />
                 </SheetRow>
                 <SheetRow
                     label={t("repeat-monthly")}
@@ -670,9 +477,9 @@ function SpecialForm({
                     label={t("participants")}
                     onClick={() => void selectMembers()}
                 >
-                    <RowLinkValue label={memberSummary} />
+                    <SheetLinkValue label={memberSummary} />
                 </SheetRow>
-            </div>
+            </SheetCard>
         </SheetShell>
     );
 }
@@ -695,8 +502,6 @@ const SheetForm = ({
             return <MonthlyForm edit={edit} {...props} />;
         case "startDay":
             return <StartDayForm edit={edit} {...props} />;
-        case "members":
-            return <MembersForm edit={edit} {...props} />;
         case "special":
             return <SpecialForm edit={edit} {...props} />;
         default:

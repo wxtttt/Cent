@@ -32,7 +32,7 @@ import { cn } from "@/utils";
 const inRange = (time: number, start: number, end: number) =>
     time >= start && time <= end;
 
-// 首页底部不再放吉祥物（家小满同款：仅 hero 与 dock 出现）
+// 首页底部不再放吉祥物（APK 同款：仅 hero 与 dock 出现）
 
 export default function Page() {
     // SVG 的 clipPath / gradient id 必须每次挂载唯一，且去掉 useId 里的冒号
@@ -143,7 +143,7 @@ export default function Page() {
                 0)
         );
     }, 0);
-    // 家小满缺省口径：没有设置预算时进度条保持空轨道，不按日期进度填橙色
+    // APK 缺省口径：没有设置预算时进度条保持空轨道，不按日期进度填橙色
     const budgetRatio =
         budgetTotalValue > 0 ? Math.min(1, budgetUsed / budgetTotalValue) : 0;
 
@@ -328,7 +328,7 @@ export default function Page() {
     return (
         <div className="page-show dp-home-surface h-full overflow-y-auto overscroll-contain">
             <div className="mx-auto w-full max-w-[720px] px-[18px] pb-32">
-                {/* 家小满折叠态问候带：灰米 / 浅黄双色斜切 + 中间上拱的浅弧下缘。
+                {/* APK 折叠态问候带：灰米 / 浅黄双色斜切 + 中间上拱的浅弧下缘。
                     1080×2340 实拍折到 393 宽后逐列量得：左端 37、中部 24、右端 40，
                     高度 44；展开态 hero 才有的右上黄圆、左下青绿弧不出现在这里。 */}
                 <div className="relative -mx-[18px] select-none">
@@ -460,7 +460,7 @@ export default function Page() {
                     </div>
                 </div>
 
-                {/* 高度 = APK 卡减去概览行；左右两列各自流式排列（家小满右列行距更紧、
+                {/* 高度 = APK 卡减去概览行；左右两列各自流式排列（APK 右列行距更紧、
                     不与左列钉底对齐）：左列行距 12px、右列 8px，进度条 5px 高 */}
                 {/* APK 概览卡：奶白底 + 1px #ede8dc 暖灰外框（逐点取色）。
                     用 inset 阴影画框而非 border，避免挤掉内容区 2px 打乱下方比例；

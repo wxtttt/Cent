@@ -34,14 +34,14 @@ function RatioBar({
 }: {
     label: string;
     value: number;
-    /** 家小满缺省口径：预算未设置时显示「未设置」且轨道保持空 */
+    /** APK 缺省口径：预算未设置时显示「未设置」且轨道保持空 */
     text?: string;
 }) {
     const percent = Math.max(0, Math.round(value * 1000) / 10);
     const unset = text !== undefined;
     return (
         <div className="min-w-0">
-            {/* 家小满：标签与数值同行靠左 */}
+            {/* APK：标签与数值同行靠左 */}
             <div className="flex items-baseline gap-1.5">
                 <span className="truncate text-xs text-ink-secondary">
                     {label}
@@ -52,7 +52,7 @@ function RatioBar({
                     {text ?? `${percent}%`}
                 </span>
             </div>
-            {/* 轨道中性灰（≈#f4f4f5）7px 高，与家小满实测一致 */}
+            {/* 轨道中性灰（≈#f4f4f5）7px 高，与 APK 实测一致 */}
             <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-black/5">
                 {!unset && (
                     <div
@@ -78,7 +78,7 @@ export default function Page() {
     const now = useMemo(() => dayjs(), []);
     const day = clampStartDay(startDay);
 
-    // 快捷筛选（家小满筛选面板）：确认后在本页就地过滤列表与统计卡
+    // 快捷筛选（APK 筛选面板）：确认后在本页就地过滤列表与统计卡
     const [quickFilter, setQuickFilter] = useState<LedgerQuickFilter>();
 
     const ledgerRef = useRef<{
@@ -202,7 +202,7 @@ export default function Page() {
         useUiStore.getState().consumeDate();
     }, [pendingDate, loading, bills]);
 
-    // 快捷筛选（家小满筛选面板）：确认后在本页就地过滤列表
+    // 快捷筛选（APK 筛选面板）：确认后在本页就地过滤列表
     const visibleBills = useMemo(() => {
         if (!quickFilter) return bills;
         const { start, end } = timeRange ?? {};
@@ -350,7 +350,7 @@ export default function Page() {
                         }
                     />
 
-                    {/* 家小满：有记录时票券卡下方显示「明细记录」小标题；空态不显示 */}
+                    {/* APK：有记录时票券卡下方显示「明细记录」小标题；空态不显示 */}
                     {visibleBills.length > 0 && (
                         <h2 className="mt-4 text-base font-bold text-ink">
                             {t("records")}
@@ -371,7 +371,7 @@ export default function Page() {
                             showAssets
                         />
                     ) : (
-                        // 家小满缺省态：左对齐纯文字，无插画、无引导按钮
+                        // APK 缺省态：左对齐纯文字，无插画、无引导按钮
                         <p className="px-4 pt-3 text-[13px] text-ink-secondary">
                             {t("no-bill-records")}
                         </p>

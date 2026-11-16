@@ -280,3 +280,70 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - **zh.json 去重**：loan 段有 **77 行重复键**（两次跑 locale 脚本所致，两条值完全相同、`JSON.parse` 取后者所以功能无感），已删重复、保留首条；去重后 zh 1418 键 / loan 94 键，en 94 键，loan 段零差异。
 - `pnpm --filter cent lint` 383 files 通过；清理了 4 个残留构建目录（`dist-stale-*`，合计 ~16MB，未被 .gitignore 覆盖、也不该入库）。
 - **探针坑**：`page.goto` 后立刻 `page.evaluate` 会因客户端跳转报 `Execution context was destroyed`——初始化必须走 `addInitScript` + 等 2s；`[data-loan-compare]` 只命中第一张卡（属性挂在两张按钮上），要点第二张得写 `[data-loan-compare="principal"]`。
+
+## 2026-11-16 13:20 贷款页视觉统一 + OAuth 登录回跳验证（worktree `feat-loan-261115`）
+
+- **页面底色**：`[data-route-page][data-route-path="/loan"]` 首屏测到 `pageBg rgb(244,244,244)`、`heroBg none | rgb(255,255,255)`、`heroRadius 16px`、保存按钮 `h 48 / radius 12px / bg rgb(255,132,53) / weight 600 / 15px`——底色、白卡、CTA 三项都落到中性作用域口径。
+- **分组标题**：`贷款设置` / `还款分析` = `12px / weight 400 / rgb(138,132,127)`（对齐车辆页 `GroupTitle`），不再是 15px 中文 700。
+- **抽屉三态**（`after2-loan-sheet-{term,rate,save}.png`）：年限滚轮选中胶囊**整行撑满居中**（此前单列滚轮只 `[&>*]:flex-1` 于多列时生效，白色胶囊缩到内容宽、贴左边）；商贷利率的 BP ± 已换成 `BTN_TAP`（28px 白圆 + 细描边 + 黑图标）、LPR 改成无边框右对齐数字；三个抽屉的确认按钮都是**整行橙色**（修前只有「确认」两个字宽，见 `before-loan-sheet-term.png`），灰底栏与抽屉底色同为 `#f4f4f4`（修前底栏是暖米 `#fbf7ef`）。
+- **回归**：`verify-loan-page.js` 改端口到 5183 后 Chromium / WebKit 输出一致（hero/对比切换/洞察条/`rawKeys []`/`years 8` 全同），WebKit 仅剩既有的 `Load failed` 网络噪声。`pnpm lint` 389 files 通过。
+- **OAuth 登录**（`.playwright-cli/probe-login-oauth.js`，路由拦截 `/api/*-oauth/*` 后点按钮）：
+  - 修前：点「使用 Github 登录」跳到 `http://localhost:5183/undefined/api/github-oauth/authorize?...`——相对路径被 Vite 的 SPA 兜底接住、重新加载回登录页，即用户说的「闪一下就没了」。
+  - 修后：`https://oncent-backend.linkai.work/api/github-oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A5183`、Gitee 同形（`...gitee-oauth/authorize...`），`page.url()` 已离开应用。`curl -I` 该地址返回 302 → `gitee.com/oauth/authorize?...`，说明回落后端可达。
+  - 探针坑：`page.getByRole("button", { name })` 用中文无障碍名最稳（按钮内图标 + 文案，`data-*` 未挂）；拦截 oauth 请求时用 `route.fulfill` 返回 stub，避免真的把会话带去 GitHub。
+
+**同一轮末：5173 换成本 worktree 的构建预览**（用户选定「接管 5173」）。原 5173 是另一会话在 `_cent_analysis` 起的 `pnpm --filter cent dev`（服务主 worktree，看不到本轮改动），已停；`apps/cent` 重新 `pnpm build` 后 `pnpm preview` 绑回 5173，`dist/index.html` 的 `assets/index-B6OVFuuo.js` 与 5173 返回的一致。在该预览（生产构建）上复跑 `verify-loan-page-5173.js`（Chromium）：hero / 结构 / 对比切换 / 洞察条 / `rawKeys []` 与 dev 完全一致、`pageErrors []`；`probe-login-oauth-5173.js` 点 GitHub / Gitee 均落到 `https://oncent-backend.linkai.work/api/{github,gitee}-oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A5173`。**dev 的 5183 已停**，本轮只保留 5173 预览。
+
+## 2026-11-16 15:10 贷款页三视图 + 还款生涯 + 分类页作用域修复（worktree `feat-loan-261115`）
+
+- **三视图**（`shot-loan-v2.js` 全流程截图）：空态「记一笔房贷」→ 编辑页（类型三胶囊无插画、首付「比例/金额」切换 + 双向换算、商贷利率两行 LPR 副值、首次还款系统 month 控件、还款方式分段）→ 保存抽屉（`max-h-[80dvh]` + 取消/保存双按钮，与预算抽屉同构）→ 详情页（剩余本金 / 已还 0/360 / 已还本金·已付利息·剩余利息 / 下次还款 / 还款计划 / 还款分析 / 提前还款 / 利率轨迹）。
+- **数值**（Chromium 与 WebKit 输出逐字一致，`verify-loan-v2.js`）：默认商业贷款 210 万 / 30 年 / LPR 3.5 −45BP → `¥2,100,000`、下次还款 `2026.12 · 第 1 期 ¥8,910.41`（本金 3,573 + 利息 5,338）、剩余利息 `¥1,107,750`、到期 `2056.11`；加一笔 20 万「减月供」→ 省息 `¥105,172`、月供降至 `¥8,060.36`、列表卡计数 1。
+- **锁定**：无提前还款时铅笔进编辑页（`data-loan-save` 计数 1）；加记录后点铅笔仍在详情（计数 0）+ toast `loan-locked-toast`。
+- **缺陷修复**：① 保存抽屉点「保存方案」后不关闭（重写时漏了 `onClose`）；② 提前还款抽屉切「减月供」无效——`useEffect` 依赖 `derived.next.ym`（每次渲染都是新对象）导致 effect 每轮重置 `mode`，改成依赖 `年-月` 字符串；③ 0 期进度条仍渲染 1.5% 最小宽度形成小圆点 → 条件渲染；④ 图表中间刻度在 0 期与左端重复 → `currentYear > 1` 才显示。
+- **深色**：hero `rgb(31,25,19)` / 文字 `rgb(247,240,230)` / 页面底 `rgb(23,19,15)`，橙色数字与图表柱对比度正常（`dark-detail.png`）。
+- **分类管理页**：`[data-route-path='/category']` 实测 `backgroundColor rgb(244,244,244)`、`--dp-color-ground #f4f4f4`（修前退回 `#fbf7ef`，用户描述「看着偏黄」）。根因：`createConfirmProvider` 的路由页分支未拼 `contentClassName`，`category/list-form.tsx` 的 `dp-category-surface` 丢失；新增 `routeClassName` 并改传。
+- **探针坑**：`getByText("记一笔房贷")` 会命中说明段落（子串匹配），必须 `getByRole("button", { name, exact: true })`；保存后的 toast 会盖住左上返回按钮，点击前先 `document.querySelectorAll("[data-sonner-toast]").forEach(e => e.remove())`。
+
+## 2026-11-16 17:1x 贷款管理（去列表页 / 全抽屉化 / 还款计划联动）（worktree `feat-loan-261115`）
+
+探针 `.playwright-cli/probe-loan3-{entry,main,full,b,c,d}.js`（390×844，Chromium；离线模式 + 新建账本后从宫格进「贷款管理」）。
+
+- **入口**：无方案时直接落在编辑页（`[data-loan-save]` = 1），首付行 `90 万 · 30%`、年限行 `360 期 30 年`（`items-baseline` 后两者同基线）、首次还款 `2026年12月` 带 chevron。
+- **抽屉宽度**：首付 / 商贷利率两个抽屉的卡片与确认按钮左右边界都是 `[21, 369]`（修前按钮 `px-5` 而内容 `px-4`，窄 8px）；确认按钮底边 824 < 视口 844。
+- **详情页**：`data-loan-more` 右距边 16px、返回按钮左 16px（对称）；`data-loan-prepay-cta` y=784 h=48 → 完整可见（修前 `h-full` 把顶栏高度算进 100%，底栏被顶出屏幕）。
+- **还款计划**：30 列、横轴 `第 1 年 / 第 15 年 / 第 30 年`；点第 10 列 → `data-loan-year-row="10"` 高亮且列表 `scrollTop` 458（容器高 286 / 内容高 1896）；点第 20 年 → 第 20 列 `opacity 1`、其余 ≤0.4。
+- **提前还款**：抽屉内「还款时间 / 第 1 期 / 2026年12月」同一张卡，时间点开全站滚轮并保留抽屉；确认 20 万缩年限后省息 `¥265,819`、缩短 52 个月，计划 30 年 → 26 年（轴 1/13/26）；点条目进编辑抽屉、底栏「删除 + 确认」，删完回到空态且计划回到 1/15/30。
+- **利率调整**：抽屉「生效时间 / 第 2 期起 / 2027年1月」，确认后轨迹卡出现 `2027.01 / 第 2 期起 / 3.05%`。
+- **方案管理**：⋯ → 编辑贷款（分析卡点等额本金 → 还款方式同步切到等额本金、`data-loan-seg="principal"` 选中）；⋯ → 删除方案 → 确认后回新建态（hero 消失、`data-loan-save` 出现）；方案抽屉 1 条 → 新增第二笔 → 2 条且勾选当前。
+- **探针坑**：① 本模块抽屉是 z-40/z-50，全局删除确认层是 z-4，两层叠着时确认按钮永远点不到（Playwright 报 overlay intercepts pointer events）——代码里改成「先收抽屉再弹确认」；② 删除确认弹层与抽屉里都有「删除」按钮，必须 `locator('[role="dialog"]').filter({ hasText: "删除提前还款" })` 再点；③ `playwright-cli` 的 session 只在单次 bash 调用里存活，多步验证要写进同一个 `run-code` 脚本。
+
+## 2026-11-16 18:1x 全局版式收口：共享 `sheet-kit` + 预算 / 贷款两页对齐（worktree `feat-loan-261115`）
+
+探针 `.playwright-cli/probe-kit-{a,b,c,d}.js`（390×844，Chromium；离线模式 + 新建账本）。规范全文见 `docs/agents/ui-kit.md`。
+
+- **页头**：贷款管理、预算管理均为 `18px / 600 / rgb(56,50,48)`（此前贷款页是 `PopupLayout` 默认字号）；两个页面的一级返回按钮与右侧 ⋯ 都距边 16px。
+- **分组小标题**：两页的「还款进度 / 提前还款 / 利率轨迹 / 预算周期 / 预算范围 / 特殊预算」实测 `12px / rgb(138,132,127)`，都在卡片外面。
+- **抽屉对齐**：贷款首付抽屉卡片 `[20, 370]`、取消 `[20, 191]`、确认 `[201, 370]`，三者左右边界一致；按钮底边 824 < 视口 844。此前确认按钮 `flex-[2]` 比卡片窄/宽不一致的问题已消除。
+- **橙色提醒**：首付折算（`相当于 90 万`，`rgb(42,32,24)` / 13px）、提前还款预览、利率预览三处均为 `bg-brand/10` + 圆角 16；绿色提示块（`#e8f3ea`）已全部下线。
+- **计入成员**：预算页点「计入成员」弹出的是选项抽屉（标题 + 白卡行 + 右侧圆形勾选 + 取消/确认），行内 chip 为 0，与「关联特殊标签」同款。
+- **贷款详情**：`data-loan-prepay-cta` `[784, 832]`（h=48）完整可见；`data-loan-more` 右距边 16px。
+- **待确认**：「特殊预算」的新增入口目前仍是 54px 虚线框（`add-special-budget`），三个候选方案见交接说明，未改代码。
+
+## 2026-11-16 21:5x 二级页统一到全局共享层（worktree `feat-loan-261115`）
+
+- 迁移范围：汇率与货币（列表 + 编辑抽屉 + 手动汇率抽屉）、通用选项抽屉、车辆记录页、分类管理页头、周期记账页、`form-rows` 全部委托 `sheet-kit`。
+- 探针：`.playwright-cli/probe-currency-page.js`（币种页几何）、`probe-currency-kit.js`（两个抽屉）、`probe-kit-pages.js`（预算 / 分类 / 车辆 / 周期记账批量开页）、`probe-sched-final.js`（周期记账）。
+- 实测：预算 / 分类 / 车辆 / 周期记账 / 汇率五页标题均为 18px / 600；页头 ＋ 40×40 且距右边 16px；币种页本位币行 58px、四组 `GroupTitle` 命中；分类页「分类标签」小标题为 12px 灰；周期记账空态为白卡一行灰字。
+- **踩坑（已修）**：币种页首次截图里「本位币 / 快捷币种」两张卡只剩一条 16px 白边——`flex flex-col` 滚动容器把卡片压扁 + `overflow-hidden` 裁切；`sheet-kit` 加 `shrink-0` 后恢复正常（`parentH` 从 16 → 58）。
+- 类型 / 构建：`npx tsc -b` 无错，`npx vite build --emptyOutDir=false` 通过，`biome check` 改动文件零 error。
+
+## 2026-11-16 22:3x 间距统一 + 抽屉底栏统一（worktree `feat-loan-261115`）
+
+- 分类管理：标题→分段 20px、分段→「分类标签」16px、「分类标签」→卡片 6px（原来是 gap-3 + mb-1.5 叠成 18px）。
+- 标签管理：同样 20/16/6，分段控件 40px；缺省卡 58px；页头圆形 ＋ 40px。
+- 汇率与货币：`PlaceholderCard` 58px = `data-currency-base-row` 58px（原来 44px）。
+- 抽屉：分类编辑、添加车辆实测标题 17px、底栏「取消 / 确认（保存）」两颗按钮 48px、左 21 起、宽 168~170、间距 10px。
+- 代码改动：新增 `SheetFooter`（`SheetShell` 复用它）；车辆 2 个表单、医疗 3 个表单、物品表单、分类表单、账单筛选全部换底栏；标签编辑改 `SheetShell`；标签管理页改共享列表层。
+- 探针：`.playwright-cli/probe-spacing.js`（分类 / 币种）、`probe-drawers.js`（分类抽屉）、`probe-vehicle4.js`（车辆抽屉）、`probe-tags.js`（标签页）。
+- 类型 / 构建：`npx tsc -b` 无错，`npx vite build --emptyOutDir=false` 通过。
+

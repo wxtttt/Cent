@@ -10,7 +10,7 @@ import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { useLedgerStore } from "@/store/ledger";
 import { cn } from "@/utils";
-import { PRESSABLE_ROW } from "../button-styles";
+import { GroupTitle, ListCard, ListRow, PlaceholderCard } from "../sheet-kit";
 import {
     clampStartDay,
     periodContaining,
@@ -26,6 +26,8 @@ import {
     BudgetSheetProvider,
     type BudgetSheetValue,
     type MonthlyBudgetValue,
+    normalizeJoiners,
+    showBudgetOptions,
     showBudgetSheet,
 } from "./sheet";
 import type { Budget } from "./type";
@@ -91,13 +93,6 @@ const Bar = ({
     </div>
 );
 
-/** 分组连卡：组内行只有细分隔线、无间隙（APK 类别页 + 预算范围页同款） */
-const SettingCard = ({ children }: { children: ReactNode }) => (
-    <div className="divide-y divide-rule/70 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
-        {children}
-    </div>
-);
-
 /** 历史周期只叠一层蒙层表达只读，不再逐行变淡、也不再配文字提示 */
 const ReadOnlyMask = ({
     children,
@@ -114,71 +109,6 @@ const ReadOnlyMask = ({
                 className="absolute inset-0 rounded-2xl bg-ground/55"
             />
         )}
-    </div>
-);
-
-const SettingRow = ({
-    title,
-    subtitle,
-    value,
-    badge,
-    onClick,
-    disabled,
-}: {
-    title: string;
-    subtitle?: string;
-    value?: string;
-    badge?: ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-}) => (
-    <div className="flex items-center gap-2 px-4 py-1">
-        <button
-            type="button"
-            disabled={disabled}
-            onClick={disabled ? undefined : onClick}
-            className="flex min-h-[58px] min-w-0 flex-1 items-center gap-3 py-2 text-left"
-        >
-            {badge}
-            <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] text-ink">
-                    {title}
-                </span>
-                {subtitle && (
-                    <span className="mt-0.5 block truncate text-[11px] text-ink-secondary">
-                        {subtitle}
-                    </span>
-                )}
-            </span>
-            {value && (
-                <span className="flex-shrink-0 text-[14px] text-ink">
-                    {value}
-                </span>
-            )}
-            {!disabled && (
-                <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0 text-ink-secondary/60" />
-            )}
-        </button>
-    </div>
-);
-
-const GroupTitle = ({
-    title,
-    action,
-    first,
-}: {
-    title: string;
-    action?: ReactNode;
-    first?: boolean;
-}) => (
-    <div
-        className={cn(
-            "mb-1.5 flex items-center justify-between gap-2 px-1 text-[12px] text-ink-secondary",
-            first ? "mt-4" : "mt-3",
-        )}
-    >
-        <span>{title}</span>
-        {action}
     </div>
 );
 
@@ -457,14 +387,26 @@ export default function BudgetListForm({
         }
     };
 
+    /** 计入成员走「关联特殊标签」同款选项抽屉：行内只留摘要，不铺 chip */
     const openMembers = async () => {
-        const res = await openSheet({
-            type: "members",
-            value: normal?.joiners ?? [],
-            members: activeMembers,
-        });
-        if (Array.isArray(res)) {
-            await patchNormal({ joiners: res as (string | number)[] });
+        const saved = (normal?.joiners ?? []).map(String);
+        const res = await showBudgetOptions({
+            title: t("included-members"),
+            hint: t("participants-hint"),
+            options: activeMembers.map((m) => ({
+                id: String(m.id),
+                label: m.name,
+            })),
+            // 空数组在数据层表示「全部成员」，抽屉里要把它们都点亮
+            selected:
+                saved.length === 0
+                    ? activeMembers.map((m) => String(m.id))
+                    : saved,
+        }).catch(() => undefined);
+        if (res !== undefined) {
+            await patchNormal({
+                joiners: normalizeJoiners(res, activeMembers),
+            });
         }
     };
 
@@ -574,17 +516,34 @@ export default function BudgetListForm({
 
     /** 预算范围里的起始日读该周期自己的首日，历史月不再显示全局配置 */
     const periodStartDay = dayjs(activePeriod).date();
-    /** 有数据或有添加入口时才渲染「特殊预算」分组；历史周期没有特殊预算就整体缺省 */
+    /** 添加入口固定在页面右上角（与货币页同款），标题行右侧不再挂按钮；
+        当前周期没有特殊预算时用缺省白卡说明功能存在，历史周期没有就整体缺省 */
     const showSpecialGroup = isCurrent || specials.length > 0;
-    const showEmptyAddBox = isCurrent && specials.length === 0;
-    const showAddAction = isCurrent && specials.length > 0;
+    const showPlaceholder = isCurrent && specials.length === 0;
 
     return (
         <PopupLayout
             onBack={onCancel}
-            title={t("budget-manager")}
+            title={
+                <span className="text-[18px] font-semibold text-ink">
+                    {t("budget-manager")}
+                </span>
+            }
             backStyle="circle"
             className="dp-drawer-surface h-full bg-ground"
+            right={
+                isCurrent ? (
+                    <button
+                        type="button"
+                        data-budget-add-special
+                        onClick={() => void openSpecial()}
+                        aria-label={t("add-special-budget")}
+                        className="flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                    >
+                        <i className="icon-[lucide--plus] size-5" />
+                    </button>
+                ) : undefined
+            }
         >
             <div className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto bg-ground px-3 pt-1 pb-6">
                 {/* 通用月选择器：受控唤起，触发器不占位 */}
@@ -770,22 +729,22 @@ export default function BudgetListForm({
                 {/* 设置项在大卡下方，按分组连卡；历史周期只读只用一层蒙层表达 */}
                 <GroupTitle title={t("budget-range")} />
                 <ReadOnlyMask readOnly={!isCurrent}>
-                    <SettingCard>
-                        <SettingRow
+                    <ListCard>
+                        <ListRow
                             title={t("monthly-budget")}
                             subtitle={t("monthly-budget-hint")}
                             value={`¥${fmt(normal?.totalBudget ?? 0)}`}
                             onClick={() => void openMonthly()}
                             disabled={!isCurrent}
                         />
-                        <SettingRow
+                        <ListRow
                             title={t("budget-start-day")}
                             subtitle={t("budget-start-day-hint")}
                             value={t("day-n-of-month", { n: periodStartDay })}
                             onClick={() => void openStartDay()}
                             disabled={!isCurrent}
                         />
-                        <SettingRow
+                        <ListRow
                             title={t("included-members")}
                             subtitle={t("participants-hint")}
                             value={
@@ -798,50 +757,22 @@ export default function BudgetListForm({
                             onClick={() => void openMembers()}
                             disabled={!isCurrent}
                         />
-                    </SettingCard>
+                    </ListCard>
                 </ReadOnlyMask>
 
                 {showSpecialGroup && (
                     <>
-                        <GroupTitle
-                            title={t("special-budget")}
-                            action={
-                                showAddAction ? (
-                                    <button
-                                        type="button"
-                                        aria-label={t("add")}
-                                        onClick={() => void openSpecial()}
-                                        className={cn(
-                                            "flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] text-brand",
-                                            PRESSABLE_ROW,
-                                            "enabled:hover:bg-brand/20",
-                                        )}
-                                    >
-                                        <i className="icon-[lucide--circle-plus] size-3.5" />
-                                        {t("add")}
-                                    </button>
-                                ) : undefined
-                            }
-                        />
-                        {showEmptyAddBox && (
-                            <button
-                                type="button"
-                                onClick={() => void openSpecial()}
-                                className={cn(
-                                    "flex h-[54px] w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-rule bg-panel/60 text-[13px] text-ink-secondary",
-                                    PRESSABLE_ROW,
-                                    "enabled:hover:border-brand/60 enabled:hover:text-brand",
-                                )}
-                            >
-                                <i className="icon-[lucide--circle-plus] size-4 text-brand" />
-                                {t("add-special-budget")}
-                            </button>
+                        <GroupTitle title={t("special-budget")} />
+                        {showPlaceholder && (
+                            <PlaceholderCard>
+                                {t("no-special-budget")}
+                            </PlaceholderCard>
                         )}
                         {specials.length > 0 && (
                             <ReadOnlyMask readOnly={!isCurrent}>
-                                <SettingCard>
+                                <ListCard>
                                     {specials.map((b) => (
-                                        <SettingRow
+                                        <ListRow
                                             key={b.id}
                                             badge={
                                                 <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand/10 text-[14px] text-brand">
@@ -867,7 +798,7 @@ export default function BudgetListForm({
                                             disabled={!isCurrent}
                                         />
                                     ))}
-                                </SettingCard>
+                                </ListCard>
                             </ReadOnlyMask>
                         )}
                     </>

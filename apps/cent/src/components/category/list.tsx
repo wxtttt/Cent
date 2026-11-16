@@ -23,6 +23,7 @@ import { treeCategories } from "@/ledger/utils";
 import { useIntl } from "@/locale";
 import { useBookStore } from "@/store/book";
 import modal from "../modal";
+import { GroupTitle } from "../sheet-kit";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CategoryDeleteProvider, showCategoryDelete } from "./delete-dialog";
 import { CategoryEditFormProvider, showCategoryEdit } from "./edit";
@@ -159,8 +160,27 @@ export default function CategoryList({
 
     return (
         <PopupLayout
-            className="h-full overflow-hidden bg-ground"
+            className="dp-drawer-surface h-full overflow-hidden bg-ground"
             onBack={onCancel}
+            backStyle="circle"
+            right={
+                <button
+                    type="button"
+                    data-category-add
+                    onClick={() =>
+                        openForm({
+                            id: undefined,
+                            parent: tabs.find((v) => v.label === tab)?.value[0]
+                                ?.id,
+                            type: tab as BillType,
+                        })
+                    }
+                    aria-label={t("add-label")}
+                    className="flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                >
+                    <i className="icon-[lucide--plus] size-5" />
+                </button>
+            }
             title={
                 <span className="text-[18px] font-semibold text-ink">
                     {t("category-management")}
@@ -170,9 +190,9 @@ export default function CategoryList({
             <Tabs
                 value={tab}
                 onValueChange={setTab}
-                className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-4 pb-4"
+                className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pt-3 pb-4"
             >
-                <div className="flex justify-center">
+                <div className="flex shrink-0 justify-center pb-4">
                     <TabsList className="h-10 rounded-full bg-panel p-1 shadow-sm">
                         {tabs.map((item) => (
                             <TabsTrigger
@@ -185,26 +205,8 @@ export default function CategoryList({
                         ))}
                     </TabsList>
                 </div>
-                <div className="flex items-center justify-between px-1">
-                    <span className="text-[16px] font-semibold text-ink">
-                        {t("category-labels")}
-                    </span>
-                    <button
-                        type="button"
-                        className="flex items-center gap-1 text-[13px] text-ink-secondary"
-                        onClick={() =>
-                            openForm({
-                                id: undefined,
-                                parent: tabs.find((v) => v.label === tab)
-                                    ?.value[0]?.id,
-                                type: tab as BillType,
-                            })
-                        }
-                    >
-                        <i className="icon-[lucide--circle-plus] size-4" />
-                        {t("add-label")}
-                    </button>
-                </div>
+                {/* 分类标签小标题与卡片只隔 6px（mb-1.5），和预算 / 币种页的分组节奏一致 */}
+                <GroupTitle title={t("category-labels")} className="mt-0" />
                 {tabs.map((item) => (
                     <TabsContent
                         key={item.label}

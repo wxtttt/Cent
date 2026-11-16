@@ -1,7 +1,8 @@
+import { toast } from "sonner";
+import { t } from "@/locale";
 import { asyncOnce } from "@/utils/async";
+import { LOGIN_API_HOST } from "../oauth-host";
 
-// 从环境变量读取 LOGIN_API_HOST
-const LOGIN_API_HOST = import.meta.env.VITE_LOGIN_API_HOST;
 const LOCAL_TOKEN_KEY = "gitee_user_token";
 
 const { promise: loginFinished, resolve: resolveLoginFinished } =
@@ -15,41 +16,55 @@ export const createLoginAPI = () => {
         );
     };
 
+    // 与 GitHub 同一套回跳解析：任何一步抛错都要保证 `loginFinished` 已 resolve，
+    // 否则 getToken 永久挂起（表现为「点登录闪一下就没反应」）
     const afterLogin = async () => {
-        const resText = localStorage.getItem("_oauth_res");
-        if (!resText) {
-            resolveLoginFinished();
-            return;
-        }
-        const res = JSON.parse(resText);
-        if (res.type !== "gitee") {
-            return;
-        }
-        localStorage.removeItem("_oauth_res");
-        const url = new URL(res.url);
-        const tokenData = JSON.parse(
-            url.searchParams.get("gitee_authorized") ?? "{}",
-        );
-        const accessToken = tokenData["access_token"];
-        const expiresIn = tokenData["expires_in"];
-        const refreshToken = tokenData["refresh_token"];
-        const refreshTokenExpiresIn = tokenData["refresh_token_expires_in"];
-        const tokenType = tokenData["token_type"];
-        const scope = tokenData["scope"];
-
-        if (accessToken)
-            localStorage.setItem(
-                LOCAL_TOKEN_KEY,
-                JSON.stringify({
-                    accessToken,
-                    expiresIn: Date.now() + expiresIn,
-                    refreshToken,
-                    refreshTokenExpiresIn: Date.now() + refreshTokenExpiresIn,
-                    tokenType,
-                    scope,
-                }),
+        try {
+            const resText = localStorage.getItem("_oauth_res");
+            if (!resText) {
+                return;
+            }
+            const res = JSON.parse(resText);
+            if (res?.type !== "gitee") {
+                return;
+            }
+            localStorage.removeItem("_oauth_res");
+            const url = new URL(res.url);
+            const tokenData = JSON.parse(
+                url.searchParams.get("gitee_authorized") || "{}",
             );
-        resolveLoginFinished();
+            const accessToken = tokenData["access_token"];
+            // 后端给的过期时间是「秒」，落库存毫秒时间戳（漏乘 1000 会每次登录都触发刷新）
+            const expiresIn = tokenData["expires_in"];
+            const refreshToken = tokenData["refresh_token"];
+            const refreshTokenExpiresIn = tokenData["refresh_token_expires_in"];
+            const tokenType = tokenData["token_type"];
+            const scope = tokenData["scope"];
+
+            if (accessToken) {
+                localStorage.setItem(
+                    LOCAL_TOKEN_KEY,
+                    JSON.stringify({
+                        accessToken,
+                        expiresIn: expiresIn
+                            ? Date.now() + expiresIn * 1000
+                            : undefined,
+                        refreshToken,
+                        refreshTokenExpiresIn: refreshTokenExpiresIn
+                            ? Date.now() + refreshTokenExpiresIn * 1000
+                            : undefined,
+                        tokenType,
+                        scope,
+                    }),
+                );
+            } else {
+                toast.error(t("login-oauth-failed"));
+            }
+        } catch {
+            toast.error(t("login-oauth-failed"));
+        } finally {
+            resolveLoginFinished();
+        }
     };
 
     const _getToken = async () => {

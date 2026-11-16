@@ -8,7 +8,7 @@ export default function CategoryIcon({
     className?: string;
     icon: string;
 }) {
-    // 图片地址（Vite 资产 URL / CDN），家小满式自绘分类图标走这里
+    // 图片地址（Vite 资产 URL / CDN），APK 式自绘分类图标走这里
     if (
         icon.startsWith("/") ||
         icon.startsWith("http") ||
@@ -80,7 +80,7 @@ export default function CategoryIcon({
         );
     }
 
-    // 非 iconify 类名的纯文本（emoji）按字符渲染，与家小满分类图标风格一致
+    // 非 iconify 类名的纯文本（emoji）按字符渲染，与 APK 分类图标风格一致
     if (!icon.startsWith("icon-")) {
         return (
             <span

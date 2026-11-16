@@ -13,7 +13,7 @@ import xiaoqiPeek from "@/assets/mascots/06-todo-xiaoqi-peek.webp";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils";
 
-/** 各业务域的吉祥物立绘（源自家小满素材）。 */
+/** 各业务域的吉祥物立绘（源自APK 素材）。 */
 export const MASCOTS = {
     home: xiaonuan,
     bookkeeping: xiaoji,

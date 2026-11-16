@@ -1,5 +1,5 @@
 /**
- * 全站图标统一为 Lucide 细线风格（对齐家小满 APK 的单色线性图标）。
+ * 全站图标统一为 Lucide 细线风格（对齐APK APK 的单色线性图标）。
  *
  * 历史账本 / 自定义分类里保存的 className 仍是旧 MDI 前缀的类名，
  * 渲染时经 normalizeIconClass 归一化，保证老数据不丢图标。

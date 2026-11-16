@@ -1,14 +1,16 @@
 import dayjs from "dayjs";
 import { useState } from "react";
 import { periodForMonth, periodMonthKey } from "@/components/budget/period";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/button-styles";
 import createConfirmProvider from "@/components/confirm";
 import { DatePicker } from "@/components/date-picker";
+import { SheetFooter } from "@/components/sheet-kit";
 import { useCreators } from "@/hooks/use-creator";
 import type { BillType, Budget } from "@/ledger/type";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
 
-/** 记账页快捷筛选，维度与家小满筛选面板一致：时间/交易类型/记账人/金额 */
+/** 记账页快捷筛选，维度与 APK 筛选面板一致：时间/交易类型/记账人/金额 */
 export type LedgerQuickFilter = {
     /** 时间筛选来源：月份档位与自定义日期各自保留，只有激活方参与过滤 */
     timeMode?: "month" | "custom";
@@ -76,7 +78,7 @@ export function resolveQuickTimeRange(
     return {
         start: customStart,
         end: customEnd,
-        // 统计卡标题取区间结束月份（家小满实测：跨月区间显示末月）
+        // 统计卡标题取区间结束月份（APK 实测：跨月区间显示末月）
         month: dayjs(customEnd ?? customStart),
         fullPeriod: false,
     };
@@ -234,14 +236,14 @@ function SheetForm({
     };
 
     return (
-        // 面板底色/圆角/档位规格均按家小满实测：#f4f4f4 底、44px 档位、橙色选中
+        // 面板底色/圆角/档位规格均按 APK 实测：#f4f4f4 底、44px 档位、橙色选中
         <div className="relative flex min-h-0 flex-1 flex-col outline-none">
             <div
                 data-sheet-drag
                 className="flex flex-shrink-0 flex-col items-center pt-3"
             >
-                <div className="h-1 w-8 rounded-full bg-[#bdbbb7]" />
-                <div className="mt-3.5 text-[17px] font-bold text-[#272322]">
+                <div className="h-1 w-10 rounded-full bg-ink-secondary/40" />
+                <div className="mt-3.5 text-[17px] font-semibold text-ink">
                     {t("filter")}
                 </div>
             </div>
@@ -445,22 +447,24 @@ function SheetForm({
                     </div>
                 </section>
             </div>
-            <div className="flex flex-shrink-0 items-center gap-5 px-5 pb-[max(20px,var(--safe-area-inset-bottom))] pt-4">
-                <button
-                    type="button"
-                    className="h-[52px] w-[36%] cursor-pointer rounded-[26px] bg-white text-[16px] font-medium text-[#272322]"
-                    onClick={() => setDraft({})}
-                >
-                    {t("filter-reset")}
-                </button>
-                <button
-                    type="button"
-                    className="h-[52px] flex-1 cursor-pointer rounded-[26px] bg-brand text-[16px] font-medium text-on-brand"
-                    onClick={() => onConfirm?.(draft)}
-                >
-                    {t("filter-confirm")}
-                </button>
-            </div>
+            <SheetFooter>
+                <div className="flex gap-2.5">
+                    <button
+                        type="button"
+                        className={cn(BTN_SECONDARY, "flex-1")}
+                        onClick={() => setDraft({})}
+                    >
+                        {t("filter-reset")}
+                    </button>
+                    <button
+                        type="button"
+                        className={cn(BTN_PRIMARY, "flex-1")}
+                        onClick={() => onConfirm?.(draft)}
+                    >
+                        {t("filter-confirm")}
+                    </button>
+                </div>
+            </SheetFooter>
         </div>
     );
 }
@@ -473,7 +477,7 @@ const [LedgerFilterProvider, rawShowLedgerFilter] = createConfirmProvider<
     dialogModalClose: true,
     from: "bottom",
     contentClassName:
-        "w-full rounded-t-[28px] border-0! bg-[#f4f4f4]! sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]",
+        "w-full rounded-t-[28px] border-0! bg-ground! sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]",
 });
 
 export { LedgerFilterProvider };

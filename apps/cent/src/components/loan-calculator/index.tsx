@@ -1,10 +1,10 @@
 import createConfirmProvider from "../confirm";
 import LoanCalculatorForm from "./form";
-import { LoanDeleteProvider } from "./providers";
+import { LoanDeleteProvider } from "./sheets";
 
 export const [LoanCalculatorProvider, showLoanCalculator] =
     createConfirmProvider(LoanCalculatorForm, {
-        dialogTitle: "贷款计算",
+        dialogTitle: "贷款管理",
         routePath: "/loan",
         dialogModalClose: true,
         contentClassName:

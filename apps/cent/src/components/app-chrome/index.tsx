@@ -47,7 +47,7 @@ import { useLedgerStore } from "@/store/ledger";
 import { useIsLogin } from "@/store/user";
 import { cn } from "@/utils";
 
-// dock 左侧吉祥物随页签切换（对应家小满：首页=小暖 / 记账=小鸡 / 归医=小雨 / 知物=小智）
+// dock 左侧吉祥物随页签切换（对应APK：首页=小暖 / 记账=小鸡 / 归医=小雨 / 知物=小智）
 const DOCK_MASCOTS: Record<string, string> = {
     "/": xiaonuan,
     "/ledger": xiaoji,
@@ -95,7 +95,7 @@ function AssistantDock() {
 
     const mascot = DOCK_MASCOTS[location.pathname];
 
-    // 加号行为随页签不同（与家小满一致）：
+    // 加号行为随页签不同（与 APK 一致）：
     // 首页=快捷新建抽屉 / 记账=导入与手记卡片 / 归医=直接添加成员 / 知物=直接添加物品
     const plusMode: PlusMode = location.pathname.startsWith("/ledger")
         ? "ledger"
@@ -157,7 +157,7 @@ function AssistantDock() {
         }
     };
 
-    // 归医的加号随子页签分派（与家小满一致）：档案=添加成员 / 药箱=添加药品 / 就诊=添加就诊（需先有成员）
+    // 归医的加号随子页签分派（与 APK 一致）：档案=添加成员 / 药箱=添加药品 / 就诊=添加就诊（需先有成员）
     const medicalTab =
         new URLSearchParams(location.search).get("tab") ?? "profile";
 
@@ -208,7 +208,7 @@ function AssistantDock() {
 
     return (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[3] px-[21px] pb-[max(12px,var(--safe-area-inset-bottom))]">
-            {/* 首页：快捷新建底部抽屉（纯文字按钮，与家小满一致） */}
+            {/* 首页：快捷新建底部抽屉（纯文字按钮，与 APK 一致） */}
             {plusMode === "home" && (
                 <Dialog open={menuVisible} onOpenChange={setMenuOpen}>
                     <DialogPortal>
@@ -247,7 +247,7 @@ function AssistantDock() {
                     </DialogPortal>
                 </Dialog>
             )}
-            {/* 记账：dock 上方一排图标卡（与家小满记账页一致）。整页透明拦截层：
+            {/* 记账：dock 上方一排图标卡（与 APK 记账页一致）。整页透明拦截层：
                 菜单开着时页面按钮不可点，点外部任意区域即收起 */}
             {plusMode === "ledger" && menuVisible && (
                 <>
@@ -346,7 +346,7 @@ export default function AppChrome() {
     const navRef = useRef<HTMLElement>(null);
     const indicatorRef = useRef<HTMLSpanElement>(null);
 
-    // 页签与家小满对齐：首页 / 记账 / 归医 / 知物
+    // 页签与 APK 对齐：首页 / 记账 / 归医 / 知物
     const tabs = [
         { path: "/", label: t("home"), active: location.pathname === "/" },
         {

@@ -1,7 +1,8 @@
+import { toast } from "sonner";
+import { t } from "@/locale";
 import { asyncOnce } from "@/utils/async";
+import { LOGIN_API_HOST } from "../oauth-host";
 
-// 从环境变量读取 LOGIN_API_HOST
-const LOGIN_API_HOST = import.meta.env.VITE_LOGIN_API_HOST;
 const LOCAL_TOKEN_KEY = "github_user_token";
 
 const { promise: loginFinished, resolve: resolveLoginFinished } =
@@ -15,42 +16,61 @@ export const createLoginAPI = () => {
         );
     };
 
+    // OAuth 回跳后由 index.html 把完整地址写进 localStorage._oauth_res，
+    // 这里解析出 token 落库。全链路必须保证 `loginFinished` 一定会 resolve：
+    // 任何一步抛出（地址被截断、payload 不是 JSON）否则 getToken 会永久挂起，
+    // 表现为「点登录闪一下，页面一直转圈 / 停在登录页」。
     const afterLogin = async () => {
-        const resText = localStorage.getItem("_oauth_res");
-        if (!resText) {
-            resolveLoginFinished();
-            return;
-        }
-        const res = JSON.parse(resText);
-        if (res.type !== "github") {
-            return;
-        }
-        localStorage.removeItem("_oauth_res");
-        const url = new URL(res.url);
-        const githubTokenData = JSON.parse(
-            url.searchParams.get("github_authorized") ?? "{}",
-        );
-        const accessToken = githubTokenData["access_token"];
-        const expiresIn = githubTokenData["expires_in"];
-        const refreshToken = githubTokenData["refresh_token"];
-        const refreshTokenExpiresIn =
-            githubTokenData["refresh_token_expires_in"];
-        const tokenType = githubTokenData["token_type"];
-        const scope = githubTokenData["scope"];
-
-        if (accessToken)
-            localStorage.setItem(
-                LOCAL_TOKEN_KEY,
-                JSON.stringify({
-                    accessToken,
-                    expiresIn: Date.now() + expiresIn,
-                    refreshToken,
-                    refreshTokenExpiresIn: Date.now() + refreshTokenExpiresIn,
-                    tokenType,
-                    scope,
-                }),
+        try {
+            const resText = localStorage.getItem("_oauth_res");
+            if (!resText) {
+                return;
+            }
+            const res = JSON.parse(resText);
+            if (res?.type !== "github") {
+                return;
+            }
+            localStorage.removeItem("_oauth_res");
+            const url = new URL(res.url);
+            const githubTokenData = JSON.parse(
+                url.searchParams.get("github_authorized") || "{}",
             );
-        resolveLoginFinished();
+            const accessToken = githubTokenData["access_token"];
+            // expires_in / refresh_token_expires_in 后端给的是「秒」，落库统一存毫秒时间戳；
+            // 少乘 1000 会被当成 8 秒后就过期，每次登录都白跑一次 refresh
+            const expiresIn = githubTokenData["expires_in"];
+            const refreshToken = githubTokenData["refresh_token"];
+            const refreshTokenExpiresIn =
+                githubTokenData["refresh_token_expires_in"];
+            const tokenType = githubTokenData["token_type"];
+            const scope = githubTokenData["scope"];
+
+            if (accessToken) {
+                localStorage.setItem(
+                    LOCAL_TOKEN_KEY,
+                    JSON.stringify({
+                        accessToken,
+                        expiresIn: expiresIn
+                            ? Date.now() + expiresIn * 1000
+                            : undefined,
+                        refreshToken,
+                        refreshTokenExpiresIn: refreshTokenExpiresIn
+                            ? Date.now() + refreshTokenExpiresIn * 1000
+                            : undefined,
+                        tokenType,
+                        scope,
+                    }),
+                );
+            } else {
+                // 后端没换到 token（多为登录接口报错 / 用户取消授权），
+                // 不提示的话只是回到登录页，用户只会觉得「闪了一下没了」
+                toast.error(t("login-oauth-failed"));
+            }
+        } catch {
+            toast.error(t("login-oauth-failed"));
+        } finally {
+            resolveLoginFinished();
+        }
     };
 
     const _getToken = async () => {

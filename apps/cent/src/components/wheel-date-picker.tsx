@@ -27,9 +27,14 @@ type Props = {
     /** 受控开合，筛选中「其他月份」需要直接唤起滚轮 */
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
+    /**
+     * 年份可选区间 [起, 止]。默认只给「今年前后」一段，
+     * 贷款还款生涯要跨 20~30 年，得由调用方把区间放出去。
+     */
+    years?: [number, number];
 };
 
-// 家小满式滚轮：行高约等于选中胶囊高度，窗口露出 5 行，上下边缘渐隐
+// APK 式滚轮：行高约等于选中胶囊高度，窗口露出 5 行，上下边缘渐隐
 const ITEM_HEIGHT = 36;
 const VISIBLE_ROWS = 5;
 const WINDOW_HEIGHT = ITEM_HEIGHT * VISIBLE_ROWS;
@@ -124,6 +129,7 @@ export function WheelDatePicker({
     onBlur,
     open: controlledOpen,
     onOpenChange,
+    years,
 }: Props) {
     const t = useIntl();
     const isZh = intl.locale === "zh";
@@ -155,7 +161,13 @@ export function WheelDatePicker({
     }, [open, value]);
 
     const pad = (n: number) => `${n}`.padStart(2, "0");
-    const yearItems = YEARS.map((y) => (isZh ? `${y}年` : `${y}`));
+    const yearList = years
+        ? Array.from(
+              { length: Math.max(1, years[1] - years[0] + 1) },
+              (_, i) => years[0] + i,
+          )
+        : YEARS;
+    const yearItems = yearList.map((y) => (isZh ? `${y}年` : `${y}`));
     const monthItems = Array.from({ length: 12 }, (_, i) =>
         isZh ? `${i + 1}月` : pad(i + 1),
     );
@@ -214,7 +226,7 @@ export function WheelDatePicker({
                 <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
                     <DialogContent
                         from="bottom"
-                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-[#f4f4f4] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-ground shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
                     >
                         <DialogTitle className="sr-only">
                             {title ?? t("time")}
@@ -278,8 +290,13 @@ export function WheelDatePicker({
                                 >
                                     <WheelColumn
                                         items={yearItems}
-                                        index={Math.max(0, YEARS.indexOf(year))}
-                                        onIndexChange={(i) => setYear(YEARS[i])}
+                                        index={Math.max(
+                                            0,
+                                            yearList.indexOf(year),
+                                        )}
+                                        onIndexChange={(i) =>
+                                            setYear(yearList[i])
+                                        }
                                     />
                                     <WheelColumn
                                         items={monthItems}

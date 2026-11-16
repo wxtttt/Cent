@@ -8,6 +8,7 @@ import {
     RowChevron,
     RowInput,
 } from "@/components/form-rows";
+import { SheetFooter } from "@/components/sheet-kit";
 import PopupLayout from "@/layouts/popup-layout";
 import { intl, useIntl } from "@/locale";
 import { cn } from "@/utils";
@@ -87,11 +88,7 @@ export function VehicleForm({
 
     return (
         <PopupLayout
-            title={
-                <span className="text-[18px] font-semibold text-ink">
-                    {vehicle ? t("vehicle-edit") : t("vehicle-add")}
-                </span>
-            }
+            title={vehicle ? t("vehicle-edit") : t("vehicle-add")}
             hideBack
             handle
         >
@@ -144,25 +141,20 @@ export function VehicleForm({
                     {t("vehicle-energy-hint")}
                 </p>
             </div>
-            <div className="flex-shrink-0 px-4 pb-[max(16px,var(--safe-area-inset-bottom))] pt-2">
-                <button
-                    type="button"
-                    disabled={!valid}
-                    onClick={submit}
-                    className="h-12 w-full cursor-pointer rounded-full bg-brand text-[16px] font-medium text-on-brand shadow-[0_6px_16px_rgba(245,130,32,0.28)] transition-opacity disabled:cursor-not-allowed disabled:bg-ground-muted disabled:text-ink-secondary/70 disabled:shadow-none"
-                >
-                    {t("vehicle-save")}
-                </button>
-                {vehicle && edit?.onDelete && (
-                    <button
-                        type="button"
-                        onClick={() => void remove()}
-                        className="mt-2 h-10 w-full cursor-pointer text-[14px] font-medium text-red-500"
-                    >
-                        {t("vehicle-delete-vehicle")}
-                    </button>
-                )}
-            </div>
+            <SheetFooter
+                onCancel={
+                    vehicle && edit?.onDelete ? () => void remove() : onCancel
+                }
+                cancelDanger={Boolean(vehicle && edit?.onDelete)}
+                cancelLabel={
+                    vehicle && edit?.onDelete
+                        ? t("vehicle-delete-vehicle")
+                        : undefined
+                }
+                onConfirm={submit}
+                confirmLabel={t("vehicle-save")}
+                confirmDisabled={!valid}
+            />
             <VehicleFormDeleteProvider />
         </PopupLayout>
     );
@@ -430,13 +422,7 @@ export function VehicleRecordForm({
 
     return (
         <PopupLayout
-            title={
-                <span className="text-[18px] font-semibold text-ink">
-                    {record
-                        ? t("vehicle-edit-record")
-                        : t("vehicle-add-record")}
-                </span>
-            }
+            title={record ? t("vehicle-edit-record") : t("vehicle-add-record")}
             hideBack
             handle
         >
@@ -676,25 +662,20 @@ export function VehicleRecordForm({
                     </FormCard>
                 )}
             </div>
-            <div className="flex-shrink-0 px-4 pb-[max(16px,var(--safe-area-inset-bottom))] pt-2">
-                <button
-                    type="button"
-                    disabled={!valid}
-                    onClick={submit}
-                    className="h-12 w-full cursor-pointer rounded-full bg-brand text-[16px] font-medium text-on-brand shadow-[0_6px_16px_rgba(245,130,32,0.28)] transition-opacity disabled:cursor-not-allowed disabled:bg-brand/40 disabled:text-on-brand/80 disabled:shadow-none"
-                >
-                    {t("vehicle-save")}
-                </button>
-                {record && edit?.onDelete && (
-                    <button
-                        type="button"
-                        onClick={() => void remove()}
-                        className="mt-2 h-10 w-full cursor-pointer text-[14px] font-medium text-red-500"
-                    >
-                        {t("vehicle-delete-record")}
-                    </button>
-                )}
-            </div>
+            <SheetFooter
+                onCancel={
+                    record && edit?.onDelete ? () => void remove() : onCancel
+                }
+                cancelDanger={Boolean(record && edit?.onDelete)}
+                cancelLabel={
+                    record && edit?.onDelete
+                        ? t("vehicle-delete-record")
+                        : undefined
+                }
+                onConfirm={submit}
+                confirmLabel={t("vehicle-save")}
+                confirmDisabled={!valid}
+            />
             <RecordFormDeleteProvider />
         </PopupLayout>
     );

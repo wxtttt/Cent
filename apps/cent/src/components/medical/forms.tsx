@@ -14,6 +14,7 @@ import {
     RowInput,
 } from "@/components/form-rows";
 import SmartImage from "@/components/image";
+import { SheetFooter } from "@/components/sheet-kit";
 import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import type {
@@ -74,31 +75,9 @@ export default function MedicalProfileForm({
             title={edit ? t("medical-edit-profile") : t("medical-add-profile")}
             onBack={onCancel}
             handle
-            right={
-                <Button
-                    size="sm"
-                    disabled={!valid}
-                    onClick={() =>
-                        onConfirm?.({
-                            entity: "profile",
-                            name: name.trim(),
-                            avatar,
-                            birthday,
-                            gender,
-                            bloodType: bloodType.trim() || undefined,
-                            allergy: allergy.trim() || undefined,
-                            medicalHistory: medicalHistory.trim() || undefined,
-                            medications: medications.trim() || undefined,
-                            remark: remark.trim() || undefined,
-                        })
-                    }
-                >
-                    {t("confirm")}
-                </Button>
-            }
         >
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
-                {/* 头像：圆形 + 相机角标，与家小满建档页一致 */}
+                {/* 头像：圆形 + 相机角标，与 APK 建档页一致 */}
                 <div className="flex justify-center pt-1">
                     <div className="relative">
                         <button
@@ -247,6 +226,24 @@ export default function MedicalProfileForm({
                     </FormRow>
                 </FormCard>
             </div>
+            <SheetFooter
+                onCancel={onCancel}
+                onConfirm={() =>
+                    onConfirm?.({
+                        entity: "profile",
+                        name: name.trim(),
+                        avatar,
+                        birthday,
+                        gender,
+                        bloodType: bloodType.trim() || undefined,
+                        allergy: allergy.trim() || undefined,
+                        medicalHistory: medicalHistory.trim() || undefined,
+                        medications: medications.trim() || undefined,
+                        remark: remark.trim() || undefined,
+                    })
+                }
+                confirmDisabled={!valid}
+            />
         </PopupLayout>
     );
 }
@@ -299,27 +296,6 @@ export function MedicalVisitForm({
             title={visit ? t("medical-edit-visit") : t("medical-add-visit")}
             onBack={onCancel}
             handle
-            right={
-                <Button
-                    size="sm"
-                    disabled={!valid}
-                    onClick={() =>
-                        onConfirm?.({
-                            entity: "visit",
-                            profileId,
-                            time,
-                            hospital: hospital.trim() || undefined,
-                            department: department.trim() || undefined,
-                            diagnosis: diagnosis.trim() || undefined,
-                            amount,
-                            images: images.length > 0 ? images : undefined,
-                            remark: remark.trim() || undefined,
-                        })
-                    }
-                >
-                    {t("confirm")}
-                </Button>
-            }
         >
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 <FormCard>
@@ -415,6 +391,23 @@ export function MedicalVisitForm({
                     </FormRow>
                 </FormCard>
             </div>
+            <SheetFooter
+                onCancel={onCancel}
+                onConfirm={() =>
+                    onConfirm?.({
+                        entity: "visit",
+                        profileId,
+                        time,
+                        hospital: hospital.trim() || undefined,
+                        department: department.trim() || undefined,
+                        diagnosis: diagnosis.trim() || undefined,
+                        amount,
+                        images: images.length > 0 ? images : undefined,
+                        remark: remark.trim() || undefined,
+                    })
+                }
+                confirmDisabled={!valid}
+            />
         </PopupLayout>
     );
 }
@@ -457,25 +450,6 @@ export function MedicalMedicineForm({
             }
             onBack={onCancel}
             handle
-            right={
-                <Button
-                    size="sm"
-                    disabled={!valid}
-                    onClick={() =>
-                        onConfirm?.({
-                            entity: "medicine",
-                            name: name.trim(),
-                            profileId: profileId || undefined,
-                            stock: stock.trim() || undefined,
-                            dosage: dosage.trim() || undefined,
-                            expiryDate,
-                            remark: remark.trim() || undefined,
-                        })
-                    }
-                >
-                    {t("confirm")}
-                </Button>
-            }
         >
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3 pb-6">
                 <FormCard>
@@ -572,6 +546,21 @@ export function MedicalMedicineForm({
                     </FormRow>
                 </FormCard>
             </div>
+            <SheetFooter
+                onCancel={onCancel}
+                onConfirm={() =>
+                    onConfirm?.({
+                        entity: "medicine",
+                        name: name.trim(),
+                        profileId: profileId || undefined,
+                        stock: stock.trim() || undefined,
+                        dosage: dosage.trim() || undefined,
+                        expiryDate,
+                        remark: remark.trim() || undefined,
+                    })
+                }
+                confirmDisabled={!valid}
+            />
         </PopupLayout>
     );
 }

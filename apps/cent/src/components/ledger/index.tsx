@@ -36,7 +36,7 @@ function DayHeader({
     const weekday = new Intl.DateTimeFormat(locale, {
         weekday: "short",
     }).format(date.toDate());
-    // 家小满记账页日头：当天显示「今天」，其余统一显示「M月D日」，非同年才带年份
+    // APK 记账页日头：当天显示「今天」，其余统一显示「M月D日」，非同年才带年份
     const now = dayjs();
     const dateText = date.isSame(now, "days")
         ? t("Today")

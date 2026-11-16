@@ -14,6 +14,7 @@ import {
     RowInput,
 } from "@/components/form-rows";
 import SmartImage from "@/components/image";
+import { SheetFooter } from "@/components/sheet-kit";
 import { useCreators } from "@/hooks/use-creator";
 import type { InventoryItem } from "@/inventory/types";
 import PopupLayout from "@/layouts/popup-layout";
@@ -29,6 +30,7 @@ const MAX_IMAGES = 3;
 
 export default function InventoryItemForm({
     edit,
+    onCancel,
     onConfirm,
 }: {
     edit?: InventoryItem;
@@ -92,13 +94,9 @@ export default function InventoryItemForm({
     };
 
     return (
-        // APK 折叠态：标题居中加粗，不设返回/右上确认，改由底部全宽橙色按钮提交
+        // 标题居中加粗（抽屉 17px），提交与取消都在底部同一颗底栏里
         <PopupLayout
-            title={
-                <span className="text-lg font-semibold text-ink">
-                    {edit ? t("inventory-edit") : t("inventory-add")}
-                </span>
-            }
+            title={edit ? t("inventory-edit") : t("inventory-add")}
             hideBack
             handle
         >
@@ -288,16 +286,12 @@ export default function InventoryItemForm({
                     </FormRow>
                 </FormCard>
             </div>
-            <div className="flex-shrink-0 px-4 pb-[max(16px,var(--safe-area-inset-bottom))] pt-2">
-                <button
-                    type="button"
-                    disabled={!valid}
-                    onClick={submit}
-                    className="h-12 w-full cursor-pointer rounded-2xl bg-brand text-[16px] font-medium text-white shadow-[0_6px_16px_rgba(245,130,32,0.28)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {edit ? t("confirm") : t("confirm-add")}
-                </button>
-            </div>
+            <SheetFooter
+                onCancel={onCancel}
+                onConfirm={submit}
+                confirmLabel={edit ? t("confirm") : t("confirm-add")}
+                confirmDisabled={!valid}
+            />
         </PopupLayout>
     );
 }
