@@ -291,3 +291,5 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
   - 修前：点「使用 Github 登录」跳到 `http://localhost:5183/undefined/api/github-oauth/authorize?...`——相对路径被 Vite 的 SPA 兜底接住、重新加载回登录页，即用户说的「闪一下就没了」。
   - 修后：`https://oncent-backend.linkai.work/api/github-oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A5183`、Gitee 同形（`...gitee-oauth/authorize...`），`page.url()` 已离开应用。`curl -I` 该地址返回 302 → `gitee.com/oauth/authorize?...`，说明回落后端可达。
   - 探针坑：`page.getByRole("button", { name })` 用中文无障碍名最稳（按钮内图标 + 文案，`data-*` 未挂）；拦截 oauth 请求时用 `route.fulfill` 返回 stub，避免真的把会话带去 GitHub。
+
+**同一轮末：5173 换成本 worktree 的构建预览**（用户选定「接管 5173」）。原 5173 是另一会话在 `_cent_analysis` 起的 `pnpm --filter cent dev`（服务主 worktree，看不到本轮改动），已停；`apps/cent` 重新 `pnpm build` 后 `pnpm preview` 绑回 5173，`dist/index.html` 的 `assets/index-B6OVFuuo.js` 与 5173 返回的一致。在该预览（生产构建）上复跑 `verify-loan-page-5173.js`（Chromium）：hero / 结构 / 对比切换 / 洞察条 / `rawKeys []` 与 dev 完全一致、`pageErrors []`；`probe-login-oauth-5173.js` 点 GitHub / Gitee 均落到 `https://oncent-backend.linkai.work/api/{github,gitee}-oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A5173`。**dev 的 5183 已停**，本轮只保留 5173 预览。
