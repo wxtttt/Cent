@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DefaultCurrencies } from "@/api/currency/currencies";
-import { FormCard, FormSection, RowChevron } from "@/components/form-rows";
 import { useCurrency } from "@/hooks/use-currency";
 import PopupLayout from "@/layouts/popup-layout";
 import type { CustomCurrency } from "@/ledger/type";
@@ -9,7 +8,8 @@ import { useIntl } from "@/locale";
 import { useLedgerStore } from "@/store/ledger";
 import { useUserStore } from "@/store/user";
 import { cn } from "@/utils";
-import { BTN_TAP, PRESSABLE_ROW } from "../button-styles";
+import { BTN_TAP } from "../button-styles";
+import { GroupTitle, ListCard, ListRow, PlaceholderCard } from "../sheet-kit";
 import { EditCurrencyProvider, showEditCurrency } from "./edit-form";
 import { ManualRateProvider, showManualRateUpdate } from "./manual-rate-form";
 import {
@@ -161,7 +161,11 @@ export default function CurrencyListForm({
     return (
         <PopupLayout
             onBack={onCancel}
-            title={t("currency-manager")}
+            title={
+                <span className="text-[18px] font-semibold text-ink">
+                    {t("currency-manager")}
+                </span>
+            }
             backStyle="circle"
             className="dp-drawer-surface h-full bg-ground"
             right={
@@ -178,122 +182,72 @@ export default function CurrencyListForm({
         >
             <div
                 data-currency-page
-                className="scrollbar-hidden flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-6"
+                className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-ground px-3 pt-1 pb-6"
             >
-                <section>
-                    <FormSection title={t("base-currency")} />
-                    <FormCard>
-                        <button
-                            type="button"
-                            data-currency-base-row
-                            onClick={() => void toPickBaseCurrency()}
-                            className={cn(
-                                "flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2 text-left",
-                                PRESSABLE_ROW,
-                            )}
-                        >
-                            <span className="flex-shrink-0 text-[15px] text-ink">
-                                {t("base-currency")}
-                            </span>
-                            <span className="flex min-w-0 items-center gap-1.5">
-                                <span className="truncate text-[15px] text-ink">
-                                    {baseCurrency.label}
-                                </span>
-                                <RowChevron />
-                            </span>
-                        </button>
-                    </FormCard>
-                </section>
+                <GroupTitle title={t("base-currency")} first />
+                <ListCard>
+                    <ListRow
+                        title={t("base-currency")}
+                        value={baseCurrency.label}
+                        onClick={() => void toPickBaseCurrency()}
+                        data-currency-base-row
+                    />
+                </ListCard>
 
-                <section>
-                    <FormSection title={t("bill-quick-currencies")} />
-                    <FormCard>
-                        <button
-                            type="button"
-                            data-currency-quick-row
-                            onClick={() => void toPickQuickCurrencies()}
-                            className={cn(
-                                "flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-2 text-left",
-                                PRESSABLE_ROW,
-                            )}
-                        >
-                            <span className="flex-shrink-0 text-[15px] text-ink">
-                                {t("bill-quick-currencies")}
-                            </span>
-                            <span className="flex min-w-0 items-center gap-1.5">
-                                <span
-                                    className={cn(
-                                        "truncate text-[15px]",
-                                        quickCurrencies.length > 0
-                                            ? "text-ink"
-                                            : "text-ink-secondary/70",
-                                    )}
-                                >
-                                    {quickCurrencies.length > 0
-                                        ? quickCurrencies
-                                              .map((c) => c.label)
-                                              .join("、")
-                                        : t("not-set")}
-                                </span>
-                                <RowChevron />
-                            </span>
-                        </button>
-                    </FormCard>
-                </section>
+                <GroupTitle title={t("bill-quick-currencies")} />
+                <ListCard>
+                    <ListRow
+                        title={t("bill-quick-currencies")}
+                        value={
+                            quickCurrencies.length > 0
+                                ? quickCurrencies.map((c) => c.label).join("、")
+                                : t("not-set")
+                        }
+                        valueClassName={
+                            quickCurrencies.length > 0
+                                ? "min-w-0 shrink truncate"
+                                : "min-w-0 shrink truncate text-ink-secondary/70"
+                        }
+                        onClick={() => void toPickQuickCurrencies()}
+                        data-currency-quick-row
+                    />
+                </ListCard>
 
-                <section>
-                    <FormSection title={t("custom-currencies")} />
-                    <FormCard>
-                        {customCurrencies.length === 0 ? (
-                            <div className="px-4 py-5 text-center text-[13px] text-ink-secondary">
-                                {t("custom-currencies-empty")}
-                            </div>
-                        ) : (
-                            customCurrencies.map((currency) => (
-                                <button
-                                    key={currency.id}
-                                    type="button"
-                                    data-currency-custom-row={currency.id}
-                                    onClick={() =>
-                                        void toUpdateCurrency(currency)
-                                    }
-                                    className={cn(
-                                        "flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left",
-                                        PRESSABLE_ROW,
-                                    )}
-                                >
-                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ground-muted text-[13px] font-medium text-ink">
+                <GroupTitle title={t("custom-currencies")} />
+                {customCurrencies.length === 0 ? (
+                    <PlaceholderCard>
+                        {t("custom-currencies-empty")}
+                    </PlaceholderCard>
+                ) : (
+                    <ListCard>
+                        {customCurrencies.map((currency) => (
+                            <ListRow
+                                key={currency.id}
+                                badge={
+                                    <span className="flex size-9 flex-shrink-0 items-center justify-center rounded-full bg-ground-muted text-[13px] font-medium text-ink">
                                         {currency.symbol}
                                     </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-[15px] text-ink">
-                                            {currency.name}
-                                        </span>
-                                        <span className="block truncate text-[11px] text-ink-secondary">
-                                            {currency.symbol}
-                                        </span>
-                                    </span>
-                                    <span className="shrink-0 text-[13px] text-ink">
-                                        {formatRate(currency.rateToBase)}
-                                    </span>
-                                    <RowChevron />
-                                </button>
-                            ))
-                        )}
-                    </FormCard>
-                </section>
+                                }
+                                title={currency.name}
+                                subtitle={currency.symbol}
+                                value={formatRate(currency.rateToBase)}
+                                onClick={() => void toUpdateCurrency(currency)}
+                                data-currency-custom-row={currency.id}
+                            />
+                        ))}
+                    </ListCard>
+                )}
 
-                <section>
-                    <div className="flex items-center justify-between px-1 pb-2">
-                        <span className="text-[15px] font-semibold text-ink">
-                            {t("exchange-rate")}
-                        </span>
+                <GroupTitle
+                    title={t("exchange-rate")}
+                    action={
                         <button
                             type="button"
                             onClick={() => void toRefresh()}
                             disabled={loading}
                             aria-label={t("exchange-rate")}
                             className={cn(
+                                "flex size-7 items-center justify-center text-ink-secondary transition-colors",
                                 "disabled:cursor-not-allowed disabled:opacity-40",
                                 BTN_TAP,
                             )}
@@ -305,53 +259,38 @@ export default function CurrencyListForm({
                                 )}
                             />
                         </button>
-                    </div>
-                    <FormCard>
-                        {rateCurrencies.map((currency) => {
-                            const rate = rates.find(
-                                (r) => r.id === currency.id,
-                            );
-                            const manual = manualRates?.[currency.id] != null;
-                            return (
-                                <button
-                                    key={currency.id}
-                                    type="button"
-                                    data-currency-rate-row={currency.id}
-                                    onClick={() =>
-                                        void toManuallyUpdate(currency)
-                                    }
-                                    className={cn(
-                                        "flex min-h-[52px] w-full items-center gap-3 px-4 py-2 text-left",
-                                        PRESSABLE_ROW,
-                                    )}
-                                >
-                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ground-muted text-[17px]">
+                    }
+                />
+                <ListCard>
+                    {rateCurrencies.map((currency) => {
+                        const rate = rates.find((r) => r.id === currency.id);
+                        const manual = manualRates?.[currency.id] != null;
+                        return (
+                            <ListRow
+                                key={currency.id}
+                                badge={
+                                    <span className="flex size-9 flex-shrink-0 items-center justify-center rounded-full bg-ground-muted text-[17px]">
                                         {currency.icon}
                                     </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block truncate text-[15px] text-ink">
-                                            {t(currency.labelKey)}
-                                        </span>
-                                        <span className="block truncate text-[11px] text-ink-secondary">
-                                            {currency.id} · {currency.symbol}
-                                        </span>
-                                    </span>
-                                    {manual && (
+                                }
+                                title={t(currency.labelKey)}
+                                subtitle={`${currency.id} · ${currency.symbol}`}
+                                trailing={
+                                    manual ? (
                                         <span className="shrink-0 rounded-full bg-ground-muted px-1.5 py-0.5 text-[10px] text-ink-secondary">
                                             {t("manual-rate")}
                                         </span>
-                                    )}
-                                    <span className="shrink-0 text-[13px] text-ink">
-                                        {rate ? formatRate(rate.predict) : "—"}
-                                    </span>
-                                    <RowChevron />
-                                </button>
-                            );
-                        })}
-                    </FormCard>
-                </section>
+                                    ) : undefined
+                                }
+                                value={rate ? formatRate(rate.predict) : "—"}
+                                onClick={() => void toManuallyUpdate(currency)}
+                                data-currency-rate-row={currency.id}
+                            />
+                        );
+                    })}
+                </ListCard>
 
-                <p className="px-2 text-center text-[11px] leading-relaxed text-ink-secondary/80">
+                <p className="mt-3 px-2 text-center text-[11px] leading-relaxed text-ink-secondary/80">
                     {t("exchange-rate-from", {
                         a: (
                             <a

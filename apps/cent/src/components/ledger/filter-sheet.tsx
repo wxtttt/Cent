@@ -1,8 +1,10 @@
 import dayjs from "dayjs";
 import { useState } from "react";
 import { periodForMonth, periodMonthKey } from "@/components/budget/period";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/button-styles";
 import createConfirmProvider from "@/components/confirm";
 import { DatePicker } from "@/components/date-picker";
+import { SheetFooter } from "@/components/sheet-kit";
 import { useCreators } from "@/hooks/use-creator";
 import type { BillType, Budget } from "@/ledger/type";
 import { useIntl } from "@/locale";
@@ -240,8 +242,8 @@ function SheetForm({
                 data-sheet-drag
                 className="flex flex-shrink-0 flex-col items-center pt-3"
             >
-                <div className="h-1 w-8 rounded-full bg-[#bdbbb7]" />
-                <div className="mt-3.5 text-[17px] font-bold text-[#272322]">
+                <div className="h-1 w-10 rounded-full bg-ink-secondary/40" />
+                <div className="mt-3.5 text-[17px] font-semibold text-ink">
                     {t("filter")}
                 </div>
             </div>
@@ -445,22 +447,24 @@ function SheetForm({
                     </div>
                 </section>
             </div>
-            <div className="flex flex-shrink-0 items-center gap-5 px-5 pb-[max(20px,var(--safe-area-inset-bottom))] pt-4">
-                <button
-                    type="button"
-                    className="h-[52px] w-[36%] cursor-pointer rounded-[26px] bg-white text-[16px] font-medium text-[#272322]"
-                    onClick={() => setDraft({})}
-                >
-                    {t("filter-reset")}
-                </button>
-                <button
-                    type="button"
-                    className="h-[52px] flex-1 cursor-pointer rounded-[26px] bg-brand text-[16px] font-medium text-on-brand"
-                    onClick={() => onConfirm?.(draft)}
-                >
-                    {t("filter-confirm")}
-                </button>
-            </div>
+            <SheetFooter>
+                <div className="flex gap-2.5">
+                    <button
+                        type="button"
+                        className={cn(BTN_SECONDARY, "flex-1")}
+                        onClick={() => setDraft({})}
+                    >
+                        {t("filter-reset")}
+                    </button>
+                    <button
+                        type="button"
+                        className={cn(BTN_PRIMARY, "flex-1")}
+                        onClick={() => onConfirm?.(draft)}
+                    >
+                        {t("filter-confirm")}
+                    </button>
+                </div>
+            </SheetFooter>
         </div>
     );
 }
@@ -473,7 +477,7 @@ const [LedgerFilterProvider, rawShowLedgerFilter] = createConfirmProvider<
     dialogModalClose: true,
     from: "bottom",
     contentClassName:
-        "w-full rounded-t-[28px] border-0! bg-[#f4f4f4]! sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]",
+        "w-full rounded-t-[28px] border-0! bg-ground! sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]",
 });
 
 export { LedgerFilterProvider };

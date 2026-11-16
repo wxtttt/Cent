@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { SheetFooter } from "@/components/sheet-kit";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import useCategory from "@/hooks/use-category";
 import PopupLayout from "@/layouts/popup-layout";
@@ -426,11 +427,7 @@ export default function CategoryEditForm({
                 hideBack
                 className="h-full overflow-hidden bg-ground"
                 onBack={onCancel}
-                title={
-                    <span className="text-[18px] font-semibold text-ink">
-                        {title}
-                    </span>
-                }
+                title={title}
             >
                 {/* 图标 + 大类 + 名称文字 + 铅笔同排，与 APK 一致，不加白底卡片 */}
                 <div className="flex items-center gap-3 px-6 pb-3 pt-3">
@@ -564,21 +561,11 @@ export default function CategoryEditForm({
 
                 {isGroup && <div className="min-h-0 flex-1" />}
 
-                <div className="px-5 pb-5 pt-3">
-                    <button
-                        type="button"
-                        disabled={!canSubmit}
-                        onClick={() => form.handleSubmit(onSubmit)()}
-                        className={cn(
-                            "h-[52px] w-full rounded-xl text-[15px] font-medium transition-colors",
-                            canSubmit
-                                ? "bg-brand text-on-brand"
-                                : "cursor-not-allowed bg-[#e4e4e8] text-[#a6a6ae]",
-                        )}
-                    >
-                        {t("confirm")}
-                    </button>
-                </div>
+                <SheetFooter
+                    onCancel={onCancel}
+                    onConfirm={() => form.handleSubmit(onSubmit)()}
+                    confirmDisabled={!canSubmit}
+                />
             </PopupLayout>
             <CategoryNameProvider />
             <CategoryParentProvider />

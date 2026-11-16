@@ -328,3 +328,22 @@ playwright-cli run-code --filename .playwright-cli/webkit-verify2.js
 - **计入成员**：预算页点「计入成员」弹出的是选项抽屉（标题 + 白卡行 + 右侧圆形勾选 + 取消/确认），行内 chip 为 0，与「关联特殊标签」同款。
 - **贷款详情**：`data-loan-prepay-cta` `[784, 832]`（h=48）完整可见；`data-loan-more` 右距边 16px。
 - **待确认**：「特殊预算」的新增入口目前仍是 54px 虚线框（`add-special-budget`），三个候选方案见交接说明，未改代码。
+
+## 2026-11-16 21:5x 二级页统一到全局共享层（worktree `feat-loan-261115`）
+
+- 迁移范围：汇率与货币（列表 + 编辑抽屉 + 手动汇率抽屉）、通用选项抽屉、车辆记录页、分类管理页头、周期记账页、`form-rows` 全部委托 `sheet-kit`。
+- 探针：`.playwright-cli/probe-currency-page.js`（币种页几何）、`probe-currency-kit.js`（两个抽屉）、`probe-kit-pages.js`（预算 / 分类 / 车辆 / 周期记账批量开页）、`probe-sched-final.js`（周期记账）。
+- 实测：预算 / 分类 / 车辆 / 周期记账 / 汇率五页标题均为 18px / 600；页头 ＋ 40×40 且距右边 16px；币种页本位币行 58px、四组 `GroupTitle` 命中；分类页「分类标签」小标题为 12px 灰；周期记账空态为白卡一行灰字。
+- **踩坑（已修）**：币种页首次截图里「本位币 / 快捷币种」两张卡只剩一条 16px 白边——`flex flex-col` 滚动容器把卡片压扁 + `overflow-hidden` 裁切；`sheet-kit` 加 `shrink-0` 后恢复正常（`parentH` 从 16 → 58）。
+- 类型 / 构建：`npx tsc -b` 无错，`npx vite build --emptyOutDir=false` 通过，`biome check` 改动文件零 error。
+
+## 2026-11-16 22:3x 间距统一 + 抽屉底栏统一（worktree `feat-loan-261115`）
+
+- 分类管理：标题→分段 20px、分段→「分类标签」16px、「分类标签」→卡片 6px（原来是 gap-3 + mb-1.5 叠成 18px）。
+- 标签管理：同样 20/16/6，分段控件 40px；缺省卡 58px；页头圆形 ＋ 40px。
+- 汇率与货币：`PlaceholderCard` 58px = `data-currency-base-row` 58px（原来 44px）。
+- 抽屉：分类编辑、添加车辆实测标题 17px、底栏「取消 / 确认（保存）」两颗按钮 48px、左 21 起、宽 168~170、间距 10px。
+- 代码改动：新增 `SheetFooter`（`SheetShell` 复用它）；车辆 2 个表单、医疗 3 个表单、物品表单、分类表单、账单筛选全部换底栏；标签编辑改 `SheetShell`；标签管理页改共享列表层。
+- 探针：`.playwright-cli/probe-spacing.js`（分类 / 币种）、`probe-drawers.js`（分类抽屉）、`probe-vehicle4.js`（车辆抽屉）、`probe-tags.js`（标签页）。
+- 类型 / 构建：`npx tsc -b` 无错，`npx vite build --emptyOutDir=false` 通过。
+

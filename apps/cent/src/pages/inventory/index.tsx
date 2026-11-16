@@ -339,14 +339,14 @@ function CategoryFilterButton({
                     <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
                         <DialogContent
                             from="bottom"
-                            className="pointer-events-auto flex max-h-[80dvh] w-full flex-col rounded-t-[28px] border-0 bg-[#f4f4f4] sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]"
+                            className="pointer-events-auto flex max-h-[80dvh] w-full flex-col rounded-t-[28px] border-0 bg-ground sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px]"
                         >
                             <div
                                 data-sheet-drag
                                 className="flex flex-shrink-0 flex-col items-center pt-3"
                             >
-                                <div className="h-1 w-8 rounded-full bg-[#bdbbb7]" />
-                                <DialogTitle className="mt-3.5 text-[17px] font-bold text-ink">
+                                <div className="h-1 w-10 rounded-full bg-ink-secondary/40" />
+                                <DialogTitle className="mt-3.5 text-[17px] font-semibold text-ink">
                                     {t("filter")}
                                 </DialogTitle>
                                 <DialogDescription className="sr-only">

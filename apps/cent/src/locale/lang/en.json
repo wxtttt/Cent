@@ -1,4 +1,4 @@
-{
+﻿{
   "APP_NAME": "胖记",
   "APP_TITLE": "One bite to one cent",
   "Balance": "Balance",
@@ -1319,7 +1319,7 @@
   "repeat-monthly-hint": "Copy this special budget into every new month automatically",
   "participants-hint": "Choose which members count toward this budget",
   "budget-start-day": "Budget start day",
-  "budget-start-day-hint": "Each budget period starts on this day; changes take effect on the next matching date",
+  "budget-start-day-hint": "Each budget period starts on this day",
   "day-n-of-month": "Day {n} of month",
   "transition-period": "Transition Period",
   "transition-tag": "Transition",
@@ -1330,7 +1330,7 @@
   "edit-special-budget": "Edit Special Budget",
   "budget-delete-title": "Delete Special Budget",
   "budget-delete-confirm": "Delete special budget \"{name}\"? This cannot be undone.",
-  "no-special-budget": "No special budgets yet",
+  "no-special-budget": "No special budget yet. Give something like a trip or a renovation its own limit; only bills with the linked tags count toward it.",
   "budget-save-hint": "Changes only affect the current period, not history",
   "budget-amount": "Amount",
   "detailed-allocation": "Detailed allocation",

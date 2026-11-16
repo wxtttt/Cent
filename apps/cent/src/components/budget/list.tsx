@@ -10,8 +10,7 @@ import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { useLedgerStore } from "@/store/ledger";
 import { cn } from "@/utils";
-import { PRESSABLE_ROW } from "../button-styles";
-import { GroupTitle, ListCard, ListRow } from "../sheet-kit";
+import { GroupTitle, ListCard, ListRow, PlaceholderCard } from "../sheet-kit";
 import {
     clampStartDay,
     periodContaining,
@@ -517,10 +516,10 @@ export default function BudgetListForm({
 
     /** 预算范围里的起始日读该周期自己的首日，历史月不再显示全局配置 */
     const periodStartDay = dayjs(activePeriod).date();
-    /** 有数据或有添加入口时才渲染「特殊预算」分组；历史周期没有特殊预算就整体缺省 */
+    /** 添加入口固定在页面右上角（与货币页同款），标题行右侧不再挂按钮；
+        当前周期没有特殊预算时用缺省白卡说明功能存在，历史周期没有就整体缺省 */
     const showSpecialGroup = isCurrent || specials.length > 0;
-    const showEmptyAddBox = isCurrent && specials.length === 0;
-    const showAddAction = isCurrent && specials.length > 0;
+    const showPlaceholder = isCurrent && specials.length === 0;
 
     return (
         <PopupLayout
@@ -532,6 +531,19 @@ export default function BudgetListForm({
             }
             backStyle="circle"
             className="dp-drawer-surface h-full bg-ground"
+            right={
+                isCurrent ? (
+                    <button
+                        type="button"
+                        data-budget-add-special
+                        onClick={() => void openSpecial()}
+                        aria-label={t("add-special-budget")}
+                        className="flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                    >
+                        <i className="icon-[lucide--plus] size-5" />
+                    </button>
+                ) : undefined
+            }
         >
             <div className="relative flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto bg-ground px-3 pt-1 pb-6">
                 {/* 通用月选择器：受控唤起，触发器不占位 */}
@@ -750,39 +762,11 @@ export default function BudgetListForm({
 
                 {showSpecialGroup && (
                     <>
-                        <GroupTitle
-                            title={t("special-budget")}
-                            action={
-                                showAddAction ? (
-                                    <button
-                                        type="button"
-                                        aria-label={t("add")}
-                                        onClick={() => void openSpecial()}
-                                        className={cn(
-                                            "flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-1 text-[11px] text-brand",
-                                            PRESSABLE_ROW,
-                                            "enabled:hover:bg-brand/20",
-                                        )}
-                                    >
-                                        <i className="icon-[lucide--circle-plus] size-3.5" />
-                                        {t("add")}
-                                    </button>
-                                ) : undefined
-                            }
-                        />
-                        {showEmptyAddBox && (
-                            <button
-                                type="button"
-                                onClick={() => void openSpecial()}
-                                className={cn(
-                                    "flex h-[54px] w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-rule bg-panel/60 text-[13px] text-ink-secondary",
-                                    PRESSABLE_ROW,
-                                    "enabled:hover:border-brand/60 enabled:hover:text-brand",
-                                )}
-                            >
-                                <i className="icon-[lucide--circle-plus] size-4 text-brand" />
-                                {t("add-special-budget")}
-                            </button>
+                        <GroupTitle title={t("special-budget")} />
+                        {showPlaceholder && (
+                            <PlaceholderCard>
+                                {t("no-special-budget")}
+                            </PlaceholderCard>
                         )}
                         {specials.length > 0 && (
                             <ReadOnlyMask readOnly={!isCurrent}>

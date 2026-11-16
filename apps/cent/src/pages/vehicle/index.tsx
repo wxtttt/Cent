@@ -1,5 +1,11 @@
 import dayjs from "dayjs";
 import { useMemo, useRef, useState } from "react";
+import {
+    CARD,
+    GroupTitle,
+    ListCard,
+    PlaceholderCard,
+} from "@/components/sheet-kit";
 import { showVehicleForm, showVehicleRecord } from "@/components/vehicle";
 import { useVehicle } from "@/hooks/use-vehicle";
 import PopupLayout from "@/layouts/popup-layout";
@@ -41,36 +47,10 @@ const ENERGY_LABEL_KEY: Record<VehicleEnergyType, string> = {
     hybrid: "vehicle-energy-hybrid",
 };
 
-const CARD =
-    "divide-y divide-rule/70 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]";
-
 const money = (n: number) => `¥${Math.round(n).toLocaleString("zh-CN")}`;
 const km = (n: number) => `${Math.round(n).toLocaleString("zh-CN")} km`;
 const fixed = (n: number | undefined, digits = 2) =>
     n === undefined ? "--" : n.toFixed(digits);
-
-/** 卡片外的 12px 分组小标题（预算管理 / 分类管理同款） */
-function GroupTitle({
-    children,
-    action,
-    first,
-}: {
-    children: React.ReactNode;
-    action?: React.ReactNode;
-    first?: boolean;
-}) {
-    return (
-        <div
-            className={cn(
-                "mb-1.5 flex items-center justify-between gap-2 px-1 text-[12px] text-ink-secondary",
-                first ? "mt-4" : "mt-3",
-            )}
-        >
-            <span>{children}</span>
-            {action}
-        </div>
-    );
-}
 
 /** APK 顶部车辆切换胶囊：选中橙底白字，未选中白底灰字 */
 function VehiclePill({
@@ -182,7 +162,11 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
         >
             <PopupLayout
                 onBack={onCancel}
-                title={t("vehicle-title")}
+                title={
+                    <span className="text-[18px] font-semibold text-ink">
+                        {t("vehicle-title")}
+                    </span>
+                }
                 backStyle="circle"
                 className="dp-drawer-surface h-full bg-ground"
                 right={
@@ -190,7 +174,7 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                         <button
                             type="button"
                             aria-label={t("vehicle-edit")}
-                            className="flex size-9 cursor-pointer items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)]"
+                            className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)]"
                             onClick={() => void openVehicleForm(activeVehicle)}
                         >
                             <i className="icon-[lucide--pencil] size-4" />
@@ -248,15 +232,14 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                                 }
                             />
 
-                            <GroupTitle>
-                                {t("vehicle-section-monthly")}
-                            </GroupTitle>
+                            <GroupTitle title={t("vehicle-section-monthly")} />
                             <MonthlyBars
                                 monthly={stats.monthly}
                                 emptyLabel={t("vehicle-monthly-empty")}
                             />
 
                             <GroupTitle
+                                title={t("vehicle-section-records")}
                                 action={
                                     <span className="tabular-nums">
                                         {t("vehicle-record-count", {
@@ -264,21 +247,20 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                                         })}
                                     </span>
                                 }
-                            >
-                                {t("vehicle-section-records")}
-                            </GroupTitle>
+                            />
 
                             {groups.length === 0 ? (
-                                <div className="rounded-2xl bg-panel px-4 py-10 text-center text-[13px] text-ink-secondary shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+                                <PlaceholderCard>
                                     {t("vehicle-empty-records")}
-                                </div>
+                                </PlaceholderCard>
                             ) : (
                                 groups.map((group) => (
                                     <div key={group.key} className="mb-3">
-                                        <div className="mb-1.5 px-1 text-[12px] font-medium text-ink-secondary">
-                                            {group.label}
-                                        </div>
-                                        <div className={CARD}>
+                                        <GroupTitle
+                                            title={group.label}
+                                            className="mt-0"
+                                        />
+                                        <ListCard>
                                             {group.records.map((record) => (
                                                 <RecordRow
                                                     key={record.id}
@@ -302,7 +284,7 @@ export default function VehiclePage({ onCancel }: { onCancel?: () => void }) {
                                                     }
                                                 />
                                             ))}
-                                        </div>
+                                        </ListCard>
                                     </div>
                                 ))
                             )}
@@ -480,7 +462,7 @@ function OverviewCard({
     ];
 
     return (
-        <div className="mt-3 rounded-2xl bg-panel px-4 py-3 shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+        <div className={cn(CARD, "mt-3 px-4 py-3")}>
             {/* 车辆信息行 */}
             <div className="flex min-w-0 items-center gap-2">
                 <span className="flex size-8 flex-shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
@@ -661,7 +643,7 @@ function MonthlyBars({
     const max = Math.max(1, ...monthly.map((m) => m.cost));
     const hasAny = monthly.some((m) => m.cost > 0);
     return (
-        <div className="rounded-2xl bg-panel px-3 py-3 shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
+        <div className={cn(CARD, "px-3 py-3")}>
             {!hasAny && (
                 <div className="pb-2 text-center text-[11px] text-ink-secondary">
                     {emptyLabel}

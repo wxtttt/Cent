@@ -226,7 +226,7 @@ export function WheelDatePicker({
                 <div className="pointer-events-none fixed inset-0 z-50 flex items-end justify-center">
                     <DialogContent
                         from="bottom"
-                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-[#f4f4f4] shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
+                        className="pointer-events-auto w-full rounded-t-[28px] border border-b-0 border-rule bg-ground shadow-panel sm:w-[90vw] sm:max-w-[500px] sm:rounded-[28px] sm:border-b"
                     >
                         <DialogTitle className="sr-only">
                             {title ?? t("time")}

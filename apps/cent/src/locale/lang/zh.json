@@ -1,4 +1,4 @@
-{
+﻿{
   "APP_NAME": "胖记",
   "APP_TITLE": "一日之计",
   "Balance": "结余",
@@ -1330,7 +1330,7 @@
   "repeat-monthly-hint": "勾选后每月自动复制这条特殊预算",
   "participants-hint": "选择计入本预算的成员",
   "budget-start-day": "预算起始日",
-  "budget-start-day-hint": "每月从这一日开始计算预算周期，修改从下一个匹配日生效",
+  "budget-start-day-hint": "每月从这一日开始计算预算周期",
   "day-n-of-month": "每月 {n} 日",
   "transition-period": "过渡周期",
   "transition-tag": "过渡",
@@ -1341,7 +1341,7 @@
   "edit-special-budget": "编辑特殊预算",
   "budget-delete-title": "删除特殊预算",
   "budget-delete-confirm": "确定删除特殊预算「{name}」吗？删除后无法恢复。",
-  "no-special-budget": "还没有特殊预算",
+  "no-special-budget": "还没有特殊预算。旅行、装修这类开支可以单独设一条额度，只统计关联标签的账单，不占用日常预算。",
   "budget-save-hint": "修改只影响当前周期，不改写历史",
   "budget-amount": "金额",
   "detailed-allocation": "详细分配",

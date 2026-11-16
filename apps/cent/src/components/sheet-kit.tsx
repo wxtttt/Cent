@@ -8,7 +8,7 @@
  * 确认按钮比卡片窄、底色和预算页对不上、行高忽高忽低。以后新增二级页
  * 一律从这里取，不再手写 Dialog / 卡片 / 底栏。
  */
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
 import {
@@ -39,7 +39,7 @@ export function GroupTitle({
     return (
         <div
             className={cn(
-                "mb-1.5 flex items-center justify-between gap-2 px-1 text-[12px] text-ink-secondary",
+                "mb-1.5 flex shrink-0 items-center justify-between gap-2 px-1 text-[12px] text-ink-secondary",
                 first ? "mt-4" : "mt-3",
                 className,
             )}
@@ -61,7 +61,7 @@ export function ListCard({
     return (
         <div
             className={cn(
-                "divide-y divide-rule/70 overflow-hidden",
+                "divide-y divide-rule/70 overflow-hidden shrink-0",
                 CARD,
                 className,
             )}
@@ -80,22 +80,29 @@ export function ListRow({
     title,
     subtitle,
     value,
+    valueClassName,
     badge,
     trailing,
     onClick,
     disabled,
     className,
+    ...rest
 }: {
     title: string;
     subtitle?: string;
     value?: string;
+    /** 值过长时传 `min-w-0 shrink truncate`，否则值不换行、不截断 */
+    valueClassName?: string;
     badge?: ReactNode;
     /** 右侧追加内容（放在主值之前） */
     trailing?: ReactNode;
     onClick?: () => void;
     disabled?: boolean;
     className?: string;
-}) {
+} & Omit<
+    ComponentProps<"button">,
+    "title" | "value" | "onClick" | "className" | "children"
+>) {
     const content = (
         <>
             {badge}
@@ -111,7 +118,12 @@ export function ListRow({
             </span>
             {trailing}
             {value && (
-                <span className="flex-shrink-0 text-[14px] text-ink tabular-nums">
+                <span
+                    className={cn(
+                        "flex-shrink-0 text-[14px] text-ink tabular-nums",
+                        valueClassName,
+                    )}
+                >
                     {value}
                 </span>
             )}
@@ -134,9 +146,93 @@ export function ListRow({
             disabled={disabled}
             onClick={disabled ? undefined : onClick}
             className={cls}
+            {...rest}
         >
             {content}
         </button>
+    );
+}
+
+/**
+ * 缺省卡片：分组里一条记录都没有时占位的一张白卡，卡内只有一行 12px 灰字。
+ * 与贷款页「提前还款 / 利率调整」的空态同款：白底卡、灰色说明，不用虚线框、
+ * 也不在卡里放按钮 —— 添加动作统一由页头 ＋ 承担，空卡只负责说明这里有功能。
+ *
+ * 高度与一条 `ListRow` 对齐（58px 起，文案折行才自然变高），
+ * 这样空态卡和有记录时的卡片在同一个分组里高度节奏一致。
+ */
+export function PlaceholderCard({
+    children,
+    className,
+}: {
+    children: ReactNode;
+    className?: string;
+}) {
+    return (
+        <div
+            className={cn(
+                CARD,
+                "flex min-h-[58px] shrink-0 items-center px-4 py-3",
+                className,
+            )}
+        >
+            <p className="text-[12px] leading-relaxed text-ink-secondary">
+                {children}
+            </p>
+        </div>
+    );
+}
+
+/**
+ * 抽屉底栏：分隔线 + 两颗等宽按钮（左「取消 / 删除」，右「确认 / 保存」）。
+ * 所有底部抽屉共用这一个 —— 用 `PopupLayout` 自绘内容的表单（车辆、物品、医疗、
+ * 分类、筛选）与 `SheetShell` 抽屉都取它，避免有的通栏大按钮、有的右上角小「保存」。
+ */
+export function SheetFooter({
+    onCancel,
+    cancelLabel,
+    cancelDanger,
+    onConfirm,
+    confirmLabel,
+    confirmDisabled,
+    children,
+}: {
+    onCancel?: () => void;
+    /** 编辑态把左侧按钮换成「删除」 */
+    cancelLabel?: string;
+    cancelDanger?: boolean;
+    onConfirm?: () => void;
+    confirmLabel?: string;
+    confirmDisabled?: boolean;
+    /** 需要三颗按钮等自定义排列时整行接管 */
+    children?: ReactNode;
+}) {
+    const t = useIntl();
+    return (
+        <div className={cn(SHEET_FOOTER, "flex-shrink-0")}>
+            {children ?? (
+                <div className="flex gap-2.5">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className={cn(
+                            cancelDanger ? BTN_DANGER : BTN_SECONDARY,
+                            "flex-1",
+                        )}
+                    >
+                        {cancelLabel ?? t("cancel")}
+                    </button>
+                    <button
+                        type="button"
+                        disabled={confirmDisabled}
+                        onClick={onConfirm}
+                        className={cn(BTN_PRIMARY, "flex-1")}
+                    >
+                        {confirmLabel ?? t("confirm")}
+                    </button>
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -172,7 +268,6 @@ export function SheetShell({
     footer?: ReactNode;
     className?: string;
 }) {
-    const t = useIntl();
     return (
         <div className={cn("flex max-h-[85dvh] flex-col", className)}>
             <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3">
@@ -187,30 +282,16 @@ export function SheetShell({
                 )}
                 <div className="mt-5 mb-2">{children}</div>
             </div>
-            <div className={SHEET_FOOTER}>
-                {footer ?? (
-                    <div className="flex gap-2.5">
-                        <button
-                            type="button"
-                            onClick={onCancel}
-                            className={cn(
-                                cancelDanger ? BTN_DANGER : BTN_SECONDARY,
-                                "flex-1",
-                            )}
-                        >
-                            {cancelLabel ?? t("cancel")}
-                        </button>
-                        <button
-                            type="button"
-                            disabled={confirmDisabled}
-                            onClick={onConfirm}
-                            className={cn(BTN_PRIMARY, "flex-1")}
-                        >
-                            {confirmLabel ?? t("confirm")}
-                        </button>
-                    </div>
-                )}
-            </div>
+            <SheetFooter
+                onCancel={onCancel}
+                cancelLabel={cancelLabel}
+                cancelDanger={cancelDanger}
+                onConfirm={onConfirm}
+                confirmLabel={confirmLabel}
+                confirmDisabled={confirmDisabled}
+            >
+                {footer}
+            </SheetFooter>
         </div>
     );
 }
@@ -226,7 +307,7 @@ export function SheetCard({
     return (
         <div
             className={cn(
-                "divide-y divide-rule/60 overflow-hidden",
+                "divide-y divide-rule/60 overflow-hidden shrink-0",
                 CARD,
                 className,
             )}
@@ -255,7 +336,7 @@ export function SheetRow({
 }) {
     const inner = (
         <>
-            <span className="w-[92px] flex-shrink-0 text-[15px] leading-5 text-ink">
+            <span className="min-w-[92px] max-w-[45%] flex-shrink-0 text-[15px] leading-5 text-ink">
                 {label}
             </span>
             <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
@@ -264,7 +345,7 @@ export function SheetRow({
         </>
     );
     const cls = cn(
-        "flex h-[52px] w-full items-center gap-2 px-4 py-2 text-left",
+        "flex min-h-[52px] w-full items-center gap-2 px-4 py-2 text-left",
         !disabled && onClick && PRESSABLE_ROW,
         className,
     );

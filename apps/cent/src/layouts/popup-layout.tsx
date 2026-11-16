@@ -79,7 +79,20 @@ export default function PopupLayout({
                     </div>
                 )}
                 <div className="min-h-4 w-full flex justify-center items-center">
-                    {title}
+                    {/* 字符串标题统一字号：二级页 18px，底部抽屉（handle，有拖拽条）17px，
+                        与 SheetShell 抽屉标题一致；传 ReactNode 的页面自己控制样式 */}
+                    {typeof title === "string" ? (
+                        <span
+                            className={cn(
+                                "font-semibold text-ink",
+                                handle ? "text-[17px]" : "text-[18px]",
+                            )}
+                        >
+                            {title}
+                        </span>
+                    ) : (
+                        title
+                    )}
                 </div>
             </div>
             {children}

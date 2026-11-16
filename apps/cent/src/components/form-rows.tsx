@@ -1,30 +1,34 @@
 import type { ReactNode } from "react";
 import { cn } from "@/utils";
+import { GroupTitle, ListCard, SheetRow } from "./sheet-kit";
 
-/** APK 式行列表单基元：分组白卡 + 左标签右值，供生活模块表单复用 */
+/** 生活模块表单基元：全部委托给 `sheet-kit`，保证与预算 / 贷款 / 币种页同一套版式 */
+/** @deprecated 二级页直接用 `GroupTitle`；这里保留旧名字给尚未迁移的表单用 */
+export function FormSection({
+    title,
+    className,
+}: {
+    title: string;
+    className?: string;
+}) {
+    return <GroupTitle title={title} className={cn("mt-0", className)} />;
+}
+
+/** 白色圆角分组卡，与 `ListCard` 完全同款（不要再写一份 class） */
+export function FormCard({
+    children,
+    className,
+}: {
+    children: ReactNode;
+    className?: string;
+}) {
+    return <ListCard className={className}>{children}</ListCard>;
+}
 
 /**
- * 分组标题，放在卡片外。与二级页的 `GroupTitle`（预算页「预算周期」）同款：
- * 12px 次级灰、不抢卡片主信息的层级；19:00 前这里是 15px 粗黑，观感比卡片标题还重。
+ * 一行「左标签 + 右内容」，委托 `SheetRow`（52px 固定行高）。
+ * 标签默认 92px 成列，超长标签可自然撑开，不会挤掉右侧内容。
  */
-export function FormSection({ title }: { title: string }) {
-    return (
-        <div className="px-1 pb-1.5 text-[12px] text-ink-secondary">
-            {title}
-        </div>
-    );
-}
-
-/** 白色圆角分组卡，行间细分割线 */
-export function FormCard({ children }: { children: ReactNode }) {
-    return (
-        <div className="divide-y divide-rule/60 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
-            {children}
-        </div>
-    );
-}
-
-/** 一行：左标签 + 右值。可点行把按钮作为 children 传入，避免 button 嵌套 */
 export function FormRow({
     label,
     children,
@@ -35,17 +39,9 @@ export function FormRow({
     className?: string;
 }) {
     return (
-        <div
-            className={cn(
-                "flex min-h-[52px] items-center justify-between gap-3 px-4 py-2",
-                className,
-            )}
-        >
-            <span className="flex-shrink-0 text-[15px] text-ink">{label}</span>
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5 text-right">
-                {children}
-            </div>
-        </div>
+        <SheetRow label={label} className={className}>
+            {children}
+        </SheetRow>
     );
 }
 

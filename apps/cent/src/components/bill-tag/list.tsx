@@ -4,6 +4,7 @@ import { useTag } from "@/hooks/use-tag";
 import PopupLayout from "@/layouts/popup-layout";
 import { useIntl } from "@/locale";
 import { cn } from "@/utils";
+import { GroupTitle, ListCard, ListRow, PlaceholderCard } from "../sheet-kit";
 import type { EditTag } from "./tag";
 import { EditTagProvider, showEditTag } from "./tag-form";
 
@@ -54,62 +55,46 @@ export default function TagList({
         const list = tags.filter((v) =>
             kind === "special" ? v.kind === "special" : v.kind !== "special",
         );
-        const active = tab === kind;
         return (
-            <div className="mt-3">
-                <div className="mb-1.5 flex items-center justify-between px-1 text-[12px] text-ink-secondary">
-                    <span className={cn(active && "text-brand")}>
-                        {kind === "special"
+            <div>
+                <GroupTitle
+                    title={
+                        kind === "special"
                             ? t("special-tags")
-                            : t("normal-tags")}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setTab(kind);
-                            void toUpdateTag({
-                                name: "",
-                                kind,
-                            } as EditTag);
-                        }}
-                        className="text-[12px] text-brand"
-                    >
-                        ⊕ {t("add")}
-                    </button>
-                </div>
-                <div className="divide-y divide-rule/70 overflow-hidden rounded-2xl bg-panel shadow-[0_1px_6px_rgba(92,62,30,0.05)]">
-                    {list.length === 0 && (
-                        <div className="px-4 py-3 text-[12px] text-ink-secondary">
-                            {t("none")}
-                        </div>
-                    )}
-                    {list.map((tag, index) => (
-                        <button
-                            key={tag.id}
-                            type="button"
-                            onClick={() =>
-                                void toUpdateTag({
-                                    id: tag.id,
-                                    name: tag.name,
-                                    kind: tag.kind ?? "normal",
-                                })
-                            }
-                            className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2 text-left"
-                        >
-                            <span
-                                className="h-5 w-5 flex-shrink-0 rounded-md"
-                                style={{
-                                    backgroundColor:
-                                        DOT_COLORS[index % DOT_COLORS.length],
-                                }}
+                            : t("normal-tags")
+                    }
+                    className="mt-4"
+                />
+                {list.length === 0 ? (
+                    <PlaceholderCard>{t("none")}</PlaceholderCard>
+                ) : (
+                    <ListCard>
+                        {list.map((tag, index) => (
+                            <ListRow
+                                key={tag.id}
+                                badge={
+                                    <span
+                                        className="size-5 flex-shrink-0 rounded-md"
+                                        style={{
+                                            backgroundColor:
+                                                DOT_COLORS[
+                                                    index % DOT_COLORS.length
+                                                ],
+                                        }}
+                                    />
+                                }
+                                title={`#${tag.name}`}
+                                onClick={() =>
+                                    void toUpdateTag({
+                                        id: tag.id,
+                                        name: tag.name,
+                                        kind: tag.kind ?? "normal",
+                                    })
+                                }
                             />
-                            <span className="min-w-0 flex-1 truncate text-[15px] text-ink">
-                                #{tag.name}
-                            </span>
-                            <i className="icon-[lucide--chevron-right] size-4 flex-shrink-0 text-ink-secondary/60" />
-                        </button>
-                    ))}
-                </div>
+                        ))}
+                    </ListCard>
+                )}
                 <div className="mt-1.5 px-1 text-[11px] leading-relaxed text-ink-secondary">
                     {kind === "special"
                         ? t("special-tag-hint")
@@ -122,20 +107,37 @@ export default function TagList({
     return (
         <PopupLayout
             onBack={onCancel}
+            backStyle="circle"
             className="dp-drawer-surface h-full overflow-hidden bg-ground"
             title={t("edit-tags")}
+            right={
+                <button
+                    type="button"
+                    data-tag-add
+                    aria-label={t("add")}
+                    onClick={() =>
+                        void toUpdateTag({
+                            name: "",
+                            kind: tab === "special" ? "special" : "normal",
+                        } as EditTag)
+                    }
+                    className="flex size-10 items-center justify-center rounded-full bg-panel text-ink shadow-[0_1px_6px_rgba(92,62,30,0.10)] transition-colors hover:text-brand active:bg-ground-muted"
+                >
+                    <i className="icon-[lucide--plus] size-5" />
+                </button>
+            }
         >
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-6">
-                <div className="mx-8 mt-1 flex rounded-full bg-ground-muted p-1">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pt-3 pb-6">
+                <div className="mx-8 flex h-10 flex-shrink-0 rounded-full bg-panel p-1 shadow-sm">
                     {(["special", "normal"] as const).map((kind) => (
                         <button
                             key={kind}
                             type="button"
                             onClick={() => setTab(kind)}
                             className={cn(
-                                "h-9 flex-1 rounded-full text-[14px] transition-colors",
+                                "h-8 flex-1 rounded-full text-[14px] transition-colors",
                                 tab === kind
-                                    ? "bg-panel text-ink shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
+                                    ? "bg-ground-muted font-semibold text-ink"
                                     : "text-ink-secondary",
                             )}
                         >
